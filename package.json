@@ -1,0 +1,10 @@
+{
+  "name": "gilear",
+  "workspaces": [
+    "packages/vscode-gilear"
+  ],
+  "devDependencies": {
+    "prettier": "^3.4.1",
+    "tree-sitter-cli": "^0.24.3"
+  }
+}

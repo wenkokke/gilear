@@ -1,0 +1,49 @@
+cabal-version:   3.4
+name:            tree-sitter-capi
+version:         0.13.14.0
+license:         AGPL-3.0-only
+synopsis:        Haskell bindings for tree-sitter
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/packages/tree-sitter-capi/#README>
+
+author:          Wen Kokke
+maintainer:      wenkokke@users.noreply.github.com
+category:        Language
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common language
+  ghc-options:        -Wall
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+
+  if impl(ghc <9.6.1)
+    ghc-options: -optc=-Wno-incompatible-pointer-types-discards-qualifiers
+
+library
+  import:             language
+  exposed-modules:    TreeSitter.CApi
+  build-tool-depends: hsc2hs:hsc2hs
+  hs-source-dirs:     src
+  include-dirs:       vendor/tree-sitter/lib/include
+  includes:           tree_sitter/api.h
+  install-includes:   tree_sitter/api.h
+  c-sources:          vendor/tree-sitter/lib/src/lib.c
+  build-depends:
+    , base                  >=4.13 && <5
+    , base-compat-constptr  >=0.1  && <0.2
+    , bytestring            >=0.12 && <0.13
+
+test-suite tree-sitter-capi-test
+  import:         language
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  other-modules:  Test.TreeSitter.CApi
+  build-depends:
+    , base
+    , base-compat-constptr
+    , tasty                 >=1.5  && <1.6
+    , tasty-hunit           >=0.10 && <0.11
+    , tree-sitter-capi
+    , tree-sitter-while

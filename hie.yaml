@@ -1,0 +1,46 @@
+cradle:
+  multi:
+    - path: "./packages/base-compat-constptr"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/gilear"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/gilear-lsp"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/tree-sitter"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/tree-sitter-capi"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/tree-sitter-while"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/tree-sitter-gilear"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./prototypes/gilear-animate-ast"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./scripts/lint-cabal"
+      config:
+        cradle:
+          cabal:

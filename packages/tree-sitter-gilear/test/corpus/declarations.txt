@@ -1,0 +1,67 @@
+============================================
+Identity Function
+============================================
+
+id : (a : Type) -> a -> a;
+id a x = x;
+
+---
+
+(source_file
+  (declaration_type_signature
+    name: (variable_name)
+    right: (expression_function_type
+      (expression_parentheses
+        (expression_annotation
+          (expression_variable
+            (variable_name))
+          (expression_constructor
+            (constructor_name))))
+      (expression_function_type
+        (expression_variable
+          (variable_name))
+        (expression_variable
+          (variable_name)))))
+  (declaration_function
+    name: (variable_name)
+    left: (pattern_list
+      (pattern_variable
+        (variable_name))
+      (pattern_variable
+        (variable_name)))
+    right: (expression_variable
+      (variable_name))))
+
+============================================
+Identity Function with Lambda
+============================================
+
+id : (a : Type) -> a -> a;
+id = \a x -> x;
+
+---
+
+(source_file
+  (declaration_type_signature
+    name: (variable_name)
+    right: (expression_function_type
+      (expression_parentheses
+        (expression_annotation
+          (expression_variable
+            (variable_name))
+          (expression_constructor
+            (constructor_name))))
+      (expression_function_type
+        (expression_variable
+          (variable_name))
+        (expression_variable
+          (variable_name)))))
+  (declaration_function
+    name: (variable_name)
+    right: (expression_function_abstraction
+      (pattern_variable
+        (variable_name))
+      (pattern_variable
+        (variable_name))
+      (expression_variable
+        (variable_name)))))

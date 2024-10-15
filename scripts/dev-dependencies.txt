@@ -1,0 +1,11 @@
+actionlint=1.7.4
+cabal=3.12.1.0
+cabal-fmt=0.1.12
+cabal-hoogle=3.10.0.0
+fourmolu=0.16.2.0
+ghc=9.8.2
+haddock=2.30.0
+hlint=3.8
+node=20
+prettier=3.4.1
+shellcheck=0.10.0
