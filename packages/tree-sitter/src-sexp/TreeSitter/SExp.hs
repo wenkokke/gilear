@@ -1,0 +1,82 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
+module TreeSitter.SExp (
+  Symbol (..),
+  FieldName (..),
+  SExp (..),
+  prettySExp,
+  prettySExpDiff,
+  parseSExp,
+) where
+
+import Control.Applicative (Alternative (..), asum)
+import Data.Algorithm.Diff (getGroupedDiff)
+import Data.Algorithm.DiffOutput (ppDiff)
+import Data.Text (Text)
+import Data.Text qualified as T
+import Prettyprinter (Doc, Pretty (..), (<+>))
+import Prettyprinter qualified as PP
+import Prettyprinter.Render.String (renderString)
+import Text.Parsec (ParseError, SourceName)
+import Text.Parsec qualified as P
+import Text.Parsec.Text (Parser)
+
+type Ident = Text
+
+pIdent :: Parser Ident
+pIdent = T.pack <$> ((:) <$> P.letter <*> many (P.letter <|> P.digit <|> P.char '_'))
+
+newtype Symbol = Symbol {unSymbol :: Ident}
+  deriving (Eq, Show)
+  deriving newtype (Pretty)
+
+pSymbol :: Parser Symbol
+pSymbol = Symbol <$> pIdent <* P.notFollowedBy (P.char ':')
+
+newtype FieldName = FieldName {unFieldName :: Ident}
+  deriving (Eq, Show)
+  deriving newtype (Pretty)
+
+pFieldName :: Parser FieldName
+pFieldName = FieldName <$> pIdent <* P.char ':'
+
+data SExp
+  = Atom Symbol
+  | List [SExp]
+  | Field FieldName SExp
+  deriving (Eq, Show)
+
+instance Pretty SExp where
+  pretty :: SExp -> Doc ann
+  pretty = \case
+    Atom symbol ->
+      pretty symbol
+    List sexps ->
+      PP.parens (PP.nest 2 (PP.vsep (pretty <$> sexps)))
+    Field fieldName sexp ->
+      pretty fieldName <> pretty ":" <+> pretty sexp
+
+prettySExp :: SExp -> String
+prettySExp = renderString . PP.layoutSmart PP.defaultLayoutOptions . pretty
+
+prettySExpDiff :: SExp -> SExp -> String
+prettySExpDiff sexp1 sexp2 =
+  ppDiff $ getGroupedDiff (lines . prettySExp $ sexp1) (lines . prettySExp $ sexp2)
+
+pSExp :: Parser SExp
+pSExp =
+  P.spaces
+    *> asum
+      [ Atom <$> P.try pSymbol <* P.spaces
+      , List <$> P.between (P.char '(' <* P.spaces) (P.char ')' <* P.spaces) (P.many1 pSExp)
+      , Field <$> pFieldName <* P.spaces <*> pSExp
+      ]
+
+parseSExp :: SourceName -> Text -> Either ParseError SExp
+parseSExp = P.runParser pSExp ()

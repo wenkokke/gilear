@@ -1,0 +1,47 @@
+name: "Setup actionlint"
+description: "Install a specific actionlint version"
+inputs:
+  actionlint-version:
+    required: true
+    description: "Version of actionlint"
+outputs:
+  actionlint-bin:
+    description: "Path to the actionlint binary."
+    value: ${{ steps.setup-actionlint.outputs.actionlint-bin }}
+  actionlint-dir:
+    description: "Path to the actionlint directory."
+    value: ${{ steps.setup-actionlint.outputs.actionlint-dir }}
+runs:
+  using: composite
+  steps:
+    - name: 💾 Restore cache
+      uses: actions/cache/restore@v4
+      if: ${{ !env.ACT }}
+      with:
+        path: "$HOME/.actionlint/bin"
+        key: ${{ runner.os }}-actionlint-${{ inputs.actionlint-version }}
+      id: cache-actionlint
+
+    - name: 🛠️ Install actionlint (POSIX)
+      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+      run: |
+        mkdir --parents "$HOME/.actionlint/bin"
+        bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) ${{ inputs.actionlint-version }} "$HOME/.actionlint/bin"
+        echo "actionlint-bin=$HOME/.actionlint/bin/actionlint" >> "$GITHUB_OUTPUT"
+        echo "actionlint-dir=$HOME/.actionlint/bin" >> "$GITHUB_OUTPUT"
+      shell: bash
+      id: setup-actionlint
+
+    - name: 🛠️ Install ShellCheck (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      run: |
+        echo "Windows is unsupported"
+        exit 1
+      shell: sh
+
+    - name: 💾 Save Cabal dependencies
+      uses: actions/cache/save@v4
+      if: ${{ !env.ACT && steps.cache-actionlint.outputs.cache-hit != 'true' }}
+      with:
+        path: ${{ steps.setup-actionlint.outputs.actionlint-dir }}
+        key: ${{ steps.cache-actionlint.outputs.cache-primary-key }}

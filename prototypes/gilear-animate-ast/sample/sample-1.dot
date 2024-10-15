@@ -1,0 +1,443 @@
+digraph tree {
+edge [arrowhead=none]
+tree_0x7ff7b90c66a8 [label="source_file", tooltip="range: 0 - 39
+state: 0
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 32
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505ed0 [label="source_file_repeat1", tooltip="range: 0 - 38
+state: 1
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 32
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505e10 [label="declaration", tooltip="range: 0 - 26
+state: 1
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 21
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265059d0 [label="declaration_type_signature", tooltip="range: 0 - 26
+state: 1
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 20
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505960 [label="variable_name", shape=plaintext, tooltip="range: 0 - 2
+state: 1
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265059d0 -> tree_0x7fa026505960 [tooltip=0]
+tree_0x7fa026505968 [label=":", shape=plaintext, tooltip="range: 2 - 4
+state: 17
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265059d0 -> tree_0x7fa026505968 [tooltip=1]
+tree_0x7fa026505970 [label="expression", tooltip="range: 4 - 25
+state: 16
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 17
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505900 [label="expression_function_type", tooltip="range: 4 - 25
+state: 16
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 16
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505890 [label="expression", tooltip="range: 4 - 15
+state: 16
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 9
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265054f0 [label="expression_parentheses", tooltip="range: 4 - 15
+state: 16
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 8
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505480 [label="(", shape=plaintext, tooltip="range: 4 - 6
+state: 16
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265054f0 -> tree_0x7fa026505480 [tooltip=0]
+tree_0x7fa026505488 [label="expression", tooltip="range: 6 - 14
+state: 12
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 6
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505420 [label="expression_annotation", tooltip="range: 6 - 14
+state: 12
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 5
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265053b0 [label="expression", tooltip="range: 6 - 7
+state: 12
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265050b0 [label="expression_variable", tooltip="range: 6 - 7
+state: 12
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026504f60 [label="variable_name", shape=plaintext, tooltip="range: 6 - 7
+state: 12
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265050b0 -> tree_0x7fa026504f60 [tooltip=0]
+tree_0x7fa0265053b0 -> tree_0x7fa0265050b0 [tooltip=0]
+tree_0x7fa026505420 -> tree_0x7fa0265053b0 [tooltip=0]
+tree_0x7fa0265053b8 [label=":", shape=plaintext, tooltip="range: 7 - 9
+state: 23
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505420 -> tree_0x7fa0265053b8 [tooltip=1]
+tree_0x7fa0265053c0 [label="expression", tooltip="range: 9 - 14
+state: 15
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505350 [label="expression_constructor", tooltip="range: 9 - 14
+state: 15
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505200 [label="constructor_name", shape=plaintext, tooltip="range: 9 - 14
+state: 15
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505350 -> tree_0x7fa026505200 [tooltip=0]
+tree_0x7fa0265053c0 -> tree_0x7fa026505350 [tooltip=0]
+tree_0x7fa026505420 -> tree_0x7fa0265053c0 [tooltip=2]
+tree_0x7fa026505488 -> tree_0x7fa026505420 [tooltip=0]
+tree_0x7fa0265054f0 -> tree_0x7fa026505488 [tooltip=1]
+tree_0x7fa026505490 [label=")", shape=plaintext, tooltip="range: 14 - 15
+state: 21
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265054f0 -> tree_0x7fa026505490 [tooltip=2]
+tree_0x7fa026505890 -> tree_0x7fa0265054f0 [tooltip=0]
+tree_0x7fa026505900 -> tree_0x7fa026505890 [tooltip=0]
+tree_0x7fa026505898 [label="->", shape=plaintext, tooltip="range: 15 - 18
+state: 25
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505900 -> tree_0x7fa026505898 [tooltip=1]
+tree_0x7fa0265058a0 [label="expression", tooltip="range: 18 - 25
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 6
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505830 [label="expression_function_type", tooltip="range: 18 - 25
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 5
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265057c0 [label="expression", tooltip="range: 18 - 20
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265055b0 [label="expression_variable", tooltip="range: 18 - 20
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505550 [label="variable_name", shape=plaintext, tooltip="range: 18 - 20
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265055b0 -> tree_0x7fa026505550 [tooltip=0]
+tree_0x7fa0265057c0 -> tree_0x7fa0265055b0 [tooltip=0]
+tree_0x7fa026505830 -> tree_0x7fa0265057c0 [tooltip=0]
+tree_0x7fa0265057c8 [label="->", shape=plaintext, tooltip="range: 20 - 23
+state: 23
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505830 -> tree_0x7fa0265057c8 [tooltip=1]
+tree_0x7fa0265057d0 [label="expression", tooltip="range: 23 - 25
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505760 [label="expression_variable", tooltip="range: 23 - 25
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505610 [label="variable_name", shape=plaintext, tooltip="range: 23 - 25
+state: 13
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505760 -> tree_0x7fa026505610 [tooltip=0]
+tree_0x7fa0265057d0 -> tree_0x7fa026505760 [tooltip=0]
+tree_0x7fa026505830 -> tree_0x7fa0265057d0 [tooltip=2]
+tree_0x7fa0265058a0 -> tree_0x7fa026505830 [tooltip=0]
+tree_0x7fa026505900 -> tree_0x7fa0265058a0 [tooltip=2]
+tree_0x7fa026505970 -> tree_0x7fa026505900 [tooltip=0]
+tree_0x7fa0265059d0 -> tree_0x7fa026505970 [tooltip=2]
+tree_0x7fa026505978 [label=";", shape=plaintext, tooltip="range: 25 - 26
+state: 23
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa0265059d0 -> tree_0x7fa026505978 [tooltip=3]
+tree_0x7fa026505e10 -> tree_0x7fa0265059d0 [tooltip=0]
+tree_0x7fa026505ed0 -> tree_0x7fa026505e10 [tooltip=0]
+tree_0x7fa026505e18 [label="declaration", tooltip="range: 26 - 38
+state: 31
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 11
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505db0 [label="declaration_function", tooltip="range: 26 - 38
+state: 31
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 10
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505d30 [label="variable_name", shape=plaintext, tooltip="range: 26 - 29
+state: 33
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505db0 -> tree_0x7fa026505d30 [tooltip=0]
+tree_0x7fa026505d38 [label="pattern_list", tooltip="range: 29 - 33
+state: 17
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 4
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505c10 [label="pattern_list_repeat1", tooltip="range: 29 - 33
+state: 17
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 4
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505bb0 [label="pattern", tooltip="range: 29 - 31
+state: 17
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505a90 [label="pattern_variable", tooltip="range: 29 - 31
+state: 17
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505a30 [label="variable_name", shape=plaintext, tooltip="range: 29 - 31
+state: 17
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505a90 -> tree_0x7fa026505a30 [tooltip=0]
+tree_0x7fa026505bb0 -> tree_0x7fa026505a90 [tooltip=0]
+tree_0x7fa026505c10 -> tree_0x7fa026505bb0 [tooltip=0]
+tree_0x7fa026505bb8 [label="pattern", tooltip="range: 31 - 33
+state: 19
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505b50 [label="pattern_variable", tooltip="range: 31 - 33
+state: 19
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505af0 [label="variable_name", shape=plaintext, tooltip="range: 31 - 33
+state: 30
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505b50 -> tree_0x7fa026505af0 [tooltip=0]
+tree_0x7fa026505bb8 -> tree_0x7fa026505b50 [tooltip=0]
+tree_0x7fa026505c10 -> tree_0x7fa026505bb8 [tooltip=1]
+tree_0x7fa026505d38 -> tree_0x7fa026505c10 [tooltip=0]
+tree_0x7fa026505db0 -> tree_0x7fa026505d38 [tooltip=1]
+tree_0x7fa026505d40 [label="=", shape=plaintext, tooltip="range: 33 - 35
+state: 30
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505db0 -> tree_0x7fa026505d40 [tooltip=2]
+tree_0x7fa026505d48 [label="expression", tooltip="range: 35 - 37
+state: 11
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 2
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505cd0 [label="expression_variable", tooltip="range: 35 - 37
+state: 11
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 1
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505c70 [label="variable_name", shape=plaintext, tooltip="range: 35 - 37
+state: 11
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505cd0 -> tree_0x7fa026505c70 [tooltip=0]
+tree_0x7fa026505d48 -> tree_0x7fa026505cd0 [tooltip=0]
+tree_0x7fa026505db0 -> tree_0x7fa026505d48 [tooltip=3]
+tree_0x7fa026505d50 [label=";", shape=plaintext, tooltip="range: 37 - 38
+state: 23
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7fa026505db0 -> tree_0x7fa026505d50 [tooltip=4]
+tree_0x7fa026505e18 -> tree_0x7fa026505db0 [tooltip=0]
+tree_0x7fa026505ed0 -> tree_0x7fa026505e18 [tooltip=1]
+tree_0x7ff7b90c66a8 -> tree_0x7fa026505ed0 [tooltip=0]
+tree_0x7fa026505ed8 [label="end", shape=plaintext, fontcolor=gray, tooltip="range: 38 - 39
+state: 36
+error-cost: 0
+has-changes: 0
+depends-on-column: 0
+descendant-count: 0
+repeat-depth: 0
+lookahead-bytes: 1"]
+tree_0x7ff7b90c66a8 -> tree_0x7fa026505ed8 [tooltip=1]
+}

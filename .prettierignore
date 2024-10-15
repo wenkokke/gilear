@@ -1,0 +1,10 @@
+# packages/tree-sitter-capi
+/packages/tree-sitter-capi/vendor/
+
+# packages/tree-sitter-gilear
+/packages/tree-sitter-gilear/src/grammar.json
+/packages/tree-sitter-gilear/src/node-types.json
+
+# packages/tree-sitter-while
+/packages/tree-sitter-while/src/grammar.json
+/packages/tree-sitter-while/src/node-types.json

@@ -1,0 +1,48 @@
+cabal-version:   3.4
+name:            gilear
+version:         0.0.0.0
+license:         CC-BY-NC-ND-4.0
+synopsis:        Compiler for the Gilear language
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/packages/gilear/#README>
+
+author:          Wen Kokke
+maintainer:      wenkokke@users.noreply.github.com
+category:        Language
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common language
+  ghc-options:        -Wall
+  default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
+
+library
+  import:          language
+  exposed-modules: Gilear
+  build-depends:
+    , base           >=4.13 && <5
+    , io-classes     >=1.7  && <1.8
+    , mtl            >=2.3  && <2.4
+    , resourcet      >=1.3  && <1.4
+    , unliftio-core  >=0.2  && <0.3
+
+  hs-source-dirs:  src
+
+executable gilear
+  import:         language
+  main-is:        Main.hs
+  build-depends:
+    , base
+    , gilear
+
+  hs-source-dirs: app
+
+test-suite gilear-test
+  import:         language
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  build-depends:
+    , base
+    , gilear

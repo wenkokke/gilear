@@ -1,0 +1,35 @@
+{
+  "grammars": [
+    {
+      "name": "gilear",
+      "camelcase": "Gilear",
+      "scope": "source.gilear",
+      "path": ".",
+      "file-types": null,
+      "injection-regex": "^gilear$"
+    }
+  ],
+  "metadata": {
+    "version": "0.0.0",
+    "license": "NONE",
+    "description": "Parser for the Gilear language",
+    "authors": [
+      {
+        "name": "Wen Kokke",
+        "email": "wenkokke@users.noreply.github.com"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/wenkokke/gilear"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": false,
+    "node": false,
+    "python": false,
+    "rust": false,
+    "swift": false,
+    "haskell": true
+  }
+}

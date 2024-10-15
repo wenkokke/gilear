@@ -1,0 +1,6 @@
+[submodule "packages/tree-sitter-bindings/vendor/tree-sitter"]
+	path = packages/tree-sitter-bindings/vendor/tree-sitter
+	url = git@github.com:tree-sitter/tree-sitter.git
+[submodule "packages/tree-sitter/vendor/tree-sitter"]
+	path = packages/tree-sitter-capi/vendor/tree-sitter
+	url = git@github.com:tree-sitter/tree-sitter.git

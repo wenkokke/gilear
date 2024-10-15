@@ -1,0 +1,38 @@
+================================================================================
+While Loop
+================================================================================
+
+x := 0;
+y := 0;
+while x < 5 do
+{
+  y := y + 1
+}
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (statements
+    (statement
+      (sequence
+        (assignment
+          (variable)
+          (expression
+            (number)))
+        (sequence
+          (assignment
+            (variable)
+            (expression
+              (number)))
+          (while_do
+            (comparison
+              left: (variable)
+              (lt)
+              right: (number))
+            (statement
+              (assignment
+                (variable)
+                (expression
+                  (addition
+                    left: (variable)
+                    right: (number)))))))))))

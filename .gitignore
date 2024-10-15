@@ -1,6 +1,6 @@
-dist
-dist-*
-cabal-dev
+# Haskell
+/dist/
+/dist-newstyle/
 *.o
 *.hi
 *.hie
@@ -8,16 +8,40 @@ cabal-dev
 *.chs.h
 *.dyn_o
 *.dyn_hi
-.hpc
-.hsenv
-.cabal-sandbox/
-cabal.sandbox.config
 *.prof
 *.aux
 *.hp
 *.eventlog
-.stack-work/
+.hpc
+.hsenv
 cabal.project.local
 cabal.project.local~
-.HTF/
-.ghc.environment.*
+
+# Haddock
+/doc/reference
+
+# JavaScript
+build/
+prebuilds/
+node_modules/
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# tree-sitter-gilear
+/packages/tree-sitter-gilear/src/*.json
+/packages/tree-sitter-gilear/src/parser.c
+/packages/tree-sitter-gilear/src/tree_sitter/*
+
+# tree-sitter-while
+/packages/tree-sitter-while/src/*.json
+/packages/tree-sitter-while/src/parser.c
+/packages/tree-sitter-while/src/tree_sitter/*
+
+# packages/vscode-gilear
+/packages/vscode-gilear/out/
+/packages/vscode-gilear/tsconfig.tsbuildinfo
