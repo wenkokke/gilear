@@ -281,11 +281,14 @@ jobs:
         with:
           submodules: true
 
-      - name: 🛠️ Install Prettier
-        run: npm i
+      - name: 🗄️ Read dev-dependencies
+        run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
+        id: dev-dependencies
 
       - name: 🎗️ Lint with Prettier
         run: ./scripts/lint-prettier.sh
+        env:
+          PRETTIER: "npm exec --package=pretter@${{ steps.dev-dependencies.outputs.prettier }} prettier --"
 
   #############################################################################
   # Lint with ShellCheck
