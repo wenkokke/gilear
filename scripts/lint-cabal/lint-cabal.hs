@@ -8,11 +8,11 @@ module Main (main) where
 
 import Control.Monad (void)
 import Control.Monad.Writer (MonadIO (..))
-import Distribution.Types.GenericPackageDescription (GenericPackageDescription (..))
-import Distribution.PackageDescription (PackageDescription (..), PackageIdentifier (..))
 import Data.Foldable (for_)
+import Distribution.PackageDescription (PackageDescription (..), PackageIdentifier (..))
+import Distribution.Types.GenericPackageDescription (GenericPackageDescription (..))
+import Lint.Cabal (readGenericPackageDescription, runLint)
 import System.FilePath.Glob (glob)
-import Lint.Cabal (runLint, readGenericPackageDescription)
 
 main :: IO ()
 main = void . runLint $ do
@@ -28,4 +28,3 @@ main = void . runLint $ do
 --------------------------------------------------------------------------------
 -- Lints
 --------------------------------------------------------------------------------
-

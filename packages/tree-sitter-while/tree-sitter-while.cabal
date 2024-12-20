@@ -1,16 +1,29 @@
-cabal-version:   3.4
-name:            tree-sitter-while
-version:         0.0.0.0
-license:         AGPL-3.0-only
-synopsis:        Tree-sitter grammar/parser for the WHILE language
+cabal-version:      3.4
+name:               tree-sitter-while
+version:            0.0.0.0
+license:            AGPL-3.0-only
+synopsis:           Tree-sitter grammar/parser for the WHILE language
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/tree-sitter-while/#README>
 
-author:          Wen Kokke
-maintainer:      wenkokke@users.noreply.github.com
-category:        Language
-build-type:      Custom
-extra-doc-files: CHANGELOG.md
+author:             Wen Kokke
+maintainer:         wenkokke@users.noreply.github.com
+category:           Language
+build-type:         Custom
+extra-doc-files:    CHANGELOG.md
+extra-tmp-files:
+  src/parser.c
+  src/tree_sitter/alloc.h
+  src/tree_sitter/array.h
+  src/tree_sitter/parser.h
+
+extra-source-files:
+  bindings/c/tree-sitter-while.h
+  bindings/c/tree-sitter-while.pc.in
+  grammar.js
+  package.json
+  tree-sitter.json
+
 data-files:
   src/node-types.json
   test/corpus/*.txt
@@ -24,8 +37,8 @@ common language
 
 custom-setup
   setup-depends:
-      base      >=4
-    , Cabal     >=2.0.0.2
+    , base   >=4.13 && <5
+    , Cabal  >=2.0  && <2.16
 
 library
   import:             language
