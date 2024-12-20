@@ -38,8 +38,9 @@ common language
 
 custom-setup
   setup-depends:
-    , base   >=4.13 && <5
-    , Cabal  >=2.0  && <3.16
+    , base     >=4.13 && <5
+    , Cabal    >=2.0  && <3.16
+    , filepath >=1
 
 library
   import:           language
