@@ -69,7 +69,10 @@ jobs:
       - name: 🛠️ Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.javascript.node.version || steps.dev-dependencies.outputs.node }} 
+          node-version: ${{ matrix.javascript.node.version || steps.dev-dependencies.outputs.node }}
+
+      - name: 🛠️ Install Node dependencies
+        run: npm ci
 
       - name: 🛠️ Install Haskell
         uses: haskell-actions/setup@v2
