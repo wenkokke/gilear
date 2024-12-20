@@ -9,7 +9,7 @@ description:
 author:          Wen Kokke
 maintainer:      wenkokke@users.noreply.github.com
 category:        Language
-build-type:      Simple
+build-type:      Custom
 extra-doc-files: CHANGELOG.md
 data-files:
   src/node-types.json
@@ -21,6 +21,11 @@ common language
 
   if impl(ghc <9.6.1)
     ghc-options: -optc=-Wno-incompatible-pointer-types-discards-qualifiers
+
+custom-setup
+  setup-depends:
+      base      >=4
+    , Cabal     >=2.0.0.2
 
 library
   import:             language

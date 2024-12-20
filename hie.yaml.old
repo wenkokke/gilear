@@ -1,0 +1,58 @@
+cradle:
+  cabal:
+    - path: "./packages/base-compat-constptr/src"
+      component: "base-compat-constptr:lib:base-compat-constptr"
+
+    - path: "./packages/gilear/app"
+      component: "gilear:exe:gilear"
+
+    - path: "./packages/gilear/src"
+      component: "gilear:lib:gilear"
+
+    - path: "./packages/gilear/test"
+      component: "gilear:test:gilear-test"
+
+    - path: "./packages/gilear-lsp/app"
+      component: "gilear-lsp:exe:gilear-lsp"
+
+    - path: "./packages/gilear-lsp/src"
+      component: "gilear-lsp:lib:gilear-lsp"
+
+    - path: "./packages/gilear-lsp/test"
+      component: "gilear-lsp:test:gilear-lsp-test"
+
+    - path: "./packages/tree-sitter/src"
+      component: "tree-sitter:lib:tree-sitter"
+
+    - path: "./packages/tree-sitter/src-corpus"
+      component: "tree-sitter:lib:tree-sitter-corpus"
+
+    - path: "./packages/tree-sitter/src-sexp"
+      component: "tree-sitter:lib:tree-sitter-sexp"
+
+    - path: "./packages/tree-sitter/test"
+      component: "tree-sitter:test:tree-sitter-test"
+
+    - path: "./packages/tree-sitter-capi/src"
+      component: "tree-sitter-capi:lib:tree-sitter-capi"
+
+    - path: "./packages/tree-sitter-capi/test"
+      component: "tree-sitter-capi:test:tree-sitter-capi-test"
+
+    - path: "./packages/tree-sitter-while/src"
+      component: "tree-sitter-while:lib:tree-sitter-while"
+
+    - path: "./packages/tree-sitter-gilear/bindings/haskell/src"
+      component: "tree-sitter-gilear:lib:tree-sitter-gilear"
+
+    - path: "./packages/tree-sitter-gilear/bindings/haskell/test"
+      component: "tree-sitter-gilear:test:tree-sitter-gilear-test"
+
+    - path: "./prototypes/gilear-animate-ast/app"
+      component: "gilear-animate-ast:exe:gilear-animate-ast"
+
+    - path: "./scripts/lint-cabal/src"
+      component: "lint-cabal:lib:lint-cabal"
+
+    - path: "./scripts/lint-cabal"
+      component: "lint-cabal:exe:lint-cabal"
