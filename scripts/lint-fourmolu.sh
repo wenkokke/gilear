@@ -15,7 +15,7 @@ if [ ! "${FOURMOLU_ACTUAL_VERSION}" = "${FOURMOLU_EXPECT_VERSION}" ]; then
     exit 1
 fi
 
-# Format Haskell source
-echo "Format Haskell files..."
+# Lint Haskell source
+echo "Lint Haskell files..."
 # shellcheck disable=SC2086
-git ls-files --exclude-standard --no-deleted --deduplicate '*.hs' | xargs -L50 ${FOURMOLU} --mode=inplace
+git ls-files --exclude-standard --no-deleted --deduplicate '*.hs' | xargs -L50 ${FOURMOLU} --mode=check

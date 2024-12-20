@@ -1,0 +1,45 @@
+name: "Setup cabal-fmt"
+description: "Install a specific cabal-fmt version"
+inputs:
+  cabal-fmt-version:
+    required: true
+    description: "Version of cabal-fmt"
+outputs:
+  cabal-fmt-bin:
+    description: "Path to the cabal-fmt binary"
+    value: ${{ steps.setup-cabal-fmt-linux.outputs.cabal-fmt-bin || steps.setup-cabal-fmt-macos.outputs.cabal-fmt-bin }}
+  cabal-fmt-dir:
+    description: "Path to the cabal-fmt directory"
+    value: ${{ steps.setup-cabal-fmt-linux.outputs.cabal-fmt-dir || steps.setup-cabal-fmt-macos.outputs.cabal-fmt-dir }}
+runs:
+  using: composite
+  steps:
+      - name: 💾 Restore cache
+        uses: actions/cache/restore@v4
+        if: ${{ !env.ACT }}
+        id: cache-cabal-fmt
+        with:
+          path: ${{ steps.setup-haskell.outputs.cabal-store }}
+          key: ${{ matrix.os.name }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-${{ steps.setup-haskell.outputs.cabal-version }}
+      
+      - name: 🛠️ Install Haskell
+        if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
+        uses: haskell-actions/setup@v2
+        id: setup-haskell
+
+      - name: 🛠️ Install cabal-fmt
+        if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
+        run: |
+          mkdir --parents "$HOME/.cabal-fmt/bin"
+          cabal install cabal-fmt-${{ inputs.cabal-fmt-version }} --overwrite-policy=always --install-method=copy --installdir="$HOME/.cabal-fmt/bin"
+          echo "cabal-fmt-bin=$HOME/.cabal-fmt/bin/cabal-fmt" >> "$GITHUB_OUTPUT"
+          echo "cabal-fmt-dir=$HOME/.cabal-fmt/bin" >> "$GITHUB_OUTPUT"
+
+      - name: 💾 Save cache
+        uses: actions/cache/save@v4
+        if: ${{ !env.ACT && steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ${{ steps.setup-haskell.outputs.cabal-store }}
+            $HOME/.cabal-fmt/bin
+          key: ${{ steps.cache-cabal-fmt.outputs.cache-primary-key }}

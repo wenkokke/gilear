@@ -213,6 +213,34 @@ jobs:
           HLINT: ${{ steps.setup-hlint.outputs.hlint-bin }}
 
   #############################################################################
+  # Lint with Fourmolu
+  #############################################################################
+
+  lint-fourmolu:
+    name: "Lint with Fourmolu"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: 🗄️ Read dev-dependencies
+        run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
+        id: dev-dependencies
+
+      - name: 🛠️ Install Fourmolu
+        uses: ./.github/actions/setup-fourmolu
+        with:
+          fourmolu-version: ${{ steps.dev-dependencies.outputs.fourmolu }}
+        id: setup-fourmolu
+
+      - name: 🎗️ Lint with Fourmolu
+        run: ./scripts/lint-fourmolu.sh
+        env:
+          FOURMOLU: ${{ steps.setup-fourmolu.outputs.fourmolu-bin }}
+
+  #############################################################################
   # Lint with Prettier
   #############################################################################
 

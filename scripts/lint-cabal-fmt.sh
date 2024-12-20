@@ -19,7 +19,7 @@ if [ ! "${CABAL_FMT_ACTUAL_VERSION}" = "${CABAL_FMT_EXPECT_VERSION}" ]; then
     exit 1
 fi
 
-# Format Cabal source
-echo "Format Cabal files..."
+# Lint Cabal source
+echo "Lint Cabal files..."
 # shellcheck disable=SC2086
-git ls-files --exclude-standard --no-deleted --deduplicate '*.cabal' | xargs -L1 ${CABAL_FMT} --inplace
+git ls-files --exclude-standard --no-deleted --deduplicate '*.cabal' | xargs -L1 ${CABAL_FMT} --check

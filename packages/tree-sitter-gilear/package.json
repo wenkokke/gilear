@@ -41,8 +41,8 @@
     }
   },
   "scripts": {
+    "preinstall": "tree-sitter generate",
     "install": "node-gyp-build",
-    "generate": "tree-sitter generate",
     "prestart": "tree-sitter build --wasm",
     "start": "tree-sitter playground",
     "test": "node --test bindings/node/*_test.js"
