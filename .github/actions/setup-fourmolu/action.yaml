@@ -34,6 +34,7 @@ runs:
           cabal install fourmolu-${{ inputs.fourmolu-version }} --overwrite-policy=always --install-method=copy --installdir="$HOME/.fourmolu/bin"
           echo "fourmolu-bin=$HOME/.fourmolu/bin/fourmolu" >> "$GITHUB_OUTPUT"
           echo "fourmolu-dir=$HOME/.fourmolu/bin" >> "$GITHUB_OUTPUT"
+        shell: sh
 
       - name: 💾 Save cache
         uses: actions/cache/save@v4
