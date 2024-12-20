@@ -109,6 +109,8 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: 🗄️ Read dev-dependencies
         run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
@@ -135,6 +137,8 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: 🗄️ Read dev-dependencies
         run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
@@ -160,6 +164,8 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: 🗄️ Read dev-dependencies
         run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
@@ -186,6 +192,8 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: 🛠️ Install Prettier
         run: npm i
@@ -203,6 +211,8 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: 🗄️ Read dev-dependencies
         run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
