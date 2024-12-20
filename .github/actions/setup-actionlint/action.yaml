@@ -22,8 +22,7 @@ runs:
         key: ${{ runner.os }}-actionlint-${{ inputs.actionlint-version }}
       id: cache-actionlint
 
-    - name: 🛠️ Install actionlint (POSIX)
-      if: ${{ runner.os == 'Linux' || runner.os == 'macOS' }}
+    - name: 🛠️ Install actionlint
       run: |
         mkdir --parents "$HOME/.actionlint/bin"
         bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) ${{ inputs.actionlint-version }} "$HOME/.actionlint/bin"
@@ -31,13 +30,6 @@ runs:
         echo "actionlint-dir=$HOME/.actionlint/bin" >> "$GITHUB_OUTPUT"
       shell: bash
       id: setup-actionlint
-
-    - name: 🛠️ Install ShellCheck (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      run: |
-        echo "Windows is unsupported"
-        exit 1
-      shell: sh
 
     - name: 💾 Save Cabal dependencies
       uses: actions/cache/save@v4

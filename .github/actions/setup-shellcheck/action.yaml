@@ -7,10 +7,10 @@ inputs:
 outputs:
   shellcheck-bin:
     description: "Path to the ShellCheck binary"
-    value: ${{ steps.setup-shellcheck.outputs.shellcheck-bin }}
+    value: ${{ steps.setup-shellcheck-linux.outputs.shellcheck-bin || steps.setup-shellcheck-macos.outputs.shellcheck-bin }}
   shellcheck-dir:
     description: "Path to the ShellCheck directory"
-    value: ${{ steps.setup-shellcheck.outputs.shellcheck-dir }}
+    value: ${{ steps.setup-shellcheck-linux.outputs.shellcheck-dir || steps.setup-shellcheck-macos.outputs.shellcheck-dir }}
 runs:
   using: composite
   steps:
@@ -32,7 +32,7 @@ runs:
         echo "shellcheck-bin=$HOME/.shellcheck/bin/shellcheck" >> "$GITHUB_OUTPUT"
         echo "shellcheck-dir=$HOME/.shellcheck/bin" >> "$GITHUB_OUTPUT"
       shell: sh
-      id: setup-shellcheck
+      id: setup-shellcheck-linux
 
     - name: 🛠️ Install ShellCheck (macOS)
       if: ${{ runner.os == 'macOS' }}
@@ -44,7 +44,7 @@ runs:
         echo "shellcheck-bin=$HOME/.shellcheck/bin/shellcheck" >> "$GITHUB_OUTPUT"
         echo "shellcheck-dir=$HOME/.shellcheck/bin" >> "$GITHUB_OUTPUT"
       shell: sh
-      id: setup-shellcheck
+      id: setup-shellcheck-macos
 
     - name: 🛠️ Install ShellCheck (Windows)
       if: ${{ runner.os == 'Windows' }}
