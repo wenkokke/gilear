@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module TreeSitter.Internal (
   -- * ABI Versioning
@@ -58,6 +59,7 @@ module TreeSitter.Internal (
   unsafeParserDelete,
   withParser,
   parserSetLanguage,
+  parserLanguage,
   parserSetIncludedRanges,
   parserIncludedRanges,
   parserSetLogger,
