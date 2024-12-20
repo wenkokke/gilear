@@ -70,12 +70,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.javascript.node.version || steps.dev-dependencies.outputs.node }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: "npm"
+          cache-dependency-path: "package-lock.json"
         id: setup-node
 
       - name: 🛠️ Install Node dependencies
-        if: ${{ !env.ACT && steps.setup-node.output.cache-hit != 'true' }}
+        if: ${{ !env.ACT && steps.setup-node.outputs.cache-hit != 'true' }}
         run: npm ci
 
       - name: 🛠️ Install Haskell
