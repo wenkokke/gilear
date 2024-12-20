@@ -1,6 +1,8 @@
 {
   "name": "gilear",
   "workspaces": [
+    "packages/tree-sitter-gilear",
+    "packages/tree-sitter-while",
     "packages/vscode-gilear"
   ],
   "devDependencies": {
