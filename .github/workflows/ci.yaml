@@ -185,6 +185,34 @@ jobs:
         run: ./scripts/lint-cabal.sh
 
   #############################################################################
+  # Lint with cabal-fmt
+  #############################################################################
+
+  lint-cabal-fmt:
+    name: "Lint with cabal-fmt"
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: 🗄️ Read dev-dependencies
+        run: cat "./scripts/dev-dependencies.txt" >> "$GITHUB_OUTPUT"
+        id: dev-dependencies
+
+      - name: 🛠️ Install cabal-fmt
+        uses: ./.github/actions/setup-cabal-fmt
+        with:
+          cabal-fmt-version: ${{ steps.dev-dependencies.outputs.cabal-fmt }}
+        id: setup-cabal-fmt
+
+      - name: 🎗️ Lint with cabal-fmt
+        run: ./scripts/lint-cabal-fmt.sh
+        env:
+          FOURMOLU: ${{ steps.setup-cabal-fmt.outputs.cabal-fmt-bin }}
+
+  #############################################################################
   # Lint with HLint
   #############################################################################
 
