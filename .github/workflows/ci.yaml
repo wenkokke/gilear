@@ -75,7 +75,7 @@ jobs:
         id: setup-node
 
       - name: 🛠️ Install Node dependencies
-        if: ${{ !env.ACT && setups.setup-node.output.cache-hit != 'true' }}
+        if: ${{ !env.ACT && steps.setup-node.output.cache-hit != 'true' }}
         run: npm ci
 
       - name: 🛠️ Install Haskell
