@@ -17,6 +17,10 @@ defaults:
   run:
     shell: "sh"
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
 jobs:
   #############################################################################
   # Build
