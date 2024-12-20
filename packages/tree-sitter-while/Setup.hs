@@ -2,7 +2,7 @@
 {- cabal:
 build-depends:
   , base   >=4.13 && <5
-  , Cabal  >=2.0  && <2.16
+  , Cabal  >=2.0  && <3.16
 default-language:   Haskell2010
 ghc-options:        -Wall
 -}
