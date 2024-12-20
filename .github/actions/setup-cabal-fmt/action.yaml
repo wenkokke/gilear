@@ -19,8 +19,8 @@ runs:
         if: ${{ !env.ACT }}
         id: cache-cabal-fmt
         with:
-          path: ${{ steps.setup-haskell.outputs.cabal-store }}
-          key: ${{ matrix.os.name }}-ghc-${{ steps.setup-haskell.outputs.ghc-version }}-cabal-${{ steps.setup-haskell.outputs.cabal-version }}
+          path: "$HOME/.cabal-fmt/bin"
+          key: ${{ matrix.os.name }}-cabal-fmt-${{ inputs.cabal-fmt-version }}
       
       - name: 🛠️ Install Haskell
         if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
@@ -40,7 +40,5 @@ runs:
         uses: actions/cache/save@v4
         if: ${{ !env.ACT && steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
         with:
-          path: |
-            ${{ steps.setup-haskell.outputs.cabal-store }}
-            $HOME/.cabal-fmt/bin
+          path: "$HOME/.cabal-fmt/bin"
           key: ${{ steps.cache-cabal-fmt.outputs.cache-primary-key }}
