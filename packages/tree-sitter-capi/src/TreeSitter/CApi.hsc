@@ -212,6 +212,7 @@ module TreeSitter.CApi
   , ts_lookahead_iterator_current_symbol
   , ts_lookahead_iterator_current_symbol_name
 
+#ifdef TREE_SITTER_WASM
     -- * WebAssembly Integration
   , TSWasmEngine
   , TSWasmStore
@@ -227,13 +228,16 @@ module TreeSitter.CApi
   , ts_language_is_wasm
   , ts_parser_set_wasm_store
   , ts_parser_take_wasm_store
+#endif
 
     -- * Global Configuration
   , ts_set_allocator
   ) where
 
+#ifdef TREE_SITTER_WASM
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS (packCString, useAsCString)
+#endif
 import Data.Void (Void)
 import Data.Word
 import Foreign
@@ -3726,7 +3730,6 @@ foreign import capi unsafe "tree_sitter/api.h ts_lookahead_iterator_current_symb
 {- Section - WebAssembly Integration -}
 {-------------------------------------}
 
--- <<< TREE_SITTER_WASM 
 #ifdef TREE_SITTER_WASM
 
 {-|
@@ -3903,7 +3906,6 @@ foreign import capi unsafe "tree_sitter/api.h ts_parser_take_wasm_store"
     Ptr TSParser ->
     IO (Ptr TSWasmStore)
 
--- >>> TREE_SITTER_WASM
 #endif
 
 {----------------------------------}
