@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "description": "Parser for the Gilear language",
   "repository": "github:tree-sitter/tree-sitter-gilear",
-  "license": "AGPL-3.0-only",
   "author": {
     "name": "Wen Kokke",
     "email": "wenkokke@users.noreply.github.com"
