@@ -3,12 +3,6 @@ cradle:
     - path: "./packages/base-compat-constptr/src"
       component: "base-compat-constptr:lib:base-compat-constptr"
 
-    - path: "./packages/control-rc/src"
-      component: "control-rc:lib:control-rc"
-
-    - path: "./packages/control-rc/test"
-      component: "control-rc:test:control-rc-test"
-
     - path: "./packages/gilear/app"
       component: "gilear:exe:gilear"
 
@@ -56,6 +50,9 @@ cradle:
 
     - path: "./prototypes/gilear-animate-ast/app"
       component: "gilear-animate-ast:exe:gilear-animate-ast"
+
+    - path: "./scripts/lint-cabal/src"
+      component: "lint-cabal:lib:lint-cabal"
 
     - path: "./scripts/lint-cabal"
       component: "lint-cabal:exe:lint-cabal"

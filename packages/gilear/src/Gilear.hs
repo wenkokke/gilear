@@ -4,7 +4,6 @@
 
 module Gilear where
 
-import Control.Concurrent.Class.MonadSTM (MonadSTM)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
@@ -19,7 +18,7 @@ import Data.Kind (Type)
 
   This is an environment, rather than state, because it is intended to be
   used with the reader monad, rather than the state monad. However, it is
-  intended to hold references to mutable state ('TVar').
+  intended to hold references to mutable state.
 -}
 type TCEnv :: Type
 data TCEnv = TCEnv
