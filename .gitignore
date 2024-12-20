@@ -32,16 +32,6 @@ devenv.local.nix
 # direnv
 .direnv
 
-# tree-sitter-gilear
-/packages/tree-sitter-gilear/src/*.json
-/packages/tree-sitter-gilear/src/parser.c
-/packages/tree-sitter-gilear/src/tree_sitter/*
-
-# tree-sitter-while
-/packages/tree-sitter-while/src/*.json
-/packages/tree-sitter-while/src/parser.c
-/packages/tree-sitter-while/src/tree_sitter/*
-
 # packages/vscode-gilear
 /packages/vscode-gilear/out/
 /packages/vscode-gilear/tsconfig.tsbuildinfo
