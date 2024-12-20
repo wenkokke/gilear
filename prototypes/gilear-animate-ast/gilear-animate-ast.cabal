@@ -5,7 +5,7 @@ synopsis:        Prototype for animating changes to the AST.
 description:
   See <https://github.com/wenkokke/gilear/blob/main/prototypes/gilear-animate-ast/#README>
 
-license:         CC-BY-NC-ND-4.0
+license:
 author:          Wen Kokke
 maintainer:      wenkokke@users.noreply.github.com
 category:        Language

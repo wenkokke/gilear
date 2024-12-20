@@ -5,8 +5,7 @@ synopsis:        Backport of 'Foreign.C.ConstPtr'
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/base-compat-constptr/#README>
 
-license:         BSD-3-Clause
-license-file:    LICENSE
+license:         AGPL-3
 author:          Wen Kokke
 maintainer:      wenkokke@users.noreply.github.com
 category:        Foreign

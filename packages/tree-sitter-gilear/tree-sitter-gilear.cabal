@@ -1,7 +1,6 @@
 cabal-version:      3.4
 name:               tree-sitter-gilear
 version:            0.0.0.0
-license:            CC-BY-NC-ND-4.0
 synopsis:           Tree-sitter grammar/parser for Gilear
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/tree-sitter-gilear/#README>

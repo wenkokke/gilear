@@ -27,7 +27,7 @@ CWD=$(pwd)
 for PACKAGE_CABAL_FILE; do
     PACKAGE_DIR=$(dirname "${PACKAGE_CABAL_FILE}")
     echo "Lint ${PACKAGE_DIR}"
-    cd "${PACKAGE_DIR}" && ${CABAL} check || echo > "${FAIL}"
+    cd "${PACKAGE_DIR}" && ${CABAL} check -ilicense-none || echo > "${FAIL}"
     cd "${CWD}" || exit 2
     echo
 done

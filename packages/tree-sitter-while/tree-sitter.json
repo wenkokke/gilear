@@ -11,7 +11,7 @@
   ],
   "metadata": {
     "version": "1.0.0",
-    "license": "BSD-3-Clause",
+    "license": "AGPL-3",
     "description": "Tree-sitter grammar/parser for the WHILE language",
     "authors": [
       {

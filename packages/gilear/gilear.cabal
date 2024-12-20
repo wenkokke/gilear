@@ -1,7 +1,6 @@
 cabal-version:   3.4
 name:            gilear
 version:         0.0.0.0
-license:         CC-BY-NC-ND-4.0
 synopsis:        Compiler for the Gilear language
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/gilear/#README>

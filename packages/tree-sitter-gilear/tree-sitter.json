@@ -11,7 +11,7 @@
   ],
   "metadata": {
     "version": "0.0.0",
-    "license": "NONE",
+    "license": "AGPL-3",
     "description": "Parser for the Gilear language",
     "authors": [
       {
