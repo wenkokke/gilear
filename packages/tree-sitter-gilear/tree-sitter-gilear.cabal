@@ -11,14 +11,14 @@ build-type:         Simple
 category:           Language
 extra-doc-files:    CHANGELOG.md
 extra-source-files:
-  src/parser.c
-  src/tree_sitter/alloc.h
-  src/tree_sitter/array.h
-  src/tree_sitter/parser.h
   bindings/c/tree-sitter-gilear.h
   bindings/c/tree-sitter-gilear.pc.in
   grammar.js
   package.json
+  src/parser.c
+  src/tree_sitter/alloc.h
+  src/tree_sitter/array.h
+  src/tree_sitter/parser.h
   tree-sitter.json
 
 data-files:
