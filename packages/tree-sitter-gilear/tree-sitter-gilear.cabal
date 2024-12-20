@@ -7,16 +7,14 @@ description:
 
 author:             Wen Kokke
 maintainer:         wenkokke@users.noreply.github.com
-build-type:         Custom
+build-type:         Simple
 category:           Language
 extra-doc-files:    CHANGELOG.md
-extra-tmp-files:
+extra-source-files:
   src/parser.c
   src/tree_sitter/alloc.h
   src/tree_sitter/array.h
   src/tree_sitter/parser.h
-
-extra-source-files:
   bindings/c/tree-sitter-gilear.h
   bindings/c/tree-sitter-gilear.pc.in
   grammar.js
@@ -35,11 +33,6 @@ common language
 
   if impl(ghc <9.6.1)
     ghc-options: -optc=-Wno-incompatible-pointer-types-discards-qualifiers
-
-custom-setup
-  setup-depends:
-    , base      >=4.13 && <5
-    , Cabal     >=2.0  && <3.16
 
 library
   import:           language

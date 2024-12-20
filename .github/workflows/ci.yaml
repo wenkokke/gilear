@@ -120,6 +120,14 @@ jobs:
           path: ${{ steps.setup-haskell.outputs.cabal-store }}
           key: ${{ steps.cache-haskell.outputs.cache-primary-key }}
 
+      - name: 🏗️ Generate tree-sitter-gilear
+        run: npm exec tree-sitter generate
+        working-directory: packages/tree-sitter-gilear
+
+      - name: 🏗️ Generate tree-sitter-while
+        run: npm exec tree-sitter generate
+        working-directory: packages/tree-sitter-while
+
       - name: 🏗️ Build
         run: cabal build all --project-file=${{ matrix.haskell.cabal.project-file }}
 
