@@ -29,7 +29,7 @@ treeSitterGenerate :: PackageDescription -> LocalBuildInfo -> UserHooks -> Build
 treeSitterGenerate _packageDescription localBuildInfo _userHooks buildFlags = do
     let verbosity = fromFlagOrDefault normal (buildVerbosity buildFlags)
     let LocalBuildInfo {withPrograms} = localBuildInfo
-    runDbProgram verbosity npmProgram withPrograms ["exec", "tree-sitter", "generate"]
+    runDbProgram verbosity npmProgram withPrograms ["exec", "--yes", "--package=tree-sitter-cli", "tree-sitter", "generate"]
 
 npmProgram :: Program
 npmProgram = simpleProgram "npm"

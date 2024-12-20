@@ -45,6 +45,9 @@ jobs:
             cabal:
               version: "" # use version from dev-dependencies
               project-file: "cabal.project.debug"
+        javascript:
+          - node:
+              version: "" # use version from dev-dependencies
 
     steps:
       - name: 📥 Checkout repository
@@ -62,6 +65,11 @@ jobs:
 
       - name: 🛠️ Install Graphviz
         uses: ts-graphviz/setup-graphviz@v2
+
+      - name: 🛠️ Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.javascript.node.version || steps.dev-dependencies.outputs.node }} 
 
       - name: 🛠️ Install Haskell
         uses: haskell-actions/setup@v2
