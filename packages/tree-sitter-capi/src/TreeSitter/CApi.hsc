@@ -3726,6 +3726,9 @@ foreign import capi unsafe "tree_sitter/api.h ts_lookahead_iterator_current_symb
 {- Section - WebAssembly Integration -}
 {-------------------------------------}
 
+-- <<< TREE_SITTER_WASM 
+#ifdef TREE_SITTER_WASM
+
 {-|
   > typedef struct wasm_engine_t TSWasmEngine;
   -}
@@ -3899,6 +3902,9 @@ foreign import capi unsafe "tree_sitter/api.h ts_parser_take_wasm_store"
   ts_parser_take_wasm_store ::
     Ptr TSParser ->
     IO (Ptr TSWasmStore)
+
+-- >>> TREE_SITTER_WASM
+#endif
 
 {----------------------------------}
 {- Section - Global Configuration -}
