@@ -22,7 +22,7 @@ tests =
     , test_ts_parser_parse_fails_without_language
     ]
 
--- | Is deleting a @'TSLanguage'@ multiple times safe?
+-- | Is deleting a @`TreeSitter.CApi.TSLanguage`@ multiple times safe?
 test_ts_language_delete :: TestTree
 test_ts_language_delete =
   testCase "ts_language_delete" $ do
@@ -30,7 +30,7 @@ test_ts_language_delete =
     ts_language_delete ts_language
     ts_language_delete ts_language
 
--- | Does @'ts_parser_parse_string'@ return @NULL@ when the parser does not have a language assigned.
+-- | Does @`ts_parser_parse_string`@ return @NULL@ when the parser does not have a language assigned.
 test_ts_parser_parse_fails_without_language :: TestTree
 test_ts_parser_parse_fails_without_language =
   testCase "test_ts_parser_parse fails without language" $ do
