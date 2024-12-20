@@ -3,21 +3,17 @@
 build-depends:
   , base     >=4.13 && <5
   , Cabal    >=2.0  && <3.16
-  , filepath >=1
 default-language:   Haskell2010
 ghc-options:        -Wall
 -}
 {-# LANGUAGE NamedFieldPuns #-}
 
 import Distribution.Simple (UserHooks (..), defaultMainWithHooks, simpleUserHooks)
-import Distribution.Simple.BuildPaths (exeExtension)
 import Distribution.Simple.Program (Program, runDbProgram, simpleProgram)
 import Distribution.Simple.Setup (BuildFlags (buildVerbosity), fromFlagOrDefault)
-import Distribution.System (buildPlatform)
 import Distribution.Types.LocalBuildInfo (LocalBuildInfo (LocalBuildInfo, withPrograms))
 import Distribution.Types.PackageDescription (PackageDescription)
 import Distribution.Verbosity (normal)
-import System.FilePath ((<.>))
 
 main :: IO ()
 main =
@@ -36,4 +32,4 @@ treeSitterGenerate _packageDescription localBuildInfo _userHooks buildFlags = do
   runDbProgram verbosity npmProgram withPrograms ["exec", "--yes", "tree-sitter", "generate"]
 
 npmProgram :: Program
-npmProgram = simpleProgram ("npm" <.> exeExtension buildPlatform)
+npmProgram = simpleProgram "npm"
