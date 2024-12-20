@@ -85,6 +85,15 @@ jobs:
           ghc-version: ${{ matrix.haskell.ghc.version || steps.dev-dependencies.outputs.ghc }}
           cabal-version: ${{ matrix.haskell.cabal.version || steps.dev-dependencies.outputs.cabal }}
 
+      - name: 🛠️ Install ICU
+        if: ${{ runner.os == 'Windows' }}
+        name: Install ICU (Windows)
+        run: |
+          $env:PATH = "C:\msys64\usr\bin;$env:PATH"
+          pacman -v --noconfirm -S mingw-w64-x86_64-pkgconf mingw-w64-x86_64-icu mingw-w64-x86_64-binutils
+          echo "C:\msys64\mingw64\bin" | Out-File -FilePath "$env:GITHUB_PATH" -Append
+        shell: pwsh
+
       - name: 🛠️ Configure
         run: |
           cabal configure --project-file=${{ matrix.haskell.cabal.project-file }}
