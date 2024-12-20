@@ -6,10 +6,12 @@ build-depends:
 default-language:   Haskell2010
 ghc-options:        -Wall
 -}
+{-# LANGUAGE NamedFieldPuns #-}
 
 import Distribution.Simple (UserHooks (..), defaultMainWithHooks, simpleUserHooks)
 import Distribution.Simple.Program (Program, runDbProgram, simpleProgram)
 import Distribution.Simple.Setup (BuildFlags (buildVerbosity), fromFlagOrDefault)
+import Distribution.System (Platform (..), OS (Windows), buildPlatform)
 import Distribution.Types.LocalBuildInfo (LocalBuildInfo (LocalBuildInfo, withPrograms))
 import Distribution.Types.PackageDescription (PackageDescription)
 import Distribution.Verbosity (normal)
@@ -31,4 +33,6 @@ treeSitterGenerate _packageDescription localBuildInfo _userHooks buildFlags = do
   runDbProgram verbosity npmProgram withPrograms ["exec", "--yes", "tree-sitter", "generate"]
 
 npmProgram :: Program
-npmProgram = simpleProgram "npm"
+npmProgram = case buildPlatform of
+  Platform _arch Windows -> simpleProgram "npm.exe"
+  _otherwise -> simpleProgram "npm"
