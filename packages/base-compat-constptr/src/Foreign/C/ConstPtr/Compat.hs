@@ -3,7 +3,7 @@
 #else
 {-# LANGUAGE RoleAnnotations #-}
 #endif
-{- | The t'ConstPtr' type was introduced in GHC 9.6.1. However, it is required
+{-| The t'ConstPtr' type was introduced in GHC 9.6.1. However, it is required
   when writing C bindings to a function involving the const annotation using
   the CApi calling convention (see 'Foreign.C.ConstPtr.ConstPtr').
   This module defines t'ConstPtr' for compatibility with earlier versions of

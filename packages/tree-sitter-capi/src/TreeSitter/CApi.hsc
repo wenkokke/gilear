@@ -482,6 +482,17 @@ instance Storable TSInput where
     #{poke TSInput, read} ptr _read
     #{poke TSInput, encoding} ptr _encoding
 
+{-| The type of the @`_read`@ field of the @`TSInput`@ struct.
+
+  > const char *(*read)(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read);
+
+  _TODO_: This type requires an additional C wrapper, as the Haskell FFI cannot automatically marshall a @`TSPoint`@.
+
+  @
+    foreign import ccall "wrapper"
+      mkTSReadFunPtr :: TSRead x -> IO (FunPtr (TSRead x))
+  @
+ -}
 type TSRead x =
   Ptr x ->
   ( #{type uint32_t} ) ->
@@ -489,11 +500,6 @@ type TSRead x =
   ( #{type uint32_t} ) ->
   ConstPtr CChar ->
   IO ()
-
--- NOTE: This requires an additional C wrapper, because
---       the Haskell FFI cannot marshall TSPoint.
--- foreign import ccall "wrapper"
---   mkTSReadFunPtr :: TSRead x -> IO (FunPtr (TSRead x))
 
 {-|
   > typedef enum TSLogType {
@@ -540,12 +546,18 @@ instance Storable TSLogger where
     #{poke TSLogger, payload} ptr _payload
     #{poke TSLogger, log} ptr _log
 
+{-| The type of the @`_log`@ field of the @`TSLogger`@ struct.
+
+ > void (*log)(void *payload, TSLogType log_type, const char *buffer);
+ -}
 type TSLog a =
   Ptr a ->
   TSLogType ->
   ConstPtr CChar ->
   IO ()
 
+{-| Allocate a C function pointer for a `TSLog` function.
+ -}
 foreign import ccall "wrapper"
   mkTSLogFunPtr :: TSLog x -> IO (FunPtr (TSLog x)) 
 
@@ -618,6 +630,10 @@ instance Storable TSNode where
     #{poke TSNode, id} ptr (unConstPtr _id)
     #{poke TSNode, tree} ptr (unConstPtr _tree)
 
+{-| The type of the @`_context`@ field of a @`TSNode`@ struct.
+
+ > uint32_t context[4];
+ -}
 data
   TSNodeContext = TSNodeContext
     {-# UNPACK #-} !( #{type uint32_t} )
@@ -625,11 +641,19 @@ data
     {-# UNPACK #-} !( #{type uint32_t} )
     {-# UNPACK #-} !( #{type uint32_t} )
 
+{-| Peek a @`TSNodeContext`@.
+
+    This does the same as `peek` would, except that @`TSNodeContext`@ is not an instance of `Storable`.
+ -}
 peekTSNodeContext :: Ptr ( #{type uint32_t} ) -> IO TSNodeContext
 peekTSNodeContext ptr = do
   [x0, x1, x2, x3] <- peekArray 4 ptr
   return $ TSNodeContext x0 x1 x2 x3
 
+{-| Poke a @`TSNodeContext`@.
+
+    This does the same as `poke` would, except that @`TSNodeContext`@ is not an instance of `Storable`.
+ -}
 pokeTSNodeContext :: Ptr ( #{type uint32_t} ) -> TSNodeContext -> IO ()
 pokeTSNodeContext ptr (TSNodeContext x0 x1 x2 x3) = do
   pokeArray ptr [x0, x1, x2, x3]
@@ -662,17 +686,29 @@ instance Storable TSTreeCursor where
     #{poke TSTreeCursor, id} ptr (unConstPtr _id)
     pokeTSTreeCursorContext ( #{ptr TSTreeCursor, context} ptr ) _context
 
+{-| The type of the @`_context`@ field of a @`TSTreeCursor`@ struct.
+
+ > uint32_t context[3];
+ -}
 data
   TSTreeCursorContext = TSTreeCursorContext
     {-# UNPACK #-} !( #{type uint32_t} )
     {-# UNPACK #-} !( #{type uint32_t} )
     {-# UNPACK #-} !( #{type uint32_t} )
 
+{-| Peek a @`TSTreeCursorContext`@.
+
+    This does the same as `peek` would, except that @`TSTreeCursorContext`@ is not an instance of `Storable`.
+ -}
 peekTSTreeCursorContext :: Ptr ( #{type uint32_t} ) -> IO TSTreeCursorContext
 peekTSTreeCursorContext ptr = do
   [x0, x1, x2] <- peekArray 3 ptr
   return $ TSTreeCursorContext x0 x1 x2
 
+{-| Poke a @`TSTreeCursorContext`@.
+
+    This does the same as `poke` would, except that @`TSTreeCursorContext`@ is not an instance of `Storable`.
+ -}
 pokeTSTreeCursorContext :: Ptr ( #{type uint32_t} ) -> TSTreeCursorContext -> IO ()
 pokeTSTreeCursorContext ptr (TSTreeCursorContext x0 x1 x2) = do
   pokeArray ptr [x0, x1, x2]
@@ -770,19 +806,27 @@ instance Storable TSQueryMatch where
     #{poke TSQueryMatch, capture_count} ptr _capture_count
     pokeTSQueryCapture ( #{ptr TSQueryMatch, captures} ptr ) _captures
 
+{-| Peek an array of @`TSQueryCapture`@.
+
+    This does the same as `peekArray`.
+ -}
 peekTSQueryCapture ::
   ( #{type uint16_t} ) ->
   Ptr TSQueryCapture ->
   IO [TSQueryCapture]
-peekTSQueryCapture _capture_count ptr =
-  peekArray (fromIntegral _capture_count) ptr
+peekTSQueryCapture capture_count ptr =
+  peekArray (fromIntegral capture_count) ptr
 
+{-| Poke an array of @`TSQueryCapture`@.
+
+    This does the same as `pokeArray`.
+ -}
 pokeTSQueryCapture ::
   Ptr TSQueryCapture ->
   [TSQueryCapture] ->
   IO ()
-pokeTSQueryCapture ptr _captures =
-  pokeArray ptr _captures
+pokeTSQueryCapture ptr captures =
+  pokeArray ptr captures
 
 {-|
   > typedef enum TSQueryPredicateStepType {
@@ -810,10 +854,12 @@ pattern TSQueryPredicateStepTypeString = TSQueryPredicateStepType ( #{const TSQu
 
 {-# COMPLETE TSQueryPredicateStepTypeDone, TSQueryPredicateStepTypeCapture, TSQueryPredicateStepTypeString #-}
 
--- typedef struct TSQueryPredicateStep {
---   TSQueryPredicateStepType type;
---   uint32_t value_id;
--- } TSQueryPredicateStep;
+{-|
+ > typedef struct TSQueryPredicateStep {
+ >   TSQueryPredicateStepType type;
+ >   uint32_t value_id;
+ > } TSQueryPredicateStep;
+ -}
 data
   {-# CTYPE "tree_sitter/api.h" "struct TSQueryPredicateStep" #-}
   TSQueryPredicateStep = TSQueryPredicateStep
@@ -832,15 +878,17 @@ instance Storable TSQueryPredicateStep where
     #{poke TSQueryPredicateStep, type} ptr _type
     #{poke TSQueryPredicateStep, value_id} ptr _value_id
 
--- typedef enum TSQueryError {
---   TSQueryErrorNone = 0,
---   TSQueryErrorSyntax,
---   TSQueryErrorNodeType,
---   TSQueryErrorField,
---   TSQueryErrorCapture,
---   TSQueryErrorStructure,
---   TSQueryErrorLanguage,
--- } TSQueryError;
+{-|
+ > typedef enum TSQueryError {
+ >   TSQueryErrorNone = 0,
+ >   TSQueryErrorSyntax,
+ >   TSQueryErrorNodeType,
+ >   TSQueryErrorField,
+ >   TSQueryErrorCapture,
+ >   TSQueryErrorStructure,
+ >   TSQueryErrorLanguage,
+ > } TSQueryError;
+ -}
 newtype
   {-# CTYPE "tree_sitter/api.h" "TSQueryError" #-}
   TSQueryError = TSQueryError
@@ -895,6 +943,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_parser_delete"
     Ptr TSParser ->
     IO ()
 
+{-| C function pointer to @`ts_parser_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_parser_delete"
   p_ts_parser_delete ::
     FunPtr (
@@ -1272,6 +1322,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_tree_delete"
     Ptr TSTree ->
     IO ()
 
+{-| C function pointer to @`ts_tree_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_tree_delete"
   p_ts_tree_delete ::
     FunPtr (
@@ -2664,6 +2716,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_tree_cursor_delete"
     Ptr TSTreeCursor ->
     IO ()
 
+{-| C function pointer to @`ts_tree_cursor_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_tree_cursor_delete"
   p_ts_tree_cursor_delete ::
     FunPtr (
@@ -2997,6 +3051,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_query_delete"
     Ptr TSQuery ->
     IO ()
 
+{-| C function pointer to @`ts_query_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_query_delete"
   p_ts_query_delete ::
     FunPtr (
@@ -3247,6 +3303,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_query_cursor_delete"
     Ptr TSQueryCursor ->
     IO ()
 
+{-| C function pointer to @`ts_query_cursor_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_query_cursor_delete"
   p_ts_query_cursor_delete ::
     FunPtr (
@@ -3479,6 +3537,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_language_delete"
     ConstPtr TSLanguage ->
     IO ()
 
+{-| C function pointer to @`ts_language_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_language_delete"
   p_ts_language_delete ::
     FunPtr (
@@ -3647,6 +3707,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_lookahead_iterator_delete"
     Ptr TSLookaheadIterator ->
     IO ()
 
+{-| C function pointer to @`ts_lookahead_iterator_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_lookahead_iterator_delete"
   p_ts_lookahead_iterator_delete ::
     FunPtr (
@@ -3831,6 +3893,8 @@ foreign import capi unsafe "tree_sitter/api.h ts_wasm_store_delete"
     Ptr TSWasmStore ->
     IO ()
 
+{-| C function pointer to @`ts_wasm_store_delete`@.
+ -}
 foreign import capi unsafe "tree_sitter/api.h &ts_wasm_store_delete"
   p_ts_wasm_store_delete ::
     FunPtr (
