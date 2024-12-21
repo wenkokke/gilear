@@ -6,6 +6,6 @@ fourmolu=0.16.2.0
 ghc=9.8.2
 haddock=2.30.0
 hlint=3.8
-node=20
+node=23
 prettier=3.4.1
 shellcheck=0.10.0
