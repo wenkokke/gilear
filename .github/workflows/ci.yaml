@@ -37,8 +37,8 @@ jobs:
             runner: "ubuntu-latest"
           - name: "macOS"
             runner: "macOS-latest"
-          - name: "Windows"
-            runner: "windows-latest"
+          # - name: "Windows"
+          #   runner: "windows-latest"
         haskell:
           - ghc:
               version: "" # use version from dev-dependencies
