@@ -210,8 +210,15 @@ module TreeSitter.Internal (
   languageNextState,
 
   -- * Lookahead Iterator
-
-  -- * WebAssembly Integration
+  withLookaheadIteratorAsTSLookaheadIteratorPtr,
+  lookaheadIteratorNew,
+  unsafeLookaheadIteratorDelete,
+  lookaheadIteratorResetState,
+  lookaheadIteratorReset,
+  lookaheadIteratorLanguage,
+  lookaheadIteratorNext,
+  lookaheadIteratorCurrentSymbol,
+  lookaheadIteratorCurrentSymbolName,
 
   -- * Global Configuration
 ) where
@@ -591,13 +598,13 @@ instance Exception QueryError where
 withParserAsTSParserPtr :: Parser -> (Ptr C.TSParser -> IO a) -> IO a
 withParserAsTSParserPtr = withForeignPtr . coerce
 
--- | See @'C.ts_parser_new'@.
+-- | See @`C.ts_parser_new`@.
 parserNew :: IO Parser
 parserNew = coerce newForeignPtr C.p_ts_parser_delete =<< C.ts_parser_new
 
 {-| Delete the 'Parser' and free the associated memory.
 
-See @'C.ts_parser_delete'@.
+See @`C.ts_parser_delete`@.
 
 __Warning__: Using the 'Parser' after calling 'unsafeParserDelete' leads to undefined behaviour.
 
@@ -609,13 +616,13 @@ unsafeParserDelete = coerce finalizeForeignPtr
 withParser :: (Parser -> IO a) -> IO a
 withParser = bracket parserNew unsafeParserDelete
 
--- | See @'C.ts_parser_language'@.
+-- | See @`C.ts_parser_language`@.
 parserLanguage :: Parser -> IO Language
 parserLanguage parser =
   withParserAsTSParserPtr parser $
     unsafeToLanguage <=< coerce C.ts_parser_language
 
--- | See @'C.ts_parser_set_language'@.
+-- | See @`C.ts_parser_set_language`@.
 parserSetLanguage :: Parser -> Language -> IO Bool
 parserSetLanguage parser language =
   withParserAsTSParserPtr parser $ \parserPtr -> do
@@ -623,7 +630,7 @@ parserSetLanguage parser language =
       success <- C.ts_parser_set_language parserPtr languagePtr
       pure $ toBool success
 
--- | See @'C.ts_parser_set_included_ranges'@.
+-- | See @`C.ts_parser_set_included_ranges`@.
 parserSetIncludedRanges :: Parser -> [Range] -> IO Bool
 parserSetIncludedRanges parser ranges =
   withParserAsTSParserPtr parser $ \parserPtr -> do
@@ -636,7 +643,7 @@ parserSetIncludedRanges parser ranges =
           (fromIntegral rangesLength)
       pure $ toBool success
 
--- | See @'C.ts_parser_included_ranges'@.
+-- | See @`C.ts_parser_included_ranges`@.
 parserIncludedRanges :: Parser -> IO [Range]
 parserIncludedRanges parser =
   withParserAsTSParserPtr parser $ \parserPtr -> do
@@ -650,7 +657,7 @@ parserIncludedRanges parser =
 
 {-| Set the 'Logger' for a 'Parser'.
 
-  See @'C.ts_parser_set_logger'@.
+  See @`C.ts_parser_set_logger`@.
 -}
 parserSetLogger :: Parser -> Logger -> IO ()
 parserSetLogger parser logger =
@@ -661,7 +668,7 @@ parserSetLogger parser logger =
 
   If no 'Logger' was set, 'parserLogger' returns 'Nothing'.
 
-  See @'C.ts_parser_logger'@.
+  See @`C.ts_parser_logger`@.
 
   __Warning__:
 -}
@@ -693,17 +700,17 @@ unsafeParserDeleteLogger parser = do
   maybeLogger <- parserRemoveLogger parser
   maybe (pure ()) unsafeLoggerDelete maybeLogger
 
-{-| See @'C.ts_parser_parse'@.
+{-| See @`C.ts_parser_parse`@.
 parserParse :: Parser -> Input -> IO ()
 parserParse = _
 -}
 
--- | See @'C.ts_parser_parse_string'@.
+-- | See @`C.ts_parser_parse_string`@.
 parserParseString :: Parser -> Maybe Tree -> String -> IO (Maybe Tree)
 parserParseString parser oldTree string =
   parserParseByteString parser oldTree (BSC.pack string)
 
--- | See @'C.ts_parser_parse_string'@.
+-- | See @`C.ts_parser_parse_string`@.
 parserParseByteString :: Parser -> Maybe Tree -> ByteString -> IO (Maybe Tree)
 parserParseByteString parser oldTree string =
   withParserAsTSParserPtr parser $ \parserPtr ->
@@ -717,7 +724,7 @@ parserParseByteString parser oldTree string =
             (fromIntegral stringLen)
         toMaybeTree newTreePtr
 
--- | See @'C.ts_parser_parse_string_encoding'@.
+-- | See @`C.ts_parser_parse_string_encoding`@.
 parserParseByteStringWithEncoding :: Parser -> Maybe Tree -> ByteString -> InputEncoding -> IO (Maybe Tree)
 parserParseByteStringWithEncoding parser oldTree string inputEncoding =
   withParserAsTSParserPtr parser $ \parserPtr ->
@@ -732,7 +739,7 @@ parserParseByteStringWithEncoding parser oldTree string inputEncoding =
             (coerce inputEncoding)
         toMaybeTree newTreePtr
 
--- | See @'C.ts_parser_reset'@.
+-- | See @`C.ts_parser_reset`@.
 parserReset :: Parser -> IO ()
 parserReset = (`withParserAsTSParserPtr` C.ts_parser_reset)
 
@@ -741,13 +748,13 @@ newtype Microsecond = Microsecond {unMicrosecond :: Word64}
   deriving stock (Show, Read, Eq, Ord)
   deriving newtype (Num, Real, Integral, Enum)
 
--- | See @'C.ts_parser_set_timeout_micros'@.
+-- | See @`C.ts_parser_set_timeout_micros`@.
 parserSetTimeoutMicros :: Parser -> Microsecond -> IO ()
 parserSetTimeoutMicros parser ms =
   withParserAsTSParserPtr parser $ \parserPtr ->
     coerce C.ts_parser_set_timeout_micros parserPtr ms
 
--- | See @'C.ts_parser_timeout_micros'@.
+-- | See @`C.ts_parser_timeout_micros`@.
 parserTimeoutMicros :: Parser -> IO Microsecond
 parserTimeoutMicros parser =
   withParserAsTSParserPtr parser $
@@ -779,13 +786,13 @@ getCancellationFlag :: CancellationFlagRef -> IO CancellationFlag
 getCancellationFlag = coerce (peek @CSize)
 {-# INLINE getCancellationFlag #-}
 
--- | See @'C.ts_parser_set_cancellation_flag'@.
+-- | See @`C.ts_parser_set_cancellation_flag`@.
 parserSetCancellationFlag :: Parser -> CancellationFlagRef -> IO ()
 parserSetCancellationFlag parser cancellationFlagRef =
   withParserAsTSParserPtr parser $ \parserPtr ->
     coerce C.ts_parser_set_cancellation_flag parserPtr cancellationFlagRef
 
--- | See @'C.ts_parser_cancellation_flag'@.
+-- | See @`C.ts_parser_cancellation_flag`@.
 parserCancellationFlag :: Parser -> IO CancellationFlagRef
 parserCancellationFlag parser =
   withParserAsTSParserPtr parser $ \parserPtr ->
@@ -817,7 +824,7 @@ withMaybeTreeAsTSTreePtr :: Maybe Tree -> (Ptr C.TSTree -> IO a) -> IO a
 withMaybeTreeAsTSTreePtr mtree action =
   maybe (action nullPtr) (`withTreeAsTSTreePtr` action) mtree
 
--- | See @'C.ts_tree_copy'@.
+-- | See @`C.ts_tree_copy`@.
 treeCopy :: Tree -> IO Tree
 treeCopy tree =
   withTreeAsTSTreePtr tree $
@@ -825,32 +832,32 @@ treeCopy tree =
 
 {-| Delete the 'Tree'.
 
-See @'C.ts_tree_delete'@.
+See @`C.ts_tree_delete`@.
 
 __Warning__: Using the 'Tree' after calling 'unsafeTreeDelete' leads to undefined behaviour.
 -}
 unsafeTreeDelete :: Tree -> IO ()
 unsafeTreeDelete = coerce finalizeForeignPtr
 
--- | See @'C.ts_tree_root_node'@.
+-- | See @`C.ts_tree_root_node`@.
 treeRootNode :: Tree -> IO Node
 treeRootNode tree =
   withTreeAsTSTreePtr tree $
     coerce C.ts_tree_root_node
 
--- | See @'C.ts_tree_root_node_with_offset'@.
+-- | See @`C.ts_tree_root_node_with_offset`@.
 treeRootNodeWithOffset :: Tree -> Word32 -> Point -> IO Node
 treeRootNodeWithOffset tree offsetBytes offsetExtent =
   withTreeAsTSTreePtr tree $ \treePtr ->
     coerce C.ts_tree_root_node_with_offset treePtr offsetBytes offsetExtent
 
--- | See @'C.ts_tree_language'@.
+-- | See @`C.ts_tree_language`@.
 treeLanguage :: Tree -> IO Language
 treeLanguage tree =
   withTreeAsTSTreePtr tree $
     unsafeToLanguage <=< C.ts_tree_language
 
--- | See @'C.ts_tree_included_ranges'@.
+-- | See @`C.ts_tree_included_ranges`@.
 treeIncludedRanges :: Tree -> IO [Range]
 treeIncludedRanges tree = do
   alloca $ \rangesLengthPtr -> do
@@ -860,14 +867,14 @@ treeIncludedRanges tree = do
     rangesLength <- fromIntegral <$> peek rangesLengthPtr
     coerce <$> peekArray rangesLength rangesPtr
 
--- | See @'C.ts_tree_edit'@.
+-- | See @`C.ts_tree_edit`@.
 treeEdit :: Tree -> InputEdit -> IO ()
 treeEdit tree inputEdit =
   withTreeAsTSTreePtr tree $ \treePtr ->
     with (coerce inputEdit) $ \inputEditPtr ->
       C.ts_tree_edit treePtr inputEditPtr
 
--- | See @'C.ts_tree_get_changed_ranges'@.
+-- | See @`C.ts_tree_get_changed_ranges`@.
 treeGetChangedRanges :: Tree -> Tree -> IO [Range]
 treeGetChangedRanges oldTree newTree =
   alloca $ \rangesLengthPtr -> do
@@ -889,7 +896,7 @@ treePrintDotGraph tree handle = do
 
 -- * Node
 
--- | See @'C.ts_node_type'@.
+-- | See @`C.ts_node_type`@.
 nodeType :: Node -> IO ByteString
 nodeType =
   -- The string returned by ts_node_type is null-terminated
@@ -897,22 +904,22 @@ nodeType =
   BSU.unsafePackCString <=< coerce C.ts_node_type
 {-# INLINE nodeType #-}
 
--- | See @'C.ts_node_type'@.
+-- | See @`C.ts_node_type`@.
 nodeTypeAsString :: Node -> IO String
 nodeTypeAsString = fmap BSC.unpack . nodeType
 {-# INLINE nodeTypeAsString #-}
 
--- | See @'C.ts_node_symbol'@.
+-- | See @`C.ts_node_symbol`@.
 nodeSymbol :: Node -> IO Symbol
 nodeSymbol = coerce C.ts_node_symbol
 {-# INLINE nodeSymbol #-}
 
--- | See @'C.ts_node_language'@.
+-- | See @`C.ts_node_language`@.
 nodeLanguage :: Node -> IO Language
 nodeLanguage = unsafeToLanguage <=< coerce C.ts_node_language
 {-# INLINE nodeLanguage #-}
 
--- | See @'C.ts_node_grammar_type'@.
+-- | See @`C.ts_node_grammar_type`@.
 nodeGrammarType :: Node -> IO GrammarType
 nodeGrammarType =
   -- The string returned by ts_node_grammar_type is null-terminated
@@ -920,107 +927,107 @@ nodeGrammarType =
   coerce . BSU.unsafePackCString <=< coerce C.ts_node_grammar_type
 {-# INLINE nodeGrammarType #-}
 
--- | See @'C.ts_node_grammar_type'@.
+-- | See @`C.ts_node_grammar_type`@.
 nodeGrammarTypeAsString :: Node -> IO String
 nodeGrammarTypeAsString = fmap (BSC.unpack . coerce) . nodeGrammarType
 {-# INLINE nodeGrammarTypeAsString #-}
 
--- | See @'C.ts_node_grammar_symbol'@.
+-- | See @`C.ts_node_grammar_symbol`@.
 nodeGrammarSymbol :: Node -> IO Symbol
 nodeGrammarSymbol = coerce C.ts_node_grammar_symbol
 {-# INLINE nodeGrammarSymbol #-}
 
--- | See @'C.ts_node_start_byte'@.
+-- | See @`C.ts_node_start_byte`@.
 nodeStartByte :: Node -> IO Word32
 nodeStartByte = coerce C.ts_node_start_byte
 {-# INLINE nodeStartByte #-}
 
--- | See @'C.ts_node_start_point'@.
+-- | See @`C.ts_node_start_point`@.
 nodeStartPoint :: Node -> IO Point
 nodeStartPoint = coerce C.ts_node_start_point
 {-# INLINE nodeStartPoint #-}
 
--- | See @'C.ts_node_end_byte'@.
+-- | See @`C.ts_node_end_byte`@.
 nodeEndByte :: Node -> IO Word32
 nodeEndByte = coerce C.ts_node_end_byte
 {-# INLINE nodeEndByte #-}
 
--- | See @'C.ts_node_end_point'@.
+-- | See @`C.ts_node_end_point`@.
 nodeEndPoint :: Node -> IO Point
 nodeEndPoint = coerce C.ts_node_end_point
 {-# INLINE nodeEndPoint #-}
 
--- | See @'C.ts_node_string'@.
+-- | See @`C.ts_node_string`@.
 showNode :: Node -> IO ByteString
 showNode = BSU.unsafePackMallocCString <=< coerce C.ts_node_string
 {-# INLINE showNode #-}
 
--- | See @'C.ts_node_string'@.
+-- | See @`C.ts_node_string`@.
 showNodeAsString :: Node -> IO String
 showNodeAsString = fmap BSC.unpack . showNode
 {-# INLINE showNodeAsString #-}
 
--- | See @'C.ts_node_is_null'@.
+-- | See @`C.ts_node_is_null`@.
 nodeIsNull :: Node -> IO Bool
 nodeIsNull = fmap toBool . C.ts_node_is_null . coerce
 {-# INLINE nodeIsNull #-}
 
--- | See @'C.ts_node_is_named'@.
+-- | See @`C.ts_node_is_named`@.
 nodeIsNamed :: Node -> IO Bool
 nodeIsNamed = fmap toBool . C.ts_node_is_named . coerce
 {-# INLINE nodeIsNamed #-}
 
--- | See @'C.ts_node_is_missing'@.
+-- | See @`C.ts_node_is_missing`@.
 nodeIsMissing :: Node -> IO Bool
 nodeIsMissing = fmap toBool . C.ts_node_is_missing . coerce
 {-# INLINE nodeIsMissing #-}
 
--- | See @'C.ts_node_is_extra'@.
+-- | See @`C.ts_node_is_extra`@.
 nodeIsExtra :: Node -> IO Bool
 nodeIsExtra = fmap toBool . C.ts_node_is_extra . coerce
 {-# INLINE nodeIsExtra #-}
 
--- | See @'C.ts_node_has_changes'@.
+-- | See @`C.ts_node_has_changes`@.
 nodeHasChanges :: Node -> IO Bool
 nodeHasChanges = fmap toBool . C.ts_node_has_changes . coerce
 {-# INLINE nodeHasChanges #-}
 
--- | See @'C.ts_node_has_error'@.
+-- | See @`C.ts_node_has_error`@.
 nodeHasError :: Node -> IO Bool
 nodeHasError = fmap toBool . C.ts_node_has_error . coerce
 {-# INLINE nodeHasError #-}
 
--- | See @'C.ts_node_is_error'@.
+-- | See @`C.ts_node_is_error`@.
 nodeIsError :: Node -> IO Bool
 nodeIsError = fmap toBool . C.ts_node_is_error . coerce
 {-# INLINE nodeIsError #-}
 
--- | See @'C.ts_node_parse_state'@.
+-- | See @`C.ts_node_parse_state`@.
 nodeParseState :: Node -> IO StateId
 nodeParseState = coerce C.ts_node_parse_state
 {-# INLINE nodeParseState #-}
 
--- | See @'C.ts_node_next_parse_state'@.
+-- | See @`C.ts_node_next_parse_state`@.
 nodeNextParseState :: Node -> IO StateId
 nodeNextParseState = coerce C.ts_node_next_parse_state
 {-# INLINE nodeNextParseState #-}
 
--- | See @'C.ts_node_parent'@.
+-- | See @`C.ts_node_parent`@.
 nodeParent :: Node -> IO Node
 nodeParent = coerce C.ts_node_parent
 {-# INLINE nodeParent #-}
 
--- | See @'C.ts_node_child_with_descendant'@.
+-- | See @`C.ts_node_child_with_descendant`@.
 nodeChildWithDescendant :: Node -> Node -> IO Node
 nodeChildWithDescendant = coerce C.ts_node_child_with_descendant
 {-# INLINE nodeChildWithDescendant #-}
 
--- | See @'C.ts_node_child'@.
+-- | See @`C.ts_node_child`@.
 nodeChild :: Node -> Word32 -> IO Node
 nodeChild = coerce C.ts_node_child
 {-# INLINE nodeChild #-}
 
--- | See @'C.ts_node_field_name_for_child'@.
+-- | See @`C.ts_node_field_name_for_child`@.
 nodeFieldNameForChild :: Node -> Word32 -> IO FieldName
 nodeFieldNameForChild node =
   -- The string returned by ts_node_grammar_type is null-terminated
@@ -1028,13 +1035,13 @@ nodeFieldNameForChild node =
   coerce . BSU.unsafePackCString <=< coerce C.ts_node_field_name_for_child node
 {-# INLINE nodeFieldNameForChild #-}
 
--- | See @'C.ts_node_field_name_for_child'@.
+-- | See @`C.ts_node_field_name_for_child`@.
 nodeFieldNameForChildAsString :: Node -> Word32 -> IO String
 nodeFieldNameForChildAsString node childIndex =
   BSC.unpack . coerce <$> nodeFieldNameForChild node childIndex
 {-# INLINE nodeFieldNameForChildAsString #-}
 
--- | See @'C.ts_node_field_name_for_named_child'@.
+-- | See @`C.ts_node_field_name_for_named_child`@.
 nodeFieldNameForNamedChild :: Node -> Word32 -> IO FieldName
 nodeFieldNameForNamedChild node =
   -- The string returned by ts_node_grammar_type is null-terminated
@@ -1042,28 +1049,28 @@ nodeFieldNameForNamedChild node =
   coerce . BSU.unsafePackCString <=< coerce C.ts_node_field_name_for_named_child node
 {-# INLINE nodeFieldNameForNamedChild #-}
 
--- | See @'C.ts_node_field_name_for_named_child'@.
+-- | See @`C.ts_node_field_name_for_named_child`@.
 nodeFieldNameForNamedChildAsString :: Node -> Word32 -> IO String
 nodeFieldNameForNamedChildAsString node childIndex =
   BSC.unpack . coerce <$> nodeFieldNameForNamedChild node childIndex
 {-# INLINE nodeFieldNameForNamedChildAsString #-}
 
--- | See @'C.ts_node_child_count'@.
+-- | See @`C.ts_node_child_count`@.
 nodeChildCount :: Node -> IO Word32
 nodeChildCount = coerce C.ts_node_child_count
 {-# INLINE nodeChildCount #-}
 
--- | See @'C.ts_node_named_child'@.
+-- | See @`C.ts_node_named_child`@.
 nodeNamedChild :: Node -> Word32 -> IO Node
 nodeNamedChild = coerce C.ts_node_named_child
 {-# INLINE nodeNamedChild #-}
 
--- | See @'C.ts_node_named_child_count'@.
+-- | See @`C.ts_node_named_child_count`@.
 nodeNamedChildCount :: Node -> IO Word32
 nodeNamedChildCount = coerce C.ts_node_named_child_count
 {-# INLINE nodeNamedChildCount #-}
 
--- | See @'C.ts_node_child_by_field_name'@.
+-- | See @`C.ts_node_child_by_field_name`@.
 nodeChildByFieldName :: Node -> FieldName -> IO Node
 nodeChildByFieldName node fieldName =
   BSU.unsafeUseAsCStringLen (coerce fieldName) $ \(stringPtr, stringLen) ->
@@ -1071,67 +1078,67 @@ nodeChildByFieldName node fieldName =
       fromIntegral @_ @Word32 stringLen
 {-# INLINE nodeChildByFieldName #-}
 
--- | See @'C.ts_node_child_by_field_id'@.
+-- | See @`C.ts_node_child_by_field_id`@.
 nodeChildByFieldId :: Node -> FieldId -> IO Node
 nodeChildByFieldId = coerce C.ts_node_child_by_field_id
 {-# INLINE nodeChildByFieldId #-}
 
--- | See @'C.ts_node_next_sibling'@.
+-- | See @`C.ts_node_next_sibling`@.
 nodeNextSibling :: Node -> IO Node
 nodeNextSibling = coerce C.ts_node_next_sibling
 {-# INLINE nodeNextSibling #-}
 
--- | See @'C.ts_node_prev_sibling'@.
+-- | See @`C.ts_node_prev_sibling`@.
 nodePrevSibling :: Node -> IO Node
 nodePrevSibling = coerce C.ts_node_prev_sibling
 {-# INLINE nodePrevSibling #-}
 
--- | See @'C.ts_node_next_named_sibling'@.
+-- | See @`C.ts_node_next_named_sibling`@.
 nodeNextNamedSibling :: Node -> IO Node
 nodeNextNamedSibling = coerce C.ts_node_next_named_sibling
 {-# INLINE nodeNextNamedSibling #-}
 
--- | See @'C.ts_node_prev_named_sibling'@.
+-- | See @`C.ts_node_prev_named_sibling`@.
 nodePrevNamedSibling :: Node -> IO Node
 nodePrevNamedSibling = coerce C.ts_node_prev_named_sibling
 {-# INLINE nodePrevNamedSibling #-}
 
--- | See @'C.ts_node_first_child_for_byte'@.
+-- | See @`C.ts_node_first_child_for_byte`@.
 nodeFirstChildForByte :: Node -> Word32 -> IO Node
 nodeFirstChildForByte = coerce C.ts_node_first_child_for_byte
 {-# INLINE nodeFirstChildForByte #-}
 
--- | See @'C.ts_node_first_named_child_for_byte'@.
+-- | See @`C.ts_node_first_named_child_for_byte`@.
 nodeFirstNamedChildForByte :: Node -> Word32 -> IO Node
 nodeFirstNamedChildForByte = coerce C.ts_node_first_named_child_for_byte
 {-# INLINE nodeFirstNamedChildForByte #-}
 
--- | See @'C.ts_node_descendant_count'@.
+-- | See @`C.ts_node_descendant_count`@.
 nodeDescendantCount :: Node -> IO Word32
 nodeDescendantCount = coerce C.ts_node_descendant_count
 {-# INLINE nodeDescendantCount #-}
 
--- | See @'C.ts_node_descendant_for_byte_range'@.
+-- | See @`C.ts_node_descendant_for_byte_range`@.
 nodeDescendantForByteRange :: Node -> Word32 -> Word32 -> IO Node
 nodeDescendantForByteRange = coerce C.ts_node_descendant_for_byte_range
 {-# INLINE nodeDescendantForByteRange #-}
 
--- | See @'C.ts_node_descendant_for_point_range'@.
+-- | See @`C.ts_node_descendant_for_point_range`@.
 nodeDescendantForPointRange :: Node -> Point -> Point -> IO Node
 nodeDescendantForPointRange = coerce C.ts_node_descendant_for_point_range
 {-# INLINE nodeDescendantForPointRange #-}
 
--- | See @'C.ts_node_named_descendant_for_byte_range'@.
+-- | See @`C.ts_node_named_descendant_for_byte_range`@.
 nodeNamedDescendantForByteRange :: Node -> Word32 -> Word32 -> IO Node
 nodeNamedDescendantForByteRange = coerce C.ts_node_named_descendant_for_byte_range
 {-# INLINE nodeNamedDescendantForByteRange #-}
 
--- | See @'C.ts_node_named_descendant_for_point_range'@.
+-- | See @`C.ts_node_named_descendant_for_point_range`@.
 nodeNamedDescendantForPointRange :: Node -> Point -> Point -> IO Node
 nodeNamedDescendantForPointRange = coerce C.ts_node_named_descendant_for_point_range
 {-# INLINE nodeNamedDescendantForPointRange #-}
 
--- | See @'C.ts_node_edit'@.
+-- | See @`C.ts_node_edit`@.
 nodeEdit :: Node -> InputEdit -> IO ()
 nodeEdit node inputEdit =
   with (unWrapTSNode node) $ \nodePtr ->
@@ -1139,7 +1146,7 @@ nodeEdit node inputEdit =
       coerce C.ts_node_edit nodePtr inputEditPtr
 {-# INLINE nodeEdit #-}
 
--- | See @'C.ts_node_eq'@.
+-- | See @`C.ts_node_eq`@.
 nodeEq :: Node -> Node -> IO Bool
 nodeEq node1 node2 =
   toBool <$> C.ts_node_eq (coerce node1) (coerce node2)
@@ -1150,7 +1157,7 @@ nodeEq node1 node2 =
 withTreeCursorAsTSTreeCursorPtr :: TreeCursor -> (Ptr C.TSTreeCursor -> IO a) -> IO a
 withTreeCursorAsTSTreeCursorPtr = withForeignPtr . coerce
 
--- | See @'C.ts_tree_cursor_new'@.
+-- | See @`C.ts_tree_cursor_new`@.
 treeCursorNew :: Node -> IO TreeCursor
 treeCursorNew node = do
   treeCursorForeignPtr <- mallocForeignPtr
@@ -1161,33 +1168,33 @@ treeCursorNew node = do
 
 {-| Delete the 'TreeCursor'.
 
-| See @'C.ts_tree_cursor_delete'@.
+| See @`C.ts_tree_cursor_delete`@.
 
 __Warning__: Using the 'Tree' after calling 'unsafeTreeCursorDelete' leads to undefined behaviour.
 -}
 unsafeTreeCursorDelete :: TreeCursor -> IO ()
 unsafeTreeCursorDelete = coerce finalizeForeignPtr
 
--- | See @'C.ts_tree_cursor_reset'@.
+-- | See @`C.ts_tree_cursor_reset`@.
 treeCursorReset :: TreeCursor -> Node -> IO ()
 treeCursorReset treeCursor node =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr ->
     C.ts_tree_cursor_reset treeCursorPtr (coerce node)
 
--- | See @'C.ts_tree_cursor_reset_to'@.
+-- | See @`C.ts_tree_cursor_reset_to`@.
 treeCursorResetTo :: TreeCursor -> TreeCursor -> IO ()
 treeCursorResetTo self other =
   withTreeCursorAsTSTreeCursorPtr self $ \selfPtr ->
     withTreeCursorAsTSTreeCursorPtr other $ \otherPtr ->
       coerce C.ts_tree_cursor_reset_to selfPtr otherPtr
 
--- | See @'C.ts_tree_cursor_current_node'@.
+-- | See @`C.ts_tree_cursor_current_node`@.
 treeCursorCurrentNode :: TreeCursor -> IO Node
 treeCursorCurrentNode treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr ->
     coerce C.ts_tree_cursor_current_node treeCursorPtr
 
--- | See @'C.ts_tree_cursor_current_field_name'@.
+-- | See @`C.ts_tree_cursor_current_field_name`@.
 treeCursorCurrentFieldName :: TreeCursor -> IO (Maybe ByteString)
 treeCursorCurrentFieldName treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr -> do
@@ -1196,74 +1203,74 @@ treeCursorCurrentFieldName treeCursor =
       then pure Nothing
       else Just <$> BSU.unsafePackCString fieldNamePtr
 
--- | See @'C.ts_tree_cursor_current_field_id'@.
+-- | See @`C.ts_tree_cursor_current_field_id`@.
 treeCursorCurrentFieldId :: TreeCursor -> IO (Maybe FieldId)
 treeCursorCurrentFieldId treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr -> do
     fieldId <- coerce C.ts_tree_cursor_current_field_id treeCursorPtr
     pure $ if fieldId == 0 then Nothing else Just fieldId
 
--- | See @'C.ts_tree_cursor_goto_parent'@.
+-- | See @`C.ts_tree_cursor_goto_parent`@.
 treeCursorGotoParent :: TreeCursor -> IO Bool
 treeCursorGotoParent treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     fmap toBool . C.ts_tree_cursor_goto_parent
 
--- | See @'C.ts_tree_cursor_goto_next_sibling'@.
+-- | See @`C.ts_tree_cursor_goto_next_sibling`@.
 treeCursorGotoNextSibling :: TreeCursor -> IO Bool
 treeCursorGotoNextSibling treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     fmap toBool . C.ts_tree_cursor_goto_next_sibling
 
--- | See @'C.ts_tree_cursor_goto_previous_sibling'@.
+-- | See @`C.ts_tree_cursor_goto_previous_sibling`@.
 treeCursorGotoPreviousSibling :: TreeCursor -> IO Bool
 treeCursorGotoPreviousSibling treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     fmap toBool . C.ts_tree_cursor_goto_previous_sibling
 
--- | See @'C.ts_tree_cursor_goto_first_child'@.
+-- | See @`C.ts_tree_cursor_goto_first_child`@.
 treeCursorGotoFirstChild :: TreeCursor -> IO Bool
 treeCursorGotoFirstChild treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     fmap toBool . C.ts_tree_cursor_goto_first_child
 
--- | See @'C.ts_tree_cursor_goto_last_child'@.
+-- | See @`C.ts_tree_cursor_goto_last_child`@.
 treeCursorGotoLastChild :: TreeCursor -> IO Bool
 treeCursorGotoLastChild treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     fmap toBool . C.ts_tree_cursor_goto_last_child
 
--- | See @'C.ts_tree_cursor_goto_descendant'@.
+-- | See @`C.ts_tree_cursor_goto_descendant`@.
 treeCursorGotoDescendant :: TreeCursor -> Word32 -> IO ()
 treeCursorGotoDescendant treeCursor descsendantIndex =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr ->
     C.ts_tree_cursor_goto_descendant treeCursorPtr descsendantIndex
 
--- | See @'C.ts_tree_cursor_current_descendant_index'@.
+-- | See @`C.ts_tree_cursor_current_descendant_index`@.
 treeCursorCurrentDescendantIndex :: TreeCursor -> IO Word32
 treeCursorCurrentDescendantIndex treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     C.ts_tree_cursor_current_descendant_index . coerce
 
--- | See @'C.ts_tree_cursor_current_depth'@.
+-- | See @`C.ts_tree_cursor_current_depth`@.
 treeCursorCurrentDepth :: TreeCursor -> IO Word32
 treeCursorCurrentDepth treeCursor =
   withTreeCursorAsTSTreeCursorPtr treeCursor $
     C.ts_tree_cursor_current_depth . coerce
 
--- | See @'C.ts_tree_cursor_goto_first_child_for_byte'@.
+-- | See @`C.ts_tree_cursor_goto_first_child_for_byte`@.
 treeCursorGotoFirstChildForByte :: TreeCursor -> Word32 -> IO Int64
 treeCursorGotoFirstChildForByte treeCursor goalByte =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr ->
     C.ts_tree_cursor_goto_first_child_for_byte treeCursorPtr goalByte
 
--- | See @'C.ts_tree_cursor_goto_first_child_for_point'@.
+-- | See @`C.ts_tree_cursor_goto_first_child_for_point`@.
 treeCursorGotoFirstChildForPoint :: TreeCursor -> Point -> IO Int64
 treeCursorGotoFirstChildForPoint treeCursor point =
   withTreeCursorAsTSTreeCursorPtr treeCursor $ \treeCursorPtr ->
     C.ts_tree_cursor_goto_first_child_for_point treeCursorPtr (coerce point)
 
--- | See @'C.ts_tree_cursor_copy'@.
+-- | See @`C.ts_tree_cursor_copy`@.
 treeCursorCopy :: TreeCursor -> IO TreeCursor
 treeCursorCopy treeCursor = do
   copyOfTreeCursorForeignPtr <- mallocForeignPtr
@@ -1278,7 +1285,7 @@ treeCursorCopy treeCursor = do
 withQueryAsTSQueryPtr :: Query -> (Ptr C.TSQuery -> IO a) -> IO a
 withQueryAsTSQueryPtr = withForeignPtr . coerce
 
--- | See @'C.ts_query_new'@.
+-- | See @`C.ts_query_new`@.
 queryNew :: Language -> ByteString -> IO Query
 queryNew language query =
   alloca $ \queryErrorOffsetPtr -> alloca $ \queryErrorTypePtr -> do
@@ -1335,44 +1342,44 @@ offsetToPointAndLine str offset = (point, line)
 
 {-| Delete the 'Query' and free the associated memory.
 
-See @'C.ts_query_delete'@.
+See @`C.ts_query_delete`@.
 
 __Warning__: Using the 'Query' after calling 'unsafeQueryDelete' leads to undefined behaviour.
 -}
 unsafeQueryDelete :: Query -> IO ()
 unsafeQueryDelete = coerce finalizeForeignPtr
 
--- | See @'C.ts_query_pattern_count'@.
+-- | See @`C.ts_query_pattern_count`@.
 queryPatternCount :: Query -> IO Word32
 queryPatternCount query =
   withQueryAsTSQueryPtr query $
     coerce C.ts_query_pattern_count
 
--- | See @'C.ts_query_capture_count'@.
+-- | See @`C.ts_query_capture_count`@.
 queryCaptureCount :: Query -> IO Word32
 queryCaptureCount query =
   withQueryAsTSQueryPtr query $
     coerce C.ts_query_capture_count
 
--- | See @'C.ts_query_string_count'@.
+-- | See @`C.ts_query_string_count`@.
 queryStringCount :: Query -> IO Word32
 queryStringCount query =
   withQueryAsTSQueryPtr query $
     coerce C.ts_query_string_count
 
--- | See @'C.ts_query_start_byte_for_pattern'@.
+-- | See @`C.ts_query_start_byte_for_pattern`@.
 queryStartByteForPattern :: Query -> PatternIndex -> IO Word32
 queryStartByteForPattern query patternIndex =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     coerce C.ts_query_start_byte_for_pattern queryPtr patternIndex
 
--- | See @'C.ts_query_end_byte_for_pattern'@.
+-- | See @`C.ts_query_end_byte_for_pattern`@.
 queryEndByteForPattern :: Query -> PatternIndex -> IO Word32
 queryEndByteForPattern query patternIndex =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     coerce C.ts_query_end_byte_for_pattern queryPtr patternIndex
 
--- -- | See @'ts_query_predicates_for_pattern'@.
+-- -- | See @`ts_query_predicates_for_pattern`@.
 queryPredicatesForPattern :: Query -> Word32 -> IO [QueryPredicateStep]
 queryPredicatesForPattern query patternIndex = do
   (stepsPtr, stepsLen) <-
@@ -1384,25 +1391,25 @@ queryPredicatesForPattern query patternIndex = do
       pure (unConstPtr stepsPtr, stepsLen)
   coerce $ peekArray @C.TSQueryPredicateStep stepsLen stepsPtr
 
--- | See @'C.ts_query_is_pattern_rooted'@.
+-- | See @`C.ts_query_is_pattern_rooted`@.
 queryIsPatternRooted :: Query -> PatternIndex -> IO Bool
 queryIsPatternRooted query patternIndex =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     toBool @CBool <$> coerce C.ts_query_is_pattern_rooted queryPtr patternIndex
 
--- | See @'C.ts_query_is_pattern_non_local'@.
+-- | See @`C.ts_query_is_pattern_non_local`@.
 queryIsPatternNonLocal :: Query -> PatternIndex -> IO Bool
 queryIsPatternNonLocal query patternIndex =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     toBool @CBool <$> coerce C.ts_query_is_pattern_non_local queryPtr patternIndex
 
--- | See @'C.ts_query_is_pattern_guaranteed_at_step'@.
+-- | See @`C.ts_query_is_pattern_guaranteed_at_step`@.
 queryIsPatternGuaranteedAtStep :: Query -> Word32 -> IO Bool
 queryIsPatternGuaranteedAtStep query byteOffset =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     toBool <$> C.ts_query_is_pattern_guaranteed_at_step (ConstPtr queryPtr) byteOffset
 
--- | See @'C.ts_query_capture_name_for_id'@.
+-- | See @`C.ts_query_capture_name_for_id`@.
 queryCaptureNameForIndex :: Query -> CaptureIndex -> IO CaptureName
 queryCaptureNameForIndex query captureIndex = do
   (namePtr, nameLen) <-
@@ -1416,13 +1423,13 @@ queryCaptureNameForIndex query captureIndex = do
         <*> (fromIntegral <$> peek nameLenPtr)
   coerce $ BSU.unsafePackCStringLen (namePtr, nameLen)
 
--- | See @'C.ts_query_capture_quantifier_for_id'@.
+-- | See @`C.ts_query_capture_quantifier_for_id`@.
 queryCaptureQuantifierForIndex :: Query -> PatternIndex -> CaptureIndex -> IO Quantifier
 queryCaptureQuantifierForIndex query patternIndex captureIndex =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     coerce C.ts_query_capture_quantifier_for_id queryPtr patternIndex captureIndex
 
--- -- | See @'ts_query_string_value_for_id'@.
+-- -- | See @`ts_query_string_value_for_id`@.
 queryStringValueForIndex :: Query -> CaptureIndex -> IO ByteString
 queryStringValueForIndex query captureIndex = do
   (strPtr, strLen) <-
@@ -1436,14 +1443,14 @@ queryStringValueForIndex query captureIndex = do
         <*> (fromIntegral <$> peek strLenPtr)
   BS.packCStringLen (strPtr, strLen)
 
--- | See @'C.ts_query_disable_capture'@.
+-- | See @`C.ts_query_disable_capture`@.
 queryDisableCapture :: Query -> CaptureName -> IO ()
 queryDisableCapture query captureName =
   withQueryAsTSQueryPtr query $ \queryPtr ->
     BSU.unsafeUseAsCStringLen (coerce captureName) $ \(namePtr, nameLen) ->
       coerce C.ts_query_disable_capture queryPtr namePtr (fromIntegral nameLen :: Word32)
 
--- | See @'C.ts_query_disable_pattern'@.
+-- | See @`C.ts_query_disable_pattern`@.
 queryDisablePattern :: Query -> PatternIndex -> IO ()
 queryDisablePattern query patternIndex =
   withQueryAsTSQueryPtr query $ \queryPtr ->
@@ -1452,65 +1459,65 @@ queryDisablePattern query patternIndex =
 withQueryCursorAsTSQueryCursorPtr :: QueryCursor -> (Ptr C.TSQueryCursor -> IO a) -> IO a
 withQueryCursorAsTSQueryCursorPtr = withForeignPtr . coerce
 
--- | See @'C.ts_query_cursor_new'@.
+-- | See @`C.ts_query_cursor_new`@.
 queryCursorNew :: IO QueryCursor
 queryCursorNew =
   coerce newForeignPtr C.p_ts_query_cursor_delete =<< C.ts_query_cursor_new
 
--- | See @'C.ts_query_cursor_delete'@.
+-- | See @`C.ts_query_cursor_delete`@.
 unsafeQueryCursorDelete :: QueryCursor -> IO ()
 unsafeQueryCursorDelete = coerce finalizeForeignPtr
 
--- | See @'C.ts_query_cursor_exec'@.
+-- | See @`C.ts_query_cursor_exec`@.
 queryCursorExec :: QueryCursor -> Query -> Node -> IO ()
 queryCursorExec queryCursor query node =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     withQueryAsTSQueryPtr query $ \queryPtr ->
       coerce C.ts_query_cursor_exec queryCursorPtr queryPtr node
 
--- | See @'C.ts_query_cursor_did_exceed_match_limit'@.
+-- | See @`C.ts_query_cursor_did_exceed_match_limit`@.
 queryCursorDidExceedMatchLimit :: QueryCursor -> IO Bool
 queryCursorDidExceedMatchLimit queryCursor =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     toBool @CBool <$> coerce C.ts_query_cursor_did_exceed_match_limit queryCursorPtr
 
--- | See @'C.ts_query_cursor_match_limit'@.
+-- | See @`C.ts_query_cursor_match_limit`@.
 queryCursorMatchLimit :: QueryCursor -> IO Word32
 queryCursorMatchLimit queryCursor =
   withQueryCursorAsTSQueryCursorPtr queryCursor $
     coerce C.ts_query_cursor_match_limit
 
--- | See @'C.ts_query_cursor_set_match_limit'@.
+-- | See @`C.ts_query_cursor_set_match_limit`@.
 queryCursorSetMatchLimit :: QueryCursor -> Word32 -> IO ()
 queryCursorSetMatchLimit queryCursor matchLimit =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     C.ts_query_cursor_set_match_limit queryCursorPtr matchLimit
 
--- | See @'C.ts_query_cursor_set_timeout_micros'@.
+-- | See @`C.ts_query_cursor_set_timeout_micros`@.
 queryCursorSetTimeoutMicros :: QueryCursor -> Microsecond -> IO ()
 queryCursorSetTimeoutMicros queryCursor micros =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     coerce C.ts_query_cursor_set_timeout_micros queryCursorPtr micros
 
--- | See @'C.ts_query_cursor_timeout_micros'@.
+-- | See @`C.ts_query_cursor_timeout_micros`@.
 queryCursorTimeoutMicros :: QueryCursor -> IO Microsecond
 queryCursorTimeoutMicros queryCursor =
   withQueryCursorAsTSQueryCursorPtr queryCursor $
     coerce C.ts_query_cursor_timeout_micros
 
--- | See @'C.ts_query_cursor_set_byte_range'@.
+-- | See @`C.ts_query_cursor_set_byte_range`@.
 queryCursorSetByteRange :: QueryCursor -> Word32 -> Word32 -> IO ()
 queryCursorSetByteRange queryCursor startByte endByte =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     C.ts_query_cursor_set_byte_range queryCursorPtr startByte endByte
 
--- | See @'C.ts_query_cursor_set_point_range'@.
+-- | See @`C.ts_query_cursor_set_point_range`@.
 queryCursorSetPointRange :: QueryCursor -> Point -> Point -> IO ()
 queryCursorSetPointRange queryCursor startPoint endPoint =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     coerce C.ts_query_cursor_set_point_range queryCursorPtr startPoint endPoint
 
--- | See @'C.ts_query_cursor_next_match'@.
+-- | See @`C.ts_query_cursor_next_match`@.
 queryCursorNextMatch :: QueryCursor -> IO (Maybe QueryMatch)
 queryCursorNextMatch queryCursor =
   alloca $ \queryMatchPtr -> do
@@ -1523,13 +1530,13 @@ queryCursorNextMatch queryCursor =
         pure . Just . coerce $ queryMatch
       else pure Nothing
 
--- | See @'C.ts_query_cursor_remove_match'@.
+-- | See @`C.ts_query_cursor_remove_match`@.
 queryCursorRemoveMatch :: QueryCursor -> CaptureIndex -> IO ()
 queryCursorRemoveMatch queryCursor captureIndex =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
     coerce C.ts_query_cursor_remove_match queryCursorPtr captureIndex
 
--- | See @'C.ts_query_cursor_next_capture'@.
+-- | See @`C.ts_query_cursor_next_capture`@.
 queryCursorNextCapture :: QueryCursor -> IO (Maybe (CaptureIndex, QueryMatch))
 queryCursorNextCapture queryCursor =
   alloca $ \captureIndexPtr -> alloca $ \queryMatchPtr -> do
@@ -1543,7 +1550,7 @@ queryCursorNextCapture queryCursor =
         pure . Just . coerce $ (captureIndex, queryMatch)
       else pure Nothing
 
--- | See @'C.ts_query_cursor_set_max_start_depth'@.
+-- | See @`C.ts_query_cursor_set_max_start_depth`@.
 queryCursorSetMaxStartDepth :: QueryCursor -> Word32 -> IO ()
 queryCursorSetMaxStartDepth queryCursor maxStartDepth =
   withQueryCursorAsTSQueryCursorPtr queryCursor $ \queryCursorPtr ->
@@ -1566,33 +1573,33 @@ withLanguageAsTSLanguagePtr :: Language -> (ConstPtr C.TSLanguage -> IO a) -> IO
 withLanguageAsTSLanguagePtr language action =
   withForeignPtr (coerce language) (action . ConstPtr)
 
--- | See @'C.ts_language_copy'@.
+-- | See @`C.ts_language_copy`@.
 languageCopy :: Language -> IO Language
 languageCopy language =
   withLanguageAsTSLanguagePtr language $
     unsafeToLanguage <=< C.ts_language_copy . coerce
 
--- | See @'C.ts_language_symbol_count'@.
+-- | See @`C.ts_language_symbol_count`@.
 languageSymbolCount :: Language -> IO Word32
 languageSymbolCount language =
   withLanguageAsTSLanguagePtr
     language
     C.ts_language_symbol_count
 
--- | See @'C.ts_language_state_count'@.
+-- | See @`C.ts_language_state_count`@.
 languageStateCount :: Language -> IO Word32
 languageStateCount language =
   withLanguageAsTSLanguagePtr
     language
     C.ts_language_state_count
 
--- | See @'C.ts_language_symbol_name'@.
+-- | See @`C.ts_language_symbol_name`@.
 languageSymbolName :: Language -> Symbol -> IO ByteString
 languageSymbolName language symbol =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
     BSU.unsafePackCString =<< coerce C.ts_language_symbol_name languagePtr symbol
 
--- | See @'C.ts_language_symbol_for_name'@.
+-- | See @`C.ts_language_symbol_for_name`@.
 languageSymbolForGrammarType :: Language -> ByteString -> Bool -> IO Symbol
 languageSymbolForGrammarType language grammarType isNamed =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
@@ -1604,19 +1611,19 @@ languageSymbolForGrammarType language grammarType isNamed =
         (fromIntegral grammarTypeLen :: Word32)
         (fromBool isNamed :: CBool)
 
--- | See @'C.ts_language_field_count'@.
+-- | See @`C.ts_language_field_count`@.
 languageFieldCount :: Language -> IO Word32
 languageFieldCount language =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
     C.ts_language_field_count languagePtr
 
--- | See @'C.ts_language_field_name_for_id'@.
+-- | See @`C.ts_language_field_name_for_id`@.
 languageFieldNameForId :: Language -> C.TSFieldId -> IO ByteString
 languageFieldNameForId language fieldId =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
     BSU.unsafePackCString =<< coerce C.ts_language_field_name_for_id languagePtr fieldId
 
--- | See @'C.ts_language_field_id_for_name'@.
+-- | See @`C.ts_language_field_id_for_name`@.
 languageFieldIdForName :: Language -> ByteString -> IO FieldId
 languageFieldIdForName language fieldName =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
@@ -1627,18 +1634,18 @@ languageFieldIdForName language fieldName =
         fieldNameStr
         (fromIntegral fieldNameLen :: Word32)
 
--- | See @'C.ts_language_symbol_type'@.
+-- | See @`C.ts_language_symbol_type`@.
 languageSymbolType :: Language -> Symbol -> IO SymbolType
 languageSymbolType language symbol =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
     coerce C.ts_language_symbol_type languagePtr symbol
 
--- | See @'C.ts_language_version'@.
+-- | See @`C.ts_language_version`@.
 languageVersion :: Language -> IO Word32
 languageVersion language =
   withLanguageAsTSLanguagePtr language C.ts_language_version
 
--- | See @'C.ts_language_next_state'@.
+-- | See @`C.ts_language_next_state`@.
 languageNextState :: Language -> StateId -> Symbol -> IO StateId
 languageNextState language stateId symbol =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
@@ -1646,34 +1653,63 @@ languageNextState language stateId symbol =
 
 -- * Lookahead Iterator
 
--- TODO: ts_lookahead_iterator_new
--- TODO: ts_lookahead_iterator_delete
--- TODO: p_ts_lookahead_iterator_delete
--- TODO: ts_lookahead_iterator_reset_state
--- TODO: ts_lookahead_iterator_reset
--- TODO: ts_lookahead_iterator_language
--- TODO: ts_lookahead_iterator_next
--- TODO: ts_lookahead_iterator_current_symbol
--- TODO: ts_lookahead_iterator_current_symbol_name
+withLookaheadIteratorAsTSLookaheadIteratorPtr :: LookaheadIterator -> (ConstPtr C.TSLookaheadIterator -> IO a) -> IO a
+withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator action =
+  withForeignPtr (coerce lookaheadIterator) (action . ConstPtr)
 
--- * WebAssembly Integration
+-- | See @`C.ts_lookahead_iterator_new`@.
+lookaheadIteratorNew :: Language -> StateId -> IO LookaheadIterator
+lookaheadIteratorNew language stateId =
+  withLanguageAsTSLanguagePtr language $ \languagePtr ->
+    coerce newForeignPtr C.p_ts_lookahead_iterator_delete
+      =<< C.ts_lookahead_iterator_new languagePtr (coerce stateId)
 
--- TODO: TSWasmEngine
--- TODO: TSWasmStore
--- TODO: TSWasmErrorKind
--- TODO: TSWasmErrorKindNone, TSWasmErrorKindParse, TSWasmErrorKindCompile, TSWasmErrorKindInstantiate, TSWasmErrorKindAllocate
--- TODO: TSWasmError
--- TODO: peekTSWasmError
--- TODO: withTSWasmError
--- TODO: ts_wasm_store_new
--- TODO: ts_wasm_store_delete
--- TODO: p_ts_wasm_store_delete
--- TODO: ts_wasm_store_load_language
--- TODO: ts_wasm_store_language_count
--- TODO: ts_language_is_wasm
--- TODO: ts_parser_set_wasm_store
--- TODO: ts_parser_take_wasm_store
+{-| See @`C.ts_lookahead_iterator_delete`@.
+
+    __Warning__: Using the `LookaheadIterator` after calling `unsafeLookaheadIteratorDelete` leads to undefined behaviour.
+-}
+unsafeLookaheadIteratorDelete :: LookaheadIterator -> IO ()
+unsafeLookaheadIteratorDelete = coerce finalizeForeignPtr
+
+-- | See @`C.ts_lookahead_iterator_reset_state`@.
+lookaheadIteratorResetState :: LookaheadIterator -> StateId -> IO Bool
+lookaheadIteratorResetState lookaheadIterator stateId =
+  withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator $ \lookaheadIteratorPtr -> do
+    toBool @CBool <$> coerce C.ts_lookahead_iterator_reset_state lookaheadIteratorPtr stateId
+
+-- | See @`C.ts_lookahead_iterator_reset`@.
+lookaheadIteratorReset :: LookaheadIterator -> Language -> StateId -> IO Bool
+lookaheadIteratorReset lookaheadIterator language stateId = do
+  withLanguageAsTSLanguagePtr language $ \languagePtr ->
+    withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator $ \lookaheadIteratorPtr ->
+      toBool @CBool <$> coerce C.ts_lookahead_iterator_reset lookaheadIteratorPtr languagePtr stateId
+
+-- | See @`C.ts_lookahead_iterator_language`@.
+lookaheadIteratorLanguage :: LookaheadIterator -> IO Language
+lookaheadIteratorLanguage lookaheadIterator =
+  withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator $
+    unsafeToLanguage <=< coerce C.ts_lookahead_iterator_language
+
+-- | See @`C.ts_lookahead_iterator_next`@.
+lookaheadIteratorNext :: LookaheadIterator -> IO Bool
+lookaheadIteratorNext lookaheadIterator =
+  withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator $ \lookaheadIteratorPtr ->
+    toBool @CBool <$> coerce C.ts_lookahead_iterator_next lookaheadIteratorPtr
+
+-- | See @`C.ts_lookahead_iterator_current_symbol`@.
+lookaheadIteratorCurrentSymbol :: LookaheadIterator -> IO Symbol
+lookaheadIteratorCurrentSymbol lookaheadIterator =
+  withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator $ \lookaheadIteratorPtr ->
+    coerce C.ts_lookahead_iterator_current_symbol lookaheadIteratorPtr
+
+-- | See @`C.ts_lookahead_iterator_current_symbol_name`@.
+lookaheadIteratorCurrentSymbolName :: LookaheadIterator -> IO ByteString
+lookaheadIteratorCurrentSymbolName lookaheadIterator =
+  withLookaheadIteratorAsTSLookaheadIteratorPtr lookaheadIterator $
+    BSU.unsafePackCString <=< coerce C.ts_lookahead_iterator_current_symbol_name
 
 -- * Global Configuration
 
--- TODO: ts_set_allocator
+-- -- | See @`C.ts_set_allocator`@.
+-- setAllocator :: FunPtr (CSize -> IO ()) -> FunPtr (CSize -> CSize -> IO ()) -> FunPtr (Ptr a -> CSize -> IO ()) -> FunPtr (Ptr a -> IO ()) -> IO ()
+-- setAllocator = undefined -- C.ts_set_allocator
