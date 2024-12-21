@@ -148,12 +148,9 @@ jobs:
         uses: ./.github/actions/setup-actionlint
         with:
           actionlint-version: ${{ steps.dev-dependencies.outputs.actionlint }}
-        id: setup-actionlint
 
       - name: 🎗️ Lint with actionlint
         run: ./scripts/lint-actionlint.sh
-        env:
-          ACTIONLINT: ${{ steps.setup-actionlint.outputs.actionlint-bin }}
 
   #############################################################################
   # Lint with cabal
@@ -307,9 +304,6 @@ jobs:
         uses: ./.github/actions/setup-shellcheck
         with:
           shellcheck-version: ${{ steps.dev-dependencies.outputs.shellcheck }}
-        id: setup-shellcheck
 
       - name: 🎗️ Lint with ShellCheck
         run: ./scripts/lint-shellcheck.sh
-        env:
-          SHELLCHECK: ${{ steps.setup-shellcheck.outputs.shellcheck-bin }}

@@ -4,13 +4,6 @@ inputs:
   shellcheck-version:
     required: true
     description: "Version of ShellCheck"
-outputs:
-  shellcheck-bin:
-    description: "Path to the ShellCheck binary"
-    value: ${{ steps.setup-shellcheck-linux.outputs.shellcheck-bin || steps.setup-shellcheck-macos.outputs.shellcheck-bin }}
-  shellcheck-dir:
-    description: "Path to the ShellCheck directory"
-    value: ${{ steps.setup-shellcheck-linux.outputs.shellcheck-dir || steps.setup-shellcheck-macos.outputs.shellcheck-dir }}
 runs:
   using: composite
   steps:
@@ -23,39 +16,37 @@ runs:
       id: cache-shellcheck
 
     - name: 🛠️ Install ShellCheck (Linux)
-      if: ${{ runner.os == 'Linux' }}
+      if: ${{ runner.os == 'Linux' && (env.ACT || steps.cache-actionlint.outputs.cache-hit != 'true') }}
       env:
         SHELLCHECK_URL: "https://github.com/koalaman/shellcheck/releases/download/v${{ inputs.shellcheck-version }}/shellcheck-v${{ inputs.shellcheck-version }}.linux.x86_64.tar.xz"
       run: |
         mkdir --parents "$HOME/.shellcheck/bin"
         curl --silent --location "$SHELLCHECK_URL" | tar --extract --xz --directory="$HOME/.shellcheck/bin" --strip-components=1 shellcheck-v${{ inputs.shellcheck-version }}/shellcheck
-        echo "shellcheck-bin=$HOME/.shellcheck/bin/shellcheck" >> "$GITHUB_OUTPUT"
-        echo "shellcheck-dir=$HOME/.shellcheck/bin" >> "$GITHUB_OUTPUT"
       shell: sh
-      id: setup-shellcheck-linux
 
     - name: 🛠️ Install ShellCheck (macOS)
-      if: ${{ runner.os == 'macOS' }}
+      if: ${{ runner.os == 'macOS' && (env.ACT || steps.cache-actionlint.outputs.cache-hit != 'true') }}
       env:
         SHELLCHECK_URL: "https://github.com/koalaman/shellcheck/releases/download/v${{ inputs.shellcheck-version }}/shellcheck-v${{ inputs.shellcheck-version }}.darwin.aarch64.tar.xz"
       run: |
         mkdir --parents "$HOME/.shellcheck/bin"
         curl --silent --location "$SHELLCHECK_URL" | tar --extract --xz --directory="$HOME/.shellcheck/bin" --strip-components=1 shellcheck-v${{ inputs.shellcheck-version }}/shellcheck
-        echo "shellcheck-bin=$HOME/.shellcheck/bin/shellcheck" >> "$GITHUB_OUTPUT"
-        echo "shellcheck-dir=$HOME/.shellcheck/bin" >> "$GITHUB_OUTPUT"
       shell: sh
-      id: setup-shellcheck-macos
 
     - name: 🛠️ Install ShellCheck (Windows)
-      if: ${{ runner.os == 'Windows' }}
+      if: ${{ runner.os == 'Windows' && (env.ACT || steps.cache-actionlint.outputs.cache-hit != 'true') }}
       run: |
         echo "Windows is unsupported"
         exit 1
       shell: sh
 
-    - name: 💾 Save Cabal dependencies
+    - name: 🛠️ Add ShellCheck to PATH
+      run: echo "$HOME/.shellcheck/bin" >> "$GITHUB_PATH"
+      shell: sh
+
+    - name: 💾 Save cache
       if: ${{ !env.ACT && steps.cache-shellcheck.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v4
       with:
-        path: ${{ steps.setup-shellcheck.outputs.shellcheck-dir }}
+        path: "$HOME/.shellcheck/bin"
         key: ${{ steps.cache-shellcheck.outputs.cache-primary-key }}
