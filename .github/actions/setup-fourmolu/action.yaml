@@ -20,33 +20,33 @@ outputs:
 runs:
   using: composite
   steps:
-      - name: 💾 Restore cache
-        uses: actions/cache/restore@v4
-        if: ${{ !env.ACT }}
-        id: cache-fourmolu
-        with:
-          path: "$HOME/.fourmolu/bin"
-          key: ${{ runner.os }}-fourmolu-${{ inputs.fourmolu-version }}
-      
-      - name: 🛠️ Install Haskell
-        if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
-        uses: haskell-actions/setup@v2
-        with:
-          ghc-version: ${{ inputs.ghc-version }}
-          cabal-version: ${{ inputs.cabal-version }}
+    - name: 💾 Restore cache
+      uses: actions/cache/restore@v4
+      if: ${{ !env.ACT }}
+      id: cache-fourmolu
+      with:
+        path: "$HOME/.fourmolu/bin"
+        key: ${{ runner.os }}-fourmolu-${{ inputs.fourmolu-version }}
 
-      - name: 🛠️ Install Fourmolu
-        if: ${{ env.ACT || steps.cache-fourmolu.outputs.cache-hit != 'true' }}
-        run: |
-          mkdir --parents "$HOME/.fourmolu/bin"
-          cabal install fourmolu-${{ inputs.fourmolu-version }} --overwrite-policy=always --install-method=copy --installdir="$HOME/.fourmolu/bin"
-          echo "fourmolu-bin=$HOME/.fourmolu/bin/fourmolu" >> "$GITHUB_OUTPUT"
-          echo "fourmolu-dir=$HOME/.fourmolu/bin" >> "$GITHUB_OUTPUT"
-        shell: sh
+    - name: 🛠️ Install Haskell
+      if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
+      uses: haskell-actions/setup@v2
+      with:
+        ghc-version: ${{ inputs.ghc-version }}
+        cabal-version: ${{ inputs.cabal-version }}
 
-      - name: 💾 Save cache
-        uses: actions/cache/save@v4
-        if: ${{ !env.ACT && steps.cache-fourmolu.outputs.cache-hit != 'true' }}
-        with:
-          path: "$HOME/.fourmolu/bin"
-          key: ${{ steps.cache-fourmolu.outputs.cache-primary-key }}
+    - name: 🛠️ Install Fourmolu
+      if: ${{ env.ACT || steps.cache-fourmolu.outputs.cache-hit != 'true' }}
+      run: |
+        mkdir --parents "$HOME/.fourmolu/bin"
+        cabal install fourmolu-${{ inputs.fourmolu-version }} --overwrite-policy=always --install-method=copy --installdir="$HOME/.fourmolu/bin"
+        echo "fourmolu-bin=$HOME/.fourmolu/bin/fourmolu" >> "$GITHUB_OUTPUT"
+        echo "fourmolu-dir=$HOME/.fourmolu/bin" >> "$GITHUB_OUTPUT"
+      shell: sh
+
+    - name: 💾 Save cache
+      uses: actions/cache/save@v4
+      if: ${{ !env.ACT && steps.cache-fourmolu.outputs.cache-hit != 'true' }}
+      with:
+        path: "$HOME/.fourmolu/bin"
+        key: ${{ steps.cache-fourmolu.outputs.cache-primary-key }}
