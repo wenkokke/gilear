@@ -70,7 +70,9 @@ library
   exposed-modules:    TreeSitter.CApi
   build-tool-depends: hsc2hs:hsc2hs
   hs-source-dirs:     src
-  include-dirs:       vendor/tree-sitter/lib/include
+  include-dirs:
+    vendor/tree-sitter/lib/include vendor/tree-sitter/lib/src
+
   includes:           tree_sitter/api.h
   c-sources:          vendor/tree-sitter/lib/src/lib.c
   build-depends:
