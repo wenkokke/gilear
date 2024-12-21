@@ -37,8 +37,6 @@ jobs:
             runner: "ubuntu-latest"
           - name: "macOS"
             runner: "macOS-latest"
-          - name: "Windows"
-            runner: "windows-latest"
         haskell:
           - ghc:
               version: "" # use version from dev-dependencies
@@ -207,12 +205,9 @@ jobs:
           cabal-fmt-version: ${{ steps.dev-dependencies.outputs.cabal-fmt }}
           ghc-version: ${{ steps.dev-dependencies.outputs.ghc }}
           cabal-version: ${{ steps.dev-dependencies.outputs.cabal }}
-        id: setup-cabal-fmt
 
       - name: 🎗️ Lint with cabal-fmt
         run: ./scripts/lint-cabal-fmt.sh
-        env:
-          FOURMOLU: ${{ steps.setup-cabal-fmt.outputs.cabal-fmt-bin }}
 
   #############################################################################
   # Lint with HLint
@@ -265,12 +260,9 @@ jobs:
           fourmolu-version: ${{ steps.dev-dependencies.outputs.fourmolu }}
           ghc-version: ${{ steps.dev-dependencies.outputs.ghc }}
           cabal-version: ${{ steps.dev-dependencies.outputs.cabal }}
-        id: setup-fourmolu
 
       - name: 🎗️ Lint with Fourmolu
         run: ./scripts/lint-fourmolu.sh
-        env:
-          FOURMOLU: ${{ steps.setup-fourmolu.outputs.fourmolu-bin }}
 
   #############################################################################
   # Lint with Prettier

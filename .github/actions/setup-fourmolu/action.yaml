@@ -10,13 +10,6 @@ inputs:
   cabal-version:
     required: true
     description: "Version of cabal"
-outputs:
-  fourmolu-bin:
-    description: "Path to the Fourmolu binary"
-    value: ${{ steps.setup-fourmolu-linux.outputs.fourmolu-bin || steps.setup-fourmolu-macos.outputs.fourmolu-bin }}
-  fourmolu-dir:
-    description: "Path to the Fourmolu directory"
-    value: ${{ steps.setup-fourmolu-linux.outputs.fourmolu-dir || steps.setup-fourmolu-macos.outputs.fourmolu-dir }}
 runs:
   using: composite
   steps:
@@ -40,8 +33,10 @@ runs:
       run: |
         mkdir --parents "$HOME/.fourmolu/bin"
         cabal install fourmolu-${{ inputs.fourmolu-version }} --overwrite-policy=always --install-method=copy --installdir="$HOME/.fourmolu/bin"
-        echo "fourmolu-bin=$HOME/.fourmolu/bin/fourmolu" >> "$GITHUB_OUTPUT"
-        echo "fourmolu-dir=$HOME/.fourmolu/bin" >> "$GITHUB_OUTPUT"
+      shell: sh
+
+    - name: 🛠️ Add Fourmolu to PATH
+      run: echo "$HOME/.fourmolu/bin" >> "$GITHUB_PATH"
       shell: sh
 
     - name: 💾 Save cache
