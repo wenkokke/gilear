@@ -37,6 +37,8 @@ jobs:
             runner: "ubuntu-latest"
           - name: "macOS"
             runner: "macOS-latest"
+          - name: "Windows"
+            runner: "windows-latest"
         haskell:
           - ghc:
               version: "" # use version from dev-dependencies
@@ -82,14 +84,6 @@ jobs:
         with:
           ghc-version: ${{ matrix.haskell.ghc.version || steps.dev-dependencies.outputs.ghc }}
           cabal-version: ${{ matrix.haskell.cabal.version || steps.dev-dependencies.outputs.cabal }}
-
-      - name: 🛠️ Install ICU (Windows)
-        if: ${{ runner.os == 'Windows' }}
-        run: |
-          $env:PATH = "C:\msys64\usr\bin;$env:PATH"
-          pacman -v --noconfirm -S mingw-w64-x86_64-pkgconf mingw-w64-x86_64-icu mingw-w64-x86_64-binutils
-          echo "C:\msys64\mingw64\bin" | Out-File -FilePath "$env:GITHUB_PATH" -Append
-        shell: pwsh
 
       - name: 🛠️ Configure
         run: |

@@ -1,16 +1,61 @@
-cabal-version:   3.4
-name:            tree-sitter-capi
-version:         0.13.14.0
-license:         AGPL-3.0-only
-synopsis:        Haskell bindings for tree-sitter
+cabal-version:      3.4
+name:               tree-sitter-capi
+version:            0.13.14.0
+license:            AGPL-3.0-only
+synopsis:           Haskell bindings for tree-sitter
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/tree-sitter-capi/#README>
 
-author:          Wen Kokke
-maintainer:      wenkokke@users.noreply.github.com
-category:        Language
-build-type:      Simple
-extra-doc-files: CHANGELOG.md
+author:             Wen Kokke
+maintainer:         wenkokke@users.noreply.github.com
+category:           Language
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+extra-source-files:
+  vendor/tree-sitter/lib/include/tree_sitter/api.h
+  vendor/tree-sitter/lib/src/alloc.c
+  vendor/tree-sitter/lib/src/alloc.h
+  vendor/tree-sitter/lib/src/array.h
+  vendor/tree-sitter/lib/src/atomic.h
+  vendor/tree-sitter/lib/src/clock.h
+  vendor/tree-sitter/lib/src/error_costs.h
+  vendor/tree-sitter/lib/src/get_changed_ranges.c
+  vendor/tree-sitter/lib/src/get_changed_ranges.h
+  vendor/tree-sitter/lib/src/host.h
+  vendor/tree-sitter/lib/src/language.c
+  vendor/tree-sitter/lib/src/language.h
+  vendor/tree-sitter/lib/src/length.h
+  vendor/tree-sitter/lib/src/lexer.c
+  vendor/tree-sitter/lib/src/lexer.h
+  vendor/tree-sitter/lib/src/lib.c
+  vendor/tree-sitter/lib/src/node.c
+  vendor/tree-sitter/lib/src/parser.c
+  vendor/tree-sitter/lib/src/parser.h
+  vendor/tree-sitter/lib/src/point.h
+  vendor/tree-sitter/lib/src/query.c
+  vendor/tree-sitter/lib/src/reduce_action.h
+  vendor/tree-sitter/lib/src/reusable_node.h
+  vendor/tree-sitter/lib/src/stack.c
+  vendor/tree-sitter/lib/src/stack.h
+  vendor/tree-sitter/lib/src/subtree.c
+  vendor/tree-sitter/lib/src/subtree.h
+  vendor/tree-sitter/lib/src/tree.c
+  vendor/tree-sitter/lib/src/tree.h
+  vendor/tree-sitter/lib/src/tree_cursor.c
+  vendor/tree-sitter/lib/src/tree_cursor.h
+  vendor/tree-sitter/lib/src/ts_assert.h
+  vendor/tree-sitter/lib/src/unicode/ptypes.h
+  vendor/tree-sitter/lib/src/unicode/umachine.h
+  vendor/tree-sitter/lib/src/unicode/urename.h
+  vendor/tree-sitter/lib/src/unicode/utf.h
+  vendor/tree-sitter/lib/src/unicode/utf16.h
+  vendor/tree-sitter/lib/src/unicode/utf8.h
+  vendor/tree-sitter/lib/src/unicode.h
+  vendor/tree-sitter/lib/src/wasm/stdlib.c
+  vendor/tree-sitter/lib/src/wasm/wasm-stdlib.h
+  vendor/tree-sitter/lib/src/wasm_store.c
+  vendor/tree-sitter/lib/src/wasm_store.h
+  vendor/tree-sitter/lib/tree-sitter.pc.in
 
 common language
   ghc-options:        -Wall
@@ -25,9 +70,10 @@ library
   exposed-modules:    TreeSitter.CApi
   build-tool-depends: hsc2hs:hsc2hs
   hs-source-dirs:     src
-  include-dirs:       vendor/tree-sitter/lib/include
+  include-dirs:
+    vendor/tree-sitter/lib/include vendor/tree-sitter/lib/src
+
   includes:           tree_sitter/api.h
-  install-includes:   tree_sitter/api.h
   c-sources:          vendor/tree-sitter/lib/src/lib.c
   build-depends:
     , base                  >=4.13 && <5
