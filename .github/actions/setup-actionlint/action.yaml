@@ -11,24 +11,24 @@ runs:
       uses: actions/cache/restore@v4
       if: ${{ !env.ACT }}
       with:
-        path: "$HOME/.actionlint/bin"
+        path: "${{ github.workspace }}/.actionlint/bin"
         key: ${{ runner.os }}-actionlint-${{ inputs.actionlint-version }}
       id: cache-actionlint
 
     - name: 🛠️ Install actionlint
       if: ${{ env.ACT || steps.cache-actionlint.outputs.cache-hit != 'true' }}
       run: |
-        mkdir --parents "$HOME/.actionlint/bin"
-        bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) ${{ inputs.actionlint-version }} "$HOME/.actionlint/bin"
+        mkdir --parents "${{ github.workspace }}/.actionlint/bin"
+        bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) ${{ inputs.actionlint-version }} "${{ github.workspace }}/.actionlint/bin"
       shell: bash
 
     - name: 🛠️ Add ShellCheck to PATH
-      run: echo "$HOME/.actionlint/bin" >> "$GITHUB_PATH"
+      run: echo "${{ github.workspace }}/.actionlint/bin" >> "$GITHUB_PATH"
       shell: sh
 
     - name: 💾 Save Cabal dependencies
       uses: actions/cache/save@v4
       if: ${{ !env.ACT && steps.cache-actionlint.outputs.cache-hit != 'true' }}
       with:
-        path: "$HOME/.actionlint/bin"
+        path: "${{ github.workspace }}/.actionlint/bin"
         key: ${{ steps.cache-actionlint.outputs.cache-primary-key }}

@@ -18,7 +18,7 @@ runs:
       if: ${{ !env.ACT }}
       id: cache-cabal-fmt
       with:
-        path: "$HOME/.cabal-fmt/bin"
+        path: "${{ github.workspace }}/.cabal-fmt/bin"
         key: ${{ runner.os }}-cabal-fmt-${{ inputs.cabal-fmt-version }}
 
     - name: 🛠️ Install Haskell
@@ -32,17 +32,17 @@ runs:
     - name: 🛠️ Install cabal-fmt
       if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
       run: |
-        mkdir --parents "$HOME/.cabal-fmt/bin"
-        cabal install cabal-fmt-${{ inputs.cabal-fmt-version }} --overwrite-policy=always --install-method=copy --installdir="$HOME/.cabal-fmt/bin"
+        mkdir --parents "${{ github.workspace }}/.cabal-fmt/bin"
+        cabal install cabal-fmt-${{ inputs.cabal-fmt-version }} --overwrite-policy=always --install-method=copy --installdir="${{ github.workspace }}/.cabal-fmt/bin"
       shell: sh
 
     - name: 🛠️ Add cabal-fmt to PATH
-      run: echo "$HOME/.cabal-fmt/bin" >> "$GITHUB_PATH"
+      run: echo "${{ github.workspace }}/.cabal-fmt/bin" >> "$GITHUB_PATH"
       shell: sh
 
     - name: 💾 Save cache
       uses: actions/cache/save@v4
       if: ${{ !env.ACT && steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
       with:
-        path: "$HOME/.cabal-fmt/bin"
+        path: "${{ github.workspace }}/.cabal-fmt/bin"
         key: ${{ steps.cache-cabal-fmt.outputs.cache-primary-key }}
