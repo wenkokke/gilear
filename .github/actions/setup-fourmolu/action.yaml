@@ -4,6 +4,12 @@ inputs:
   fourmolu-version:
     required: true
     description: "Version of Fourmolu"
+  ghc-version:
+    required: true
+    description: "Version of GHC"
+  cabal-version:
+    required: true
+    description: "Version of cabal"
 outputs:
   fourmolu-bin:
     description: "Path to the Fourmolu binary"
@@ -25,6 +31,9 @@ runs:
       - name: 🛠️ Install Haskell
         if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
         uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ inputs.ghc-version }}
+          cabal-version: ${{ inputs.cabal-version }}
 
       - name: 🛠️ Install Fourmolu
         if: ${{ env.ACT || steps.cache-fourmolu.outputs.cache-hit != 'true' }}

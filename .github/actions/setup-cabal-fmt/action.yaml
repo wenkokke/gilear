@@ -4,6 +4,12 @@ inputs:
   cabal-fmt-version:
     required: true
     description: "Version of cabal-fmt"
+  ghc-version:
+    required: true
+    description: "Version of GHC"
+  cabal-version:
+    required: true
+    description: "Version of cabal"
 outputs:
   cabal-fmt-bin:
     description: "Path to the cabal-fmt binary"
@@ -26,6 +32,9 @@ runs:
         if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
         uses: haskell-actions/setup@v2
         id: setup-haskell
+        with:
+          ghc-version: ${{ inputs.ghc-version }}
+          cabal-version: ${{ inputs.cabal-version }}
 
       - name: 🛠️ Install cabal-fmt
         if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}

@@ -205,6 +205,8 @@ jobs:
         uses: ./.github/actions/setup-cabal-fmt
         with:
           cabal-fmt-version: ${{ steps.dev-dependencies.outputs.cabal-fmt }}
+          ghc-version: ${{ steps.dev-dependencies.outputs.ghc }}
+          cabal-version: ${{ steps.dev-dependencies.outputs.cabal }}
         id: setup-cabal-fmt
 
       - name: 🎗️ Lint with cabal-fmt
@@ -261,6 +263,8 @@ jobs:
         uses: ./.github/actions/setup-fourmolu
         with:
           fourmolu-version: ${{ steps.dev-dependencies.outputs.fourmolu }}
+          ghc-version: ${{ steps.dev-dependencies.outputs.ghc }}
+          cabal-version: ${{ steps.dev-dependencies.outputs.cabal }}
         id: setup-fourmolu
 
       - name: 🎗️ Lint with Fourmolu
