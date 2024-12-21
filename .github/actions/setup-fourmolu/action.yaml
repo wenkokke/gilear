@@ -20,7 +20,7 @@ runs:
         id: cache-fourmolu
         with:
           path: "$HOME/.fourmolu/bin"
-          key: ${{ matrix.os.name }}-fourmolu-${{ inputs.fourmolu-version }}
+          key: ${{ runner.os }}-fourmolu-${{ inputs.fourmolu-version }}
       
       - name: 🛠️ Install Haskell
         if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}

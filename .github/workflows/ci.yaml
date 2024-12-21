@@ -288,7 +288,7 @@ jobs:
       - name: 🎗️ Lint with Prettier
         run: ./scripts/lint-prettier.sh
         env:
-          PRETTIER: "npm exec --package=prettier@${{ steps.dev-dependencies.outputs.prettier }} prettier --"
+          PRETTIER: "npm exec --yes --package=prettier@${{ steps.dev-dependencies.outputs.prettier }} prettier --"
 
   #############################################################################
   # Lint with ShellCheck

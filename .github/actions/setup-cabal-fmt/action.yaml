@@ -20,7 +20,7 @@ runs:
         id: cache-cabal-fmt
         with:
           path: "$HOME/.cabal-fmt/bin"
-          key: ${{ matrix.os.name }}-cabal-fmt-${{ inputs.cabal-fmt-version }}
+          key: ${{ runner.os }}-cabal-fmt-${{ inputs.cabal-fmt-version }}
       
       - name: 🛠️ Install Haskell
         if: ${{ env.ACT || steps.cache-cabal-fmt.outputs.cache-hit != 'true' }}
