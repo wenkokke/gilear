@@ -11,7 +11,7 @@ runs:
       uses: actions/cache/restore@v4
       if: ${{ !env.ACT }}
       with:
-        path: "$HOME/.shellcheck/bin"
+        path: "${{ env.HOME }}/.shellcheck/bin"
         key: ${{ runner.os }}-shellcheck-${{ inputs.shellcheck-version }}
       id: cache-shellcheck
 
@@ -20,8 +20,8 @@ runs:
       env:
         SHELLCHECK_URL: "https://github.com/koalaman/shellcheck/releases/download/v${{ inputs.shellcheck-version }}/shellcheck-v${{ inputs.shellcheck-version }}.linux.x86_64.tar.xz"
       run: |
-        mkdir --parents "$HOME/.shellcheck/bin"
-        curl --silent --location "$SHELLCHECK_URL" | tar --extract --xz --directory="$HOME/.shellcheck/bin" --strip-components=1 shellcheck-v${{ inputs.shellcheck-version }}/shellcheck
+        mkdir --parents "${{ env.HOME }}/.shellcheck/bin"
+        curl --silent --location "$SHELLCHECK_URL" | tar --extract --xz --directory="${{ env.HOME }}/.shellcheck/bin" --strip-components=1 shellcheck-v${{ inputs.shellcheck-version }}/shellcheck
       shell: sh
 
     - name: 🛠️ Install ShellCheck (macOS)
@@ -29,8 +29,8 @@ runs:
       env:
         SHELLCHECK_URL: "https://github.com/koalaman/shellcheck/releases/download/v${{ inputs.shellcheck-version }}/shellcheck-v${{ inputs.shellcheck-version }}.darwin.aarch64.tar.xz"
       run: |
-        mkdir --parents "$HOME/.shellcheck/bin"
-        curl --silent --location "$SHELLCHECK_URL" | tar --extract --xz --directory="$HOME/.shellcheck/bin" --strip-components=1 shellcheck-v${{ inputs.shellcheck-version }}/shellcheck
+        mkdir --parents "${{ env.HOME }}/.shellcheck/bin"
+        curl --silent --location "$SHELLCHECK_URL" | tar --extract --xz --directory="${{ env.HOME }}/.shellcheck/bin" --strip-components=1 shellcheck-v${{ inputs.shellcheck-version }}/shellcheck
       shell: sh
 
     - name: 🛠️ Install ShellCheck (Windows)
@@ -41,12 +41,12 @@ runs:
       shell: sh
 
     - name: 🛠️ Add ShellCheck to PATH
-      run: echo "$HOME/.shellcheck/bin" >> "$GITHUB_PATH"
+      run: echo "${{ env.HOME }}/.shellcheck/bin" >> "$GITHUB_PATH"
       shell: sh
 
     - name: 💾 Save cache
       if: ${{ !env.ACT && steps.cache-shellcheck.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v4
       with:
-        path: "$HOME/.shellcheck/bin"
+        path: "${{ env.HOME }}/.shellcheck/bin"
         key: ${{ steps.cache-shellcheck.outputs.cache-primary-key }}
