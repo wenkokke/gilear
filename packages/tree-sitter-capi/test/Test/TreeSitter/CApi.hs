@@ -1,3 +1,6 @@
+{-|
+Tests for `TreeSitter.CApi`.
+-}
 module Test.TreeSitter.CApi where
 
 import Control.Exception (bracket)
@@ -14,6 +17,7 @@ import TreeSitter.CApi (
  )
 import TreeSitter.While (tree_sitter_while)
 
+-- | All tests for `TreeSitter.CApi`.
 tests :: TestTree
 tests =
   testGroup
@@ -44,5 +48,6 @@ test_ts_parser_parse_fails_without_language =
             (fromIntegral string_length)
         nullPtr @=? tree_p
 
+-- | Internal helper: Cast a t`ConstPtr` using `castPtr`.
 castConstPtr :: ConstPtr a -> ConstPtr b
 castConstPtr = ConstPtr . castPtr . unConstPtr

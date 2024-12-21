@@ -426,7 +426,7 @@ loggerIsNull :: Logger -> Bool
 loggerIsNull (WrapTSLogger (C.TSLogger statePtr logFunPtr)) =
   statePtr == nullPtr && logFunPtr == nullFunPtr
 
-{- | Delete the 'Logger'.
+{-| Delete the 'Logger'.
 
 __Warning__: Using the 'Logger' after calling 'unsafeLoggerDelete' leads to undefined behaviour.
 -}
@@ -595,7 +595,7 @@ withParserAsTSParserPtr = withForeignPtr . coerce
 parserNew :: IO Parser
 parserNew = coerce newForeignPtr C.p_ts_parser_delete =<< C.ts_parser_new
 
-{- | Delete the 'Parser' and free the associated memory.
+{-| Delete the 'Parser' and free the associated memory.
 
 See @'C.ts_parser_delete'@.
 
@@ -648,7 +648,7 @@ parserIncludedRanges parser =
       rangesLength <- fromIntegral <$> peek rangesLengthPtr
       coerce $ peekArray rangesLength (unConstPtr rangesPtr)
 
-{- | Set the 'Logger' for a 'Parser'.
+{-| Set the 'Logger' for a 'Parser'.
 
   See @'C.ts_parser_set_logger'@.
 -}
@@ -657,7 +657,7 @@ parserSetLogger parser logger =
   withParserAsTSParserPtr parser $ \parserPtr ->
     coerce C.ts_parser_set_logger parserPtr logger
 
-{- | Get the 'Logger' for a 'Parser'.
+{-| Get the 'Logger' for a 'Parser'.
 
   If no 'Logger' was set, 'parserLogger' returns 'Nothing'.
 
@@ -684,7 +684,7 @@ parserRemoveLogger parser = do
   parserSetLogger parser loggerNull
   pure maybeLogger
 
-{- | If the 'Parser' has a 'Logger', delete it.
+{-| If the 'Parser' has a 'Logger', delete it.
 
 __Warning__: Using the 'Logger' after calling 'unsafeParserDeleteLogger' leads to undefined behaviour.
 -}
@@ -693,7 +693,7 @@ unsafeParserDeleteLogger parser = do
   maybeLogger <- parserRemoveLogger parser
   maybe (pure ()) unsafeLoggerDelete maybeLogger
 
-{- | See @'C.ts_parser_parse'@.
+{-| See @'C.ts_parser_parse'@.
 parserParse :: Parser -> Input -> IO ()
 parserParse = _
 -}
@@ -791,7 +791,7 @@ parserCancellationFlag parser =
   withParserAsTSParserPtr parser $ \parserPtr ->
     coerce C.ts_parser_cancellation_flag parserPtr
 
-{- | See @'C.ts_parser_print_dot_graphs'@.
+{-| See @'C.ts_parser_print_dot_graphs'@.
 | This function throws an 'IOError' if the 'Handle' does not reference a file descriptor.
 -}
 parserPrintDotGraphs :: Parser -> Handle -> IO ()
@@ -823,7 +823,7 @@ treeCopy tree =
   withTreeAsTSTreePtr tree $
     toTree <=< C.ts_tree_copy
 
-{- | Delete the 'Tree'.
+{-| Delete the 'Tree'.
 
 See @'C.ts_tree_delete'@.
 
@@ -878,7 +878,7 @@ treeGetChangedRanges oldTree newTree =
     rangesLength <- fromIntegral <$> peek rangesLengthPtr
     coerce <$> peekArray rangesLength rangesPtr
 
-{- | See @'C.ts_tree_print_dot_graph'@.
+{-| See @'C.ts_tree_print_dot_graph'@.
 | This function throws an 'IOError' if the 'Handle' does not reference a file descriptor.
 -}
 treePrintDotGraph :: Tree -> Handle -> IO ()
@@ -1159,7 +1159,7 @@ treeCursorNew node = do
   addForeignPtrFinalizer C.p_ts_tree_cursor_delete treeCursorForeignPtr
   pure $ WrapTSTreeCursor treeCursorForeignPtr
 
-{- | Delete the 'TreeCursor'.
+{-| Delete the 'TreeCursor'.
 
 | See @'C.ts_tree_cursor_delete'@.
 
@@ -1333,7 +1333,7 @@ offsetToPointAndLine str offset = (point, line)
   point = Point{pointRow = fromIntegral row, pointColumn = fromIntegral column}
   line = prefixLine <> suffixLine
 
-{- | Delete the 'Query' and free the associated memory.
+{-| Delete the 'Query' and free the associated memory.
 
 See @'C.ts_query_delete'@.
 

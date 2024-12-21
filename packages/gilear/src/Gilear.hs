@@ -14,7 +14,7 @@ import Data.Kind (Type)
 -- Type-Checker Monad
 --------------------------------------------------------------------------------
 
-{- | Type-Checker Environment.
+{-| Type-Checker Environment.
 
   This is an environment, rather than state, because it is intended to be
   used with the reader monad, rather than the state monad. However, it is
@@ -27,7 +27,7 @@ data TCEnv = TCEnv
 newTCEnv :: IO TCEnv
 newTCEnv = pure TCEnv
 
-{- | Type-Checker Monad.
+{-| Type-Checker Monad.
 
   The base of the type-checker monad stack is 'IO'. This is for two reasons:
 

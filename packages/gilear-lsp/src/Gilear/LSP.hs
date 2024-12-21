@@ -181,7 +181,7 @@ lspDefinition handleLogger dualLogger reactorInputChan tcEnv =
     , options = lspOptions
     }
 
-{- | The single point that all events flow through, allowing management of
+{-| The single point that all events flow through, allowing management of
   state to stitch replies and requests together from the two asynchronous
   sides: lsp server and backend compiler.
 -}
