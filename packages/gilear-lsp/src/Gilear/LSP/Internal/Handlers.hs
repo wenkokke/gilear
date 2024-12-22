@@ -24,7 +24,7 @@ handlers _clientCapabilities _logger =
     [ initializedHandler
     , textDocumentDidOpenHandler
     , textDocumentDidSaveHandler
-    , textDocumentChangeHandler
+    , textDocumentDidChangeHandler
     , textDocumentDidCloseHandler
     , workspaceDidChangeConfiguration
     ]
@@ -52,8 +52,8 @@ textDocumentSemanticTokensFullHandler =
     let _uri = request ^. params . textDocument . uri
     responder . Right . InR $ Null
 
-textDocumentChangeHandler :: LSP.Handlers LSPTC
-textDocumentChangeHandler =
+textDocumentDidChangeHandler :: LSP.Handlers LSPTC
+textDocumentDidChangeHandler =
   LSP.notificationHandler SMethod_TextDocumentDidChange $ \notification -> do
     let _uri = notification ^. params . textDocument . uri
     pure ()
