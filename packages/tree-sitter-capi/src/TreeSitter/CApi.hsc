@@ -640,6 +640,21 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_new"
 foreign import ccall "wrapper"
   mkTSLogFunPtr :: TSLog -> IO (FunPtr TSLog)
 
+#{def
+  void _wrap_ts_logger_delete(TSLogger *log) {
+    free(logger->payload);
+    free(logger);
+  }
+}
+
+{-|
+ > TSLogger *_wrap_ts_logger_delete(TSLog log);
+ -}
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_delete"
+  _wrap_ts_logger_delete ::
+    Ptr TSLogger ->
+    IO ()
+
 {-|
   > typedef struct TSInputEdit {
   >   uint32_t start_byte;
@@ -1168,7 +1183,6 @@ ts_parser_parse = \self old_tree readFun inputEncoding -> do
   bracket (mkTSReadFunPtr readFun) freeHaskellFunPtr $ \readFun_p -> do
     bracket (_wrap_ts_input_new readFun_p inputEncoding) _wrap_ts_input_delete $ \input_p -> do
       _wrap_ts_parser_parse self old_tree input_p
-{-# OPAQUE ts_parser_parse #-}
 
 #{def
   TSTree *_wrap_ts_parser_parse(
@@ -1309,13 +1323,12 @@ foreign import capi unsafe "tree_sitter/api.h ts_parser_cancellation_flag"
 -}
 ts_parser_set_logger ::
   Ptr TSParser ->
-  TSLogger ->
+  TSLog ->
   IO ()
-ts_parser_set_logger = undefined
--- \self logger ->
---   with logger $ \logger_p ->
---     _wrap_ts_parser_set_logger self logger_p
--- {-# INLINE ts_parser_set_logger #-}
+ts_parser_set_logger = \self logFun ->
+  bracket (mkTSLogFunPtr logFun) $ \logFun_p ->
+    bracket (_wrap_ts_logger_new logFun_p) $ \logger_p ->
+      _wrap_ts_parser_set_logger self logger_p
 
 #{def
   void _wrap_ts_parser_set_logger(
