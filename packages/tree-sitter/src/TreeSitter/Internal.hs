@@ -270,6 +270,8 @@ import GHC.IO.Handle.FD (handleToFd)
 import System.IO (Handle)
 import TreeSitter.CApi qualified as C
 import TreeSitter.CApi qualified as TSNode (TSNode (..))
+import Data.IORef (IORef)
+import System.Mem.Weak (Weak)
 
 -- import TreeSitter.CApi qualified as TSTreeCursor (TSTreeCursor (..))
 
@@ -396,6 +398,11 @@ pattern Range
 
 newtype Input = WrapTSInput {unWrapTSInput :: C.TSInput}
 
+type ReadInput a = a -> Word32 -> Point -> Word32 -> ByteString
+
+-- inputNew :: s -> ReadInput s -> IO Input
+-- inputNew initialState readInput = _
+
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
 
@@ -413,32 +420,44 @@ instance Show LogType where
 
 newtype Logger = WrapTSLogger {unWrapTSLogger :: C.TSLogger}
 
-type Log a = a -> LogType -> ByteString -> IO ()
+type Log = LogType -> ByteString -> IO ()
 
-loggerNew :: s -> Log s -> IO Logger
-loggerNew initialState logFun = do
-  logFunPtr <- C.mkTSLogFunPtr $ \statePtr logType buffer -> do
-    let stateStablePtr = castPtrToStablePtr (castPtr statePtr)
-    state <- deRefStablePtr stateStablePtr
+unsafeLoggerNew :: Log -> IO Logger
+unsafeLoggerNew logFun = do
+  logFunPtr <- C.mkTSLogFunPtr $ \logType buffer -> do
     logMsg <- BS.packCString (coerce buffer)
-    logFun state (coerce logType) logMsg
-  stateStablePtr <- newStablePtr initialState
-  let statePtr = castPtr (castStablePtrToPtr stateStablePtr)
-  pure . coerce $ C.TSLogger statePtr logFunPtr
+    logFun (coerce logType) logMsg
+  loggerPtr <- C.ts_logger_new logFunPtr
+  peek loggerPtr
+
+unsafeLoggerDelete :: Logger -> IO ()
+unsafeLoggerDelete (WrapTSLogger C.TSLogger {..}) = do
+  _payload
+
+-- loggerNew :: s -> WriteLog s -> IO Logger
+-- loggerNew initialState writeLog = do
+--   writeLogPtr <- C.mkTSLogFunPtr $ \statePtr logType buffer -> do
+--     let stateStablePtr = castPtrToStablePtr (castPtr statePtr)
+--     state <- deRefStablePtr stateStablePtr
+--     logMsg <- BS.packCString (coerce buffer)
+--     writeLog state (coerce logType) logMsg
+--   stateStablePtr <- newStablePtr initialState
+--   let statePtr = castPtr (castStablePtrToPtr stateStablePtr)
+--   pure . coerce $ C.TSLogger statePtr writeLogPtr
 
 loggerNull :: Logger
 loggerNull = WrapTSLogger (C.TSLogger nullPtr nullFunPtr)
 
 loggerIsNull :: Logger -> Bool
-loggerIsNull (WrapTSLogger (C.TSLogger statePtr logFunPtr)) =
-  statePtr == nullPtr && logFunPtr == nullFunPtr
+loggerIsNull (WrapTSLogger (C.TSLogger statePtr writeLogPtr)) =
+  statePtr == nullPtr && writeLogPtr == nullFunPtr
 
 {-| Delete the 'Logger'.
 
 __Warning__: Using the 'Logger' after calling 'unsafeLoggerDelete' leads to undefined behaviour.
 -}
 unsafeLoggerDelete :: Logger -> IO ()
-unsafeLoggerDelete (WrapTSLogger (C.TSLogger statePtr logFunPtr)) = do
+unsafeLoggerDelete (WrapTSLogger (C.TSLogger statePtr writeLogPtr)) = do
   -- The initial logger sets both the payload pointer as well as
   -- the log function pointer to NULL, so these checks guard against
   -- accidentally freeing the __initial__ logger.
@@ -447,8 +466,8 @@ unsafeLoggerDelete (WrapTSLogger (C.TSLogger statePtr logFunPtr)) = do
   assert (statePtr /= nullPtr) $ do
     let stateStablePtr = castPtrToStablePtr (castPtr statePtr)
     freeStablePtr stateStablePtr
-  assert (logFunPtr /= nullFunPtr) $
-    freeHaskellFunPtr logFunPtr
+  assert (writeLogPtr /= nullFunPtr) $
+    freeHaskellFunPtr writeLogPtr
 
 newtype InputEdit = WrapTSInputEdit {unWrapTSInputEdit :: C.TSInputEdit}
 
