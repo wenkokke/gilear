@@ -18,7 +18,7 @@ parse uri text = do
     Nothing -> handleParseFailure uri
     Just tree -> atomicModifyTreeCache' $ \treeCache -> (TreeCache.insert uri tree treeCache, ())
 
--- | Internal helper: Parse `Text` using the parser in `TC`.
+-- | Internal helper: Parse `Text` using the `TS.Parser` in `TC`.
 parseText :: Text -> TC (Maybe TS.Tree)
 parseText text = do
   TCEnv{..} <- askTCEnv

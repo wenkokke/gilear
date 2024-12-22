@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Gilear.Internal.TC where
 
@@ -53,11 +54,14 @@ newtype TC a = TC {unTC :: ReaderT TCEnv (ResourceT IO) a}
 askTCEnv :: TC TCEnv
 askTCEnv = TC ask
 
+-- | Get the parser.
+askParser :: TC Parser
+askParser = (.parser) <$> askTCEnv
+
 -- | Atomically modify the `TreeCache`.
 atomicModifyTreeCache' :: (TreeCache -> (TreeCache, b)) -> TC b
-atomicModifyTreeCache' f = do
-  TCEnv{..} <- askTCEnv
-  liftIO $ atomicModifyIORef' treeCacheVar f
+atomicModifyTreeCache' f =
+    askTCEnv >>= liftIO . (`atomicModifyIORef'` f) . (.treeCacheVar)
 
 -- | Run the type-checker monad.
 runTC :: TCEnv -> TC a -> IO a
