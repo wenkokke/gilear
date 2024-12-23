@@ -4,7 +4,7 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 
-module Gilear.Internal.TC where
+module Gilear.Internal.Core where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -57,6 +57,10 @@ askTCEnv = TC ask
 -- | Get the parser.
 askParser :: TC Parser
 askParser = (.parser) <$> askTCEnv
+
+-- | Run a type-checking action with the parser.
+withParser :: (Parser -> TC a) -> TC a
+withParser action = askParser >>= action
 
 -- | Atomically modify the `TreeCache`.
 atomicModifyTreeCache' :: (TreeCache -> (TreeCache, b)) -> TC b

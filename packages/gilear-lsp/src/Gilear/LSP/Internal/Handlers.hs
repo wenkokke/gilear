@@ -1,18 +1,20 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Gilear.LSP.Internal.Handlers where
 
 import Colog.Core (LogAction, WithSeverity)
 import Control.Lens ((^.))
 import Data.Text (Text)
-import Gilear.LSP.Internal.Core (Config, LSPTC)
+import Gilear.LSP.Internal.Core (Config, LSPTC, liftTC)
 import Language.LSP.Protocol.Lens (HasParams (..), HasTextDocument (..), HasUri (..))
 import Language.LSP.Protocol.Message (SMethod (..))
-import Language.LSP.Protocol.Types (ClientCapabilities, Null (..), type (|?) (..))
+import Language.LSP.Protocol.Types (ClientCapabilities, Null (..), type (|?) (..), TextDocumentItem (..), toNormalizedUri)
 import Language.LSP.Server (LspM)
 import Language.LSP.Server qualified as LSP
+import qualified Gilear.Internal.Parser as TC
 
 handlers ::
   (m ~ LspM Config) =>
@@ -37,7 +39,9 @@ initializedHandler =
 textDocumentDidOpenHandler :: LSP.Handlers LSPTC
 textDocumentDidOpenHandler =
   LSP.notificationHandler SMethod_TextDocumentDidOpen $ \notification -> do
-    let _uri = notification ^. params . textDocument . uri
+    let TextDocumentItem{_uri, _text} = notification ^. params . textDocument
+    let normalizedUrl = toNormalizedUri _uri
+    liftTC $ TC.parse normalizedUrl _text
     pure ()
 
 textDocumentDidSaveHandler :: LSP.Handlers LSPTC

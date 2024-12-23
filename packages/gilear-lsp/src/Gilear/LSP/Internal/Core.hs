@@ -12,7 +12,8 @@ import Data.Aeson.Types (Value)
 import Data.Kind (Type)
 import Data.Text (Text)
 import Gilear (TC, TCEnv, runTC)
-import Language.LSP.Server (LanguageContextEnv, LspT, MonadLsp, runLspT)
+import Language.LSP.Server (LanguageContextEnv, LspT (..), MonadLsp, runLspT)
+import Control.Monad.Trans.Class (MonadTrans (lift))
 
 --------------------------------------------------------------------------------
 -- Language-Server Type-Checker Monad Stack
@@ -25,6 +26,9 @@ newtype LSPTC a = LSPTC {unLSPTC :: LspT Config TC a}
 runLSPTC :: LanguageContextEnv Config -> TCEnv -> LSPTC a -> IO a
 runLSPTC languageContextEnv tcEnv =
   runTC tcEnv . runLspT languageContextEnv . unLSPTC
+
+liftTC :: TC a -> LSPTC a
+liftTC tcAction = LSPTC (LspT (lift tcAction))
 
 --------------------------------------------------------------------------------
 -- Language-Server Configuration

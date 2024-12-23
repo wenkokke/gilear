@@ -20,10 +20,10 @@ library
   import:          language
   exposed-modules: Gilear
   other-modules:
+    Gilear.Internal.Core
     Gilear.Internal.Parser
     Gilear.Internal.Parser.Core
     Gilear.Internal.Parser.TreeCache
-    Gilear.Internal.TC
   build-depends:
     , base                 >=4.13 && <5
     , io-classes           >=1.7  && <1.8

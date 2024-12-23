@@ -6,8 +6,8 @@ module Gilear.Internal.Parser where
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Data.Text.Encoding qualified as T
+import Gilear.Internal.Core (TC, atomicModifyTreeCache', withParser)
 import Gilear.Internal.Parser.TreeCache qualified as TreeCache
-import Gilear.Internal.TC (TC, TCEnv (..), askTCEnv, atomicModifyTreeCache')
 import Language.LSP.Protocol.Types (NormalizedUri)
 import TreeSitter qualified as TS
 
@@ -15,19 +15,19 @@ import TreeSitter qualified as TS
 parse :: NormalizedUri -> Text -> TC ()
 parse uri text = do
   parseText text >>= \case
-    Nothing -> handleParseFailure uri
+    Nothing -> parseFailure uri
     Just tree -> atomicModifyTreeCache' $ \treeCache -> (TreeCache.insert uri tree treeCache, ())
 
 -- | Internal helper: Parse `Text` using the `TS.Parser` in `TC`.
 parseText :: Text -> TC (Maybe TS.Tree)
-parseText text = do
-  TCEnv{..} <- askTCEnv
-  liftIO $
-    TS.parserParseByteStringWithEncoding
-      parser
-      Nothing
-      (T.encodeUtf8 text)
-      TS.InputEncodingUTF8
+parseText text =
+  withParser $ \parser ->
+    liftIO $
+      TS.parserParseByteStringWithEncoding
+        parser
+        Nothing
+        (T.encodeUtf8 text)
+        TS.InputEncodingUTF8
 
 {-| Internal helper: Handle parse failure.
 
@@ -35,6 +35,6 @@ parseText text = do
 
     TODO: Handle parse failure properly.
 -}
-handleParseFailure :: NormalizedUri -> TC ()
-handleParseFailure uri =
+parseFailure :: NormalizedUri -> TC ()
+parseFailure uri =
   error $ "Parsing " <> show uri <> " failed"

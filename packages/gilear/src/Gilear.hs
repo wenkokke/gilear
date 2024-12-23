@@ -7,4 +7,4 @@ module Gilear
     newTCEnv,
   ) where
 
-import Gilear.Internal.TC (TC, runTC, TCEnv, newTCEnv)
+import Gilear.Internal.Core (TC, runTC, TCEnv, newTCEnv)
