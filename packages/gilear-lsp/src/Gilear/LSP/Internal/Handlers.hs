@@ -45,6 +45,7 @@ handlers logger _clientCapabilities =
       let TextDocumentItem{_uri, _text} = notification ^. params . textDocument
       let normalizedUrl = toNormalizedUri _uri
       maybeTree <- TC.parse normalizedUrl _text
+      -- TODO: Temporary logging of parse tree.
       case maybeTree of
         Nothing -> pure ()
         Just tree -> do
