@@ -3,19 +3,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Gilear.LSP.Internal.Core where
 
 import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Reader (MonadReader (..))
 import Control.Monad.Trans.Resource (MonadUnliftIO)
 import Data.Aeson.Types (Value)
 import Data.Kind (Type)
 import Data.Text (Text)
-import Gilear.Internal.Core (TCEnv, TCIO, TCT(..), runTCT, runTCIO)
+import Gilear.Internal.Core (TCEnv, TCIO, TCT (..), runTCIO, runTCT)
 import Language.LSP.Server (LanguageContextEnv, LspT (..), MonadLsp (..), runLspT)
-import Control.Monad.Reader (MonadReader (..))
 
 --------------------------------------------------------------------------------
 -- Language-Server Type-Checker Monad Stack

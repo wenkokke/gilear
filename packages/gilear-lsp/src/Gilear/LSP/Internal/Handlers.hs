@@ -1,14 +1,17 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE ExplicitNamespaces #-}
 
 module Gilear.LSP.Internal.Handlers where
 
 import Colog.Core (LogAction, WithSeverity)
+import Colog.Core.Action ((<&))
+import Colog.Core.Severity (Severity (..), WithSeverity (..))
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
+import Data.Text.Encoding qualified as T
 import Gilear.Internal.Parser qualified as TC (parse)
 import Gilear.LSP.Internal.Core (LSPTC)
 import Language.LSP.Protocol.Lens (HasParams (..), HasTextDocument (..), HasUri (..))
@@ -16,9 +19,6 @@ import Language.LSP.Protocol.Message (SMethod (..))
 import Language.LSP.Protocol.Types (ClientCapabilities, TextDocumentItem (..), toNormalizedUri)
 import Language.LSP.Server qualified as LSP
 import TreeSitter qualified as TS
-import Colog.Core.Action ((<&))
-import Colog.Core.Severity (Severity (..), WithSeverity (..))
-import Data.Text.Encoding qualified as T
 
 handlers ::
   LogAction LSPTC (WithSeverity Text) ->
@@ -50,7 +50,7 @@ handlers logger _clientCapabilities =
         Nothing -> pure ()
         Just tree -> do
           rootNode <- liftIO $ TS.treeRootNode tree
-          rootNodeByteString <-liftIO $ TS.showNode rootNode 
+          rootNodeByteString <- liftIO $ TS.showNode rootNode
           let msg = T.decodeUtf8 rootNodeByteString
           logger <& msg `WithSeverity` Debug
           pure ()

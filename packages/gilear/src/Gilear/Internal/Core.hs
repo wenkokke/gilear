@@ -1,11 +1,11 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 module Gilear.Internal.Core where
 
@@ -107,8 +107,9 @@ type TCT :: (Type -> Type) -> Type -> Type
 newtype TCT m a = TCT {unTCT :: ReaderT TCEnv m a}
   deriving newtype (Functor, Applicative, Monad, MonadReader TCEnv)
 
-deriving newtype instance MonadIO m => MonadIO (TCT m)
-deriving newtype instance MonadUnliftIO m => MonadUnliftIO (TCT m)
+deriving newtype instance (MonadIO m) => MonadIO (TCT m)
+
+deriving newtype instance (MonadUnliftIO m) => MonadUnliftIO (TCT m)
 
 type TC :: Type -> Type
 newtype TC a = TC {unTC :: TCT TCIO a}
@@ -117,4 +118,3 @@ newtype TC a = TC {unTC :: TCT TCIO a}
 -- | Run the type-checker monad.
 runTCT :: TCEnv -> TCT m a -> m a
 runTCT env action = runReaderT (unTCT action) env
-
