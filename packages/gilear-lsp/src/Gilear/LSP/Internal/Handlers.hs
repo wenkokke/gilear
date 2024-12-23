@@ -14,7 +14,7 @@ import Language.LSP.Protocol.Message (SMethod (..))
 import Language.LSP.Protocol.Types (ClientCapabilities, Null (..), type (|?) (..), TextDocumentItem (..), toNormalizedUri)
 import Language.LSP.Server (LspM)
 import Language.LSP.Server qualified as LSP
-import qualified Gilear.Internal.Parser as TC
+import Gilear qualified
 
 handlers ::
   (m ~ LspM Config) =>
@@ -41,7 +41,7 @@ textDocumentDidOpenHandler =
   LSP.notificationHandler SMethod_TextDocumentDidOpen $ \notification -> do
     let TextDocumentItem{_uri, _text} = notification ^. params . textDocument
     let normalizedUrl = toNormalizedUri _uri
-    liftTC $ TC.parse normalizedUrl _text
+    liftTC $ Gilear.parse normalizedUrl _text
     pure ()
 
 textDocumentDidSaveHandler :: LSP.Handlers LSPTC

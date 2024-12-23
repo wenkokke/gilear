@@ -18,8 +18,8 @@ common language
 
 library
   import:          language
-  exposed-modules: Gilear
-  other-modules:
+  exposed-modules:
+    Gilear
     Gilear.Internal.Core
     Gilear.Internal.Parser
     Gilear.Internal.Parser.Core

@@ -1,10 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Gilear
-  ( TC,
-    runTC,
-    TCEnv,
-    newTCEnv,
+  ( module Gilear.Internal.Core
+  , module Gilear.Internal.Parser
   ) where
 
 import Gilear.Internal.Core (TC, runTC, TCEnv, newTCEnv)
+import Gilear.Internal.Parser (parse)
