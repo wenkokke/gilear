@@ -1,22 +1,22 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Gilear.Internal.Parser where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Data.Text.Encoding qualified as T
-import Gilear.Internal.Core (TC, atomicModifyTreeCache', withParser)
+import Gilear.Internal.Core (TC, modifyTreeCache, withParser)
 import Gilear.Internal.Parser.TreeCache qualified as TreeCache
 import Language.LSP.Protocol.Types (NormalizedUri)
 import TreeSitter qualified as TS
 
 -- | Parse an entire file.
-parse :: NormalizedUri -> Text -> TC ()
+parse :: NormalizedUri -> Text -> TC (Maybe TS.Tree)
 parse uri text = do
   parseText text >>= \case
-    Nothing -> parseFailure uri
-    Just tree -> atomicModifyTreeCache' $ \treeCache -> (TreeCache.insert uri tree treeCache, ())
+    Nothing -> parseFailure uri >> pure Nothing
+    Just tree -> modifyTreeCache $ \treeCache ->
+      (TreeCache.insert uri tree treeCache, Just tree)
 
 -- | Internal helper: Parse `Text` using the `TS.Parser` in `TC`.
 parseText :: Text -> TC (Maybe TS.Tree)

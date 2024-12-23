@@ -11,7 +11,7 @@ import Control.Monad.Trans.Resource (MonadUnliftIO)
 import Data.Aeson.Types (Value)
 import Data.Kind (Type)
 import Data.Text (Text)
-import Gilear (TC, TCEnv, runTC)
+import Gilear.Internal.Core (TC, TCEnv, runTC)
 import Language.LSP.Server (LanguageContextEnv, LspT (..), MonadLsp, runLspT)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 

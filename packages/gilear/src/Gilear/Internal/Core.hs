@@ -1,8 +1,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 
 module Gilear.Internal.Core where
 
@@ -10,12 +10,16 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
 import Control.Monad.Trans.Resource (ResourceT, runResourceT)
-import Data.IORef (IORef, atomicModifyIORef', newIORef)
+import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.Kind (Type)
 import Gilear.Internal.Parser.Core (Parser)
 import Gilear.Internal.Parser.Core qualified as Parser
 import Gilear.Internal.Parser.TreeCache (TreeCache)
 import Gilear.Internal.Parser.TreeCache qualified as TreeCache
+import Language.LSP.Protocol.Types (NormalizedUri)
+import TreeSitter qualified as TS
+import qualified Control.Monad.Accum as TreeCache
+import Data.Functor ((<&>))
 
 {-| Type-Checker Environment.
 
@@ -54,18 +58,28 @@ newtype TC a = TC {unTC :: ReaderT TCEnv (ResourceT IO) a}
 askTCEnv :: TC TCEnv
 askTCEnv = TC ask
 
--- | Get the parser.
+-- | Get the `Parser`.
 askParser :: TC Parser
 askParser = (.parser) <$> askTCEnv
 
--- | Run a type-checking action with the parser.
+-- | Run a type-checking action with the `Parser`.
 withParser :: (Parser -> TC a) -> TC a
 withParser action = askParser >>= action
 
--- | Atomically modify the `TreeCache`.
-atomicModifyTreeCache' :: (TreeCache -> (TreeCache, b)) -> TC b
-atomicModifyTreeCache' f =
-    askTCEnv >>= liftIO . (`atomicModifyIORef'` f) . (.treeCacheVar)
+-- | Get the `TreeCache`.
+askTreeCache :: TC TreeCache
+askTreeCache =
+  askTCEnv >>= liftIO . readIORef . (.treeCacheVar)
+
+-- | Modify the `TreeCache`.
+modifyTreeCache :: (TreeCache -> (TreeCache, b)) -> TC b
+modifyTreeCache f =
+  askTCEnv >>= liftIO . (`atomicModifyIORef'` f) . (.treeCacheVar)
+
+-- | Get the parse for a file.
+askTree :: NormalizedUri -> TC (Maybe TS.Tree)
+askTree uri =
+  askTreeCache <&> TreeCache.lookup uri
 
 -- | Run the type-checker monad.
 runTC :: TCEnv -> TC a -> IO a

@@ -20,3 +20,7 @@ empty = TreeCache M.empty
 insert :: NormalizedUri -> TS.Tree -> TreeCache -> TreeCache
 insert uri tree treeCache =
     TreeCache $ M.insert uri tree (unTreeCache treeCache)
+
+lookup :: NormalizedUri -> TreeCache -> Maybe TS.Tree
+lookup uri treeCache =
+    M.lookup uri (unTreeCache treeCache)

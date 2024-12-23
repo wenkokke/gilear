@@ -1,11 +1,13 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Gilear.LSP (
   main,
@@ -27,7 +29,7 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Version (showVersion)
-import Gilear (TCEnv, newTCEnv)
+import Gilear.Internal.Core (TCEnv, newTCEnv)
 import Gilear.LSP.Internal.Core (Config, LSPTC, runLSPTC)
 import Gilear.LSP.Internal.Core qualified as Core
 import Gilear.LSP.Internal.Handlers (handlers)
@@ -80,10 +82,10 @@ run = do
       handleLogger :: (Pretty a) => LogAction IO (WithSeverity a)
       handleLogger = Colog.cmap (addSeverity . fmap prettyText) (Colog.logTextHandle logHandle)
       -- \^ logs to 'logHandle' (either 'stderr' or 'logFile')
-      clientLogger :: (Pretty a) => LogAction (LspM Config) (WithSeverity a)
+      clientLogger :: (MonadLsp Config m, Pretty a) => LogAction m (WithSeverity a)
       clientLogger = Colog.cmap (fmap prettyText) defaultClientLogger
       -- \^ logs to LSP client
-      dualLogger :: (Pretty a) => LogAction (LspM Config) (WithSeverity a)
+      dualLogger :: (MonadLsp Config m, Pretty a) => LogAction m (WithSeverity a)
       dualLogger = clientLogger <> Colog.hoistLogAction liftIO handleLogger
     -- \^ logs to both
     -- Setup global variable holding the TC environment:
@@ -91,8 +93,8 @@ run = do
     -- Setup global queue with LSP message reactions:
     reactorInputChan <- newTChanIO
     -- Start the LSP server:
-    runServerWithHandles handleLogger dualLogger stdin stdout $
-      lspDefinition handleLogger dualLogger reactorInputChan tcEnv
+    runServerWithHandles handleLogger (dualLogger @(LspM Config)) stdin stdout $
+      lspDefinition handleLogger (dualLogger @LSPTC) reactorInputChan tcEnv
 
 --------------------------------------------------------------------------------
 -- Logger Helpers
@@ -163,9 +165,8 @@ newtype ReactorInput
   = ReactorAction {runReactorAction :: IO ()}
 
 lspDefinition ::
-  (m ~ LspM Config) =>
   LogAction IO (WithSeverity Text) ->
-  LogAction m (WithSeverity Text) ->
+  LogAction LSPTC (WithSeverity Text) ->
   TChan ReactorInput ->
   TCEnv ->
   ServerDefinition Config
@@ -204,8 +205,7 @@ lspInitialise logger reactorInputChan languageContextEnv _request = do
   pure $ Right languageContextEnv
 
 lspHandlers ::
-  (m ~ LspM Config) =>
-  LogAction m (WithSeverity Text) ->
+  LogAction LSPTC (WithSeverity Text) ->
   TChan ReactorInput ->
   TCEnv ->
   ClientCapabilities ->
