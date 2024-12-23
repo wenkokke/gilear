@@ -28,3 +28,19 @@ main = void . runLint $ do
 --------------------------------------------------------------------------------
 -- Lints
 --------------------------------------------------------------------------------
+
+-- TODO:
+-- Check for the following common stanza in all Cabal files:
+--
+--   common language
+--     ghc-options:        -Wall
+--     default-language:   GHC2021
+--     default-extensions: ImportQualifiedPost
+--
+-- The stanza may contain _more_ but not _fewer_ settings.
+
+-- TODO:
+-- Check that the 'language' stanza is imported in all components.
+
+-- TODO:
+-- Check that every test-suite 'X-test' is named after some other component 'X'.

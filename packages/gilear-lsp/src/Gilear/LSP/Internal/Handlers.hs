@@ -10,7 +10,7 @@ import Control.Lens ((^.))
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Gilear.Internal.Parser qualified as TC (parse)
-import Gilear.LSP.Internal.Core (LSPTC, liftTC)
+import Gilear.LSP.Internal.Core (LSPTC)
 import Language.LSP.Protocol.Lens (HasParams (..), HasTextDocument (..), HasUri (..))
 import Language.LSP.Protocol.Message (SMethod (..))
 import Language.LSP.Protocol.Types (ClientCapabilities, TextDocumentItem (..), toNormalizedUri)
@@ -44,7 +44,7 @@ handlers logger _clientCapabilities =
     LSP.notificationHandler SMethod_TextDocumentDidOpen $ \notification -> do
       let TextDocumentItem{_uri, _text} = notification ^. params . textDocument
       let normalizedUrl = toNormalizedUri _uri
-      maybeTree <- liftTC $ TC.parse normalizedUrl _text
+      maybeTree <- TC.parse normalizedUrl _text
       case maybeTree of
         Nothing -> pure ()
         Just tree -> do

@@ -1,17 +1,18 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Gilear.Internal.Parser where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Data.Text.Encoding qualified as T
-import Gilear.Internal.Core (TC, modifyTreeCache, withParser)
+import Gilear.Internal.Core (modifyTreeCache, withParser, MonadTC)
 import Gilear.Internal.Parser.TreeCache qualified as TreeCache
 import Language.LSP.Protocol.Types (NormalizedUri)
 import TreeSitter qualified as TS
 
 -- | Parse an entire file.
-parse :: NormalizedUri -> Text -> TC (Maybe TS.Tree)
+parse :: MonadTC m => NormalizedUri -> Text -> m (Maybe TS.Tree)
 parse uri text = do
   parseText text >>= \case
     Nothing -> parseFailure uri >> pure Nothing
@@ -19,7 +20,7 @@ parse uri text = do
       (TreeCache.insert uri tree treeCache, Just tree)
 
 -- | Internal helper: Parse `Text` using the `TS.Parser` in `TC`.
-parseText :: Text -> TC (Maybe TS.Tree)
+parseText :: MonadTC m => Text -> m (Maybe TS.Tree)
 parseText text =
   withParser $ \parser ->
     liftIO $
@@ -35,6 +36,6 @@ parseText text =
 
     TODO: Handle parse failure properly.
 -}
-parseFailure :: NormalizedUri -> TC ()
+parseFailure :: MonadTC m => NormalizedUri -> m ()
 parseFailure uri =
   error $ "Parsing " <> show uri <> " failed"
