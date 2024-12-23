@@ -13,29 +13,13 @@ import TreeSitter qualified as TS
 
 -- | Parse an entire file.
 parse :: (MonadTC m) => NormalizedUri -> Text -> m (Maybe TS.Tree)
-parse uri text = do
-  parseText text >>= \case
-    Nothing -> parseFailure uri >> pure Nothing
-    Just tree -> modifyTreeCache $ \treeCache ->
-      (TreeCache.insert uri tree treeCache, Just tree)
-
--- | Internal helper: Parse `Text` using the `TS.Parser` in `MonadTC`.
-parseText :: (MonadTC m) => Text -> m (Maybe TS.Tree)
-parseText text =
-  withParser $ \parser ->
-    liftIO $
-      TS.parserParseByteStringWithEncoding
-        parser
-        Nothing
-        (T.encodeUtf8 text)
-        TS.InputEncodingUTF8
-
-{-| Internal helper: Handle parse failure.
-
-    See `TS.parserParse` for conditions under which failure occurs.
-
-    TODO: Handle parse failure properly.
--}
-parseFailure :: (MonadTC m) => NormalizedUri -> m ()
-parseFailure uri =
-  error $ "Parsing " <> show uri <> " failed"
+parse uri text =
+  withParser $ \parser -> do
+    maybeTree <- liftIO $ TS.parserParseByteStringWithEncoding parser Nothing (T.encodeUtf8 text) TS.InputEncodingUTF8
+    case maybeTree of
+      Nothing -> do
+        -- TODO: Handle parse failure properly.
+        error $ "Parsing " <> show uri <> " failed"
+      Just tree -> do
+        modifyTreeCache $ \treeCache ->
+          (TreeCache.insert uri tree treeCache, Just tree)
