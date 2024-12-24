@@ -1,0 +1,4 @@
+name: gilear-w
+depend: standard-library
+include: .
+flags: --erasure --erase-record-parameters
