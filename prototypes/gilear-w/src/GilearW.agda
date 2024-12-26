@@ -5,7 +5,7 @@ module GilearW where
 open import Level using (Level) renaming (zero to lzero; suc to lsuc)
 open import GilearW.Internal.Indexed
 open import Haskell.Prelude renaming (zero to Z; suc to S)
-{-# FOREIGN AGDA2HS import GilearW.Internal.Ix #-}
+{-# FOREIGN AGDA2HS import GilearW.Internal.Ix (Ix (..)) #-}
 
 data Time : Set where
   Tick : Time -> Time
@@ -16,7 +16,7 @@ data Ix : (@0 n : Nat) -> Set where
 
 thin : {@0 n : Nat} -> Ix (S n) -> Ix n -> Ix (S n)
 thin  FZ        y  = FS y
-thin (FS x)  FZ    = FZ
+thin (FS _)  FZ    = FZ
 thin (FS x) (FS y) = FS (thin x y)
 {-# COMPILE AGDA2HS thin #-}
 
