@@ -1,35 +1,75 @@
-cabal-version:   3.4
-name:            gilear-w
-version:         0.0.0.0
-synopsis:        Prototype type-checker for the Gilear language
+cabal-version:      3.4
+name:               gilear-w
+version:            0.0.0.0
+synopsis:           Prototype type-checker for the Gilear language
 description:
   See <https://github.com/wenkokke/gilear/blob/main/prototypes/gilear-w/#README>
 
-license:         AGPL-3.0-only
-author:          Wen Kokke
-maintainer:      wenkokke@users.noreply.github.com
-category:        Language
-build-type:      Custom
-extra-doc-files: CHANGELOG.md
+license:            AGPL-3.0-only
+author:             Wen Kokke
+maintainer:         wenkokke@users.noreply.github.com
+category:           Language
+build-type:         Custom
+extra-doc-files:    CHANGELOG.md
+extra-source-files:
+  src/GilearW/Internal/Indexed.agda
+  src/GilearW/Internal/Ix.agda
+  src/GilearW/Internal/Monad/Timed/Free.agda
+  src/GilearW/Internal/Monad/Timed.agda
+  src/GilearW/Internal/Name.agda
+  src/GilearW/Internal/Time.agda
+  src/GilearW.agda
 
 common language
-  ghc-options:        -Wall
+  ghc-options:
+    -Wall
+    -Wno-unused-imports
+    -Wno-star-is-type
   default-language:   GHC2021
-  default-extensions: ImportQualifiedPost
+  default-extensions:
+    AllowAmbiguousTypes
+    GADTs
+    ImportQualifiedPost
+    KindSignatures
+    LiberalTypeSynonyms
+    PatternSynonyms
+    QuantifiedConstraints
+    TypeOperators
+    UndecidableInstances
+    ViewPatterns
 
 custom-setup
   setup-depends:
-    , base     >=4.13 && <5
-    , Cabal    >=3.0  && <4
-    , filepath >=1.4  && <1.6
+    , base      >=4.13 && <5
+    , Cabal     >=3.0  && <4
+    , filepath  >=1.4  && <1.6
 
 library
   import:             language
   exposed-modules:    GilearW
-  other-modules:
+  autogen-modules:
+    GilearW.Internal.Common
     GilearW.Internal.Indexed
     GilearW.Internal.Ix
+    GilearW.Internal.Name
+    GilearW.Internal.Time
+    GilearW.Internal.Timed
+    GilearW.Internal.Timed.Monad
+    GilearW.Internal.Timed.Monad.Free
 
-  build-depends:      base >=4.13 && <5
+  other-modules:
+    GilearW.Internal.Common
+    GilearW.Internal.Indexed
+    GilearW.Internal.Ix
+    GilearW.Internal.Name
+    GilearW.Internal.Time
+    GilearW.Internal.Timed
+    GilearW.Internal.Timed.Monad
+    GilearW.Internal.Timed.Monad.Free
+
+  build-depends:
+    , base  >=4.13 && <5
+    , text  >=2.1  && <2.2
+
   build-tool-depends: agda2hs:agda2hs >=1.3 && <1.4
   hs-source-dirs:     src autogen

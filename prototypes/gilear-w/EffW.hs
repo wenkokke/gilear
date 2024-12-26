@@ -13,11 +13,25 @@ Points of interest include
 -----------------------------------------------------------------------------}
 
 
-{-# LANGUAGE DataKinds, GADTs, KindSignatures, RankNTypes, StandaloneDeriving,
-    QuantifiedConstraints, LambdaCase, ScopedTypeVariables, TypeOperators,
-    TypeFamilies, UndecidableInstances, ConstraintKinds, TupleSections,
-    IncoherentInstances, OverlappingInstances, PatternSynonyms,
-    ViewPatterns, TypeOperators, LiberalTypeSynonyms #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTsDataKinds #-}
+{-# LANGUAGE KindSignaturesDataKinds #-}
+{-# LANGUAGE RankNTypesDataKinds #-}
+{-# LANGUAGE StandaloneDerivingDataKinds #-}
+{-# LANGUAGE QuantifiedConstraintsDataKinds #-}
+{-# LANGUAGE LambdaCaseDataKinds #-}
+{-# LANGUAGE ScopedTypeVariablesDataKinds #-}
+{-# LANGUAGE TypeOperatorsDataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE IncoherentInstances #-}
+{-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LiberalTypeSynonyms #-}
 
 module EffW where
 

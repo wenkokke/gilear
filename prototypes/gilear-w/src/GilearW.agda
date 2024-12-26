@@ -1,80 +1,58 @@
 module GilearW where
 
-open import Level using (Level) renaming (zero to lzero; suc to lsuc)
+{-# FOREIGN AGDA2HS
+import GilearW.Internal.Ix
+import GilearW.Internal.Name
+import GilearW.Internal.Time
+#-}
+open import Level using (Level)
 open import GilearW.Internal.Indexed
-open import Haskell.Prelude renaming (zero to Z; suc to S)
-{-# FOREIGN AGDA2HS import GilearW.Internal.Ix (Ix (..)) #-}
+open import GilearW.Internal.Ix
+open import GilearW.Internal.Name
+open import GilearW.Internal.Time
+open import Haskell.Prelude
+  renaming (zero to Z; suc to S)
+  hiding (All)
 
-data Time : Set where
-  Tick : Time -> Time
+  
+data Ty (@0 n : Nat) : Set where
+  E : Name -> Ty n
+  U : Ix n -> Ty n
+  _:=>_ : Ty n -> Ty n -> Ty n
+{-# COMPILE AGDA2HS Ty #-}
 
-data Ix : (@0 n : Nat) -> Set where
-  FZ : {@0 n : Nat} -> Ix (S n)
-  FS : {@0 n : Nat} -> Ix n -> Ix (S n)
+record TyAt (@0 t : Time) : Set where
+  inductive
+  field
+    unTyAt : Ty Z -> TyAt t
+open TyAt public
+{-# COMPILE AGDA2HS TyAt newtype #-}
 
-thin : {@0 n : Nat} -> Ix (S n) -> Ix n -> Ix (S n)
-thin  FZ        y  = FS y
-thin (FS _)  FZ    = FZ
-thin (FS x) (FS y) = FS (thin x y)
-{-# COMPILE AGDA2HS thin #-}
+data Sch (@0 n : Nat) : Set where
+  T : Ty n         -> Sch n
+  P : Sch (S n) -> Sch n
+{-# COMPILE AGDA2HS Sch #-}
 
--- data Pos : (@0 n : Nat) -> Set where
---   MkPos : {@0 n : Nat} -> Pos (S n)
--- {-# COMPILE AGDA2HS Pos #-}
+record SchAt (@0 t : Time) : Set where
+  inductive
+  field
+    unSchAt : Sch Z -> SchAt t
+open SchAt public
+{-# COMPILE AGDA2HS SchAt newtype #-}
 
--- isPos : {@0 n : Nat} -> Ix n -> Pos n
--- isPos  FZ    = MkPos
--- isPos (FS i) = MkPos
--- {-# COMPILE AGDA2HS isPos #-}
+-- Step
+record Sub (@0 s t : Time) : Set where
+  field
+    tgt : Name
+    sub : Ty Z
+open Sub public
+{-# COMPILE AGDA2HS Sub #-}
 
--- thick : {@0 n : Nat} -> Ix (S n) -> Ix (S n) -> Maybe (Ix n)
--- thick  FZ     FZ    = Nothing
--- thick  FZ    (FS j) = Just j
--- thick (FS i)  FZ    = case isPos i of \{ MkPos -> Just FZ }
--- thick (FS i) (FS j) = case isPos i of \{ MkPos -> FS <$> thick i j}
--- {-# COMPILE AGDA2HS thick #-}
+-- &>
+data Subs (@0 r : Time) : (@0 t : Time) -> Set where
+  Id   : Subs r r 
+  _:<_ : {@0 s t : Time} -> Subs r s -> Sub s t -> Subs r t
+{-# COMPILE AGDA2HS Subs #-}
 
--- data Name : Set where
---   MkName : Word -> Name
--- {-# COMPILE AGDA2HS Name #-}
 
--- data Ty (@0 n : Nat) : Set where
---   E : Name -> Ty n
---   U : Ix n -> Ty n
---   _:=>_ : Ty n -> Ty n -> Ty n
--- {-# COMPILE AGDA2HS Ty #-}
 
--- -- data TyAt (@0 t : Time) : Set where
--- --  MkTyAt : Ty Z -> TyAt t
-
--- -- data Scheme (@0 n : Nat) : Set where
--- --   Mono : Ty n -> Scheme n
--- --   Poly : Scheme (S n) -> Scheme n
-
--- -- data SchemeAt (@0 t : Time) : Set where
--- --   MkSchemeAt : Scheme Z -> SchemeAt t
-
--- -- record Step (@0 s t : Time) : Set where
--- --   constructor MkStep
--- --   field
--- --     var : Name
--- --     sub : Ty Z
-
--- -- -- in pre-memoriam: Steph
--- -- data Steps : (@0 r t : Time) -> Set where
--- --   Begin : Steps r r
--- --   _:<_  : Steps r s -> Step s t -> Steps r t
-
--- -- data Timed
--- --   (c : TSet₀ -> TSet₀)
--- --   (v : TSet₀)
--- --   (@0 s : Time)
--- --   : Set₁ where
--- --   Pure :
--- --     v s ->
--- --     Timed c v s
--- --   Call :
--- --     (w : TSet₀) ->
--- --     c w s ->
--- --     All (Steps s :-> w :-> Timed c v) ->
--- --     Timed c v s

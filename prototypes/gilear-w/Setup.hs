@@ -16,12 +16,12 @@ import Distribution.Simple (Args, UserHooks (..), defaultMainWithHooks, simpleUs
 import Distribution.Simple.PreProcess (PPSuffixHandler, PreProcessor (..), knownSuffixHandlers, mkSimplePreProcessor, unsorted)
 import Distribution.Simple.Program (Program, runDbProgram, simpleProgram)
 import Distribution.Simple.Setup (ConfigFlags (configVerbosity), fromFlagOrDefault)
-import Distribution.Simple.Utils (die', notice, copyFileVerbose, createDirectoryIfMissingVerbose)
+import Distribution.Simple.Utils (copyFileVerbose, createDirectoryIfMissingVerbose, die', notice)
 import Distribution.Types.BuildInfo (BuildInfo)
 import Distribution.Types.ComponentLocalBuildInfo (ComponentLocalBuildInfo)
 import Distribution.Types.LocalBuildInfo (LocalBuildInfo (LocalBuildInfo, withPrograms))
-import Distribution.Verbosity (Verbosity, normal)
-import System.FilePath ((-<.>), (</>), splitDirectories, joinPath)
+import Distribution.Verbosity (Verbosity, normal, verbose)
+import System.FilePath (joinPath, splitDirectories, (-<.>), (</>))
 
 srcDir :: FilePath
 srcDir = "src"
@@ -36,7 +36,11 @@ main :: IO ()
 main =
   defaultMainWithHooks
     simpleUserHooks
-      { hookedPreProcessors =
+      { preConf = \args configFlags -> do
+          let verbosity = fromFlagOrDefault normal (configVerbosity configFlags)
+          makeAutogenDir verbosity
+          preConf simpleUserHooks args configFlags,
+        hookedPreProcessors =
           knownSuffixHandlers <> [agdaSuffixHandler]
       }
 
@@ -73,23 +77,29 @@ preProcessAgda _buildInfo localBuildInfo _componentLocalBuildInfo =
  where
   agdaPreprocessor :: FilePath -> FilePath -> Verbosity -> IO ()
   agdaPreprocessor sourceFile targetFile verbosity = do
-        -- Ensure autogenDir exists
-        makeAutogenDir verbosity
-        -- Ensure Agda libraries file exists
-        writeAgdaLibrariesFile verbosity
-        -- Compile Agda file
-        let LocalBuildInfo{withPrograms} = localBuildInfo
-        notice verbosity $ "agda2hs: Compile " <> sourceFile
-        runDbProgram verbosity agda2hsProgram withPrograms $
-          [ "--library-file=" <> agdaLibrariesFile
-          , "--config=rewrite-rules.yaml"
-          , "--out-dir=" <> autogenDir
-          , sourceFile
-          ]
-        let sourceFileParts = splitDirectories sourceFile
-        let sourceFileRel = joinPath (drop 1 (dropWhile (/= srcDir) sourceFileParts))
-        let autogenFile = autogenDir </> sourceFileRel -<.> "hs"
-        copyFileVerbose verbosity autogenFile targetFile
+    -- Ensure autogenDir exists
+    makeAutogenDir verbosity
+    -- Ensure Agda libraries file exists
+    writeAgdaLibrariesFile verbosity
+    -- Compile Agda file
+    let LocalBuildInfo{withPrograms} = localBuildInfo
+    notice verbosity $ "agda2hs: Compile " <> sourceFile
+    runDbProgram verbosity agda2hsProgram withPrograms . concat $
+      [ ["--library-file=" <> agdaLibrariesFile]
+      , ["--config=rewrite-rules.yaml"]
+      , ["--out-dir=" <> autogenDir]
+      , ["-X", "GADTs"]
+      , ["-X", "KindSignatures"]
+      , ["-X", "PatternSynonyms"]
+      , ["-X", "TypeOperators"]
+      , ["-X", "ViewPatterns"]
+      , ["--verbose=26" | verbosity >= verbose]
+      , [sourceFile]
+      ]
+    let sourceFileParts = splitDirectories sourceFile
+    let sourceFileRel = joinPath (drop 1 (dropWhile (/= srcDir) sourceFileParts))
+    let autogenFile = autogenDir </> sourceFileRel -<.> "hs"
+    copyFileVerbose verbosity autogenFile targetFile
 
 agda2hsProgram :: Program
 agda2hsProgram = simpleProgram "agda2hs"
