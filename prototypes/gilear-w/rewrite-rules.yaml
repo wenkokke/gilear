@@ -1,0 +1,15 @@
+prelude:
+  implicit: true
+
+rewrites:
+  - from: "GilearW.Internal.Indexed._:->_"
+    to: "_->_"
+  - from: "GilearW.Ix"
+    to: "Ix"
+    importing: "GilearWUtil"
+  - from: "GilearW.Ix.FZ"
+    to: "FZ"
+    importing: "GilearWUtil"
+  - from: "GilearW.Ix.FS"
+    to: "FS"
+    importing: "GilearWUtil"

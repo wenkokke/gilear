@@ -28,7 +28,7 @@ executable gilear-animate-ast
     , base                  >=4.13 && <5
     , base-compat-constptr  >=0.1  && <0.2
     , bytestring            >=0.12 && <0.13
-    , filepath              >=1.5  && <1.6
+    , filepath              >=1.4  && <1.6
     , myers-diff            >=0.3  && <0.4
     , optparse-applicative  >=0.18 && <0.19
     , text                  >=2.1  && <2.2

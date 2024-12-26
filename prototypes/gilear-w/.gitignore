@@ -1,1 +1,3 @@
 /_build
+/src/GilearW.hs
+/src/GilearW/Internal/Indexed.hs

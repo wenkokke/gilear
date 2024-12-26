@@ -40,6 +40,11 @@ cradle:
         cradle:
           cabal:
 
+    - path: "./prototypes/gilear-w"
+      config:
+        cradle:
+          cabal:
+
     - path: "./scripts/lint-cabal"
       config:
         cradle:

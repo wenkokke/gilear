@@ -11,4 +11,5 @@ packages:
   packages/tree-sitter-gilear
   packages/tree-sitter-while
   prototypes/gilear-animate-ast/gilear-animate-ast.cabal
+  prototypes/gilear-w/gilear-w.cabal
   scripts/lint-cabal/lint-cabal.cabal

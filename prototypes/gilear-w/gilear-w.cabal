@@ -1,0 +1,34 @@
+cabal-version:   3.4
+name:            gilear-w
+version:         0.0.0.0
+synopsis:        Prototype type-checker for the Gilear language
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/prototypes/gilear-w/#README>
+
+license:         AGPL-3.0-only
+author:          Wen Kokke
+maintainer:      wenkokke@users.noreply.github.com
+category:        Language
+build-type:      Custom
+extra-doc-files: CHANGELOG.md
+
+common language
+  ghc-options:        -Wall
+  default-language:   GHC2021
+  default-extensions: ImportQualifiedPost
+
+custom-setup
+  setup-depends:
+    , base   >=4.13 && <5
+    , Cabal  >=3.0  && <4
+
+library
+  import:             language
+  exposed-modules:    GilearW
+  other-modules:
+    GilearW.Internal.Indexed
+    GilearW.Internal.Ix
+
+  build-depends:      base >=4.13 && <5
+  build-tool-depends: agda2hs:agda2hs >=1.3 && <1.4
+  hs-source-dirs:     src autogen
