@@ -1,7 +1,9 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module GilearW.Internal.Ix where
+module GilearW.Internal.Ix (
+  Ix (FZ, FS),
+) where
 
 -- | The type of DeBruijn indices.
 newtype Ix = UnsafeIx Word
@@ -24,3 +26,5 @@ pattern FS :: Ix -> Ix
 pattern FS n <- (safePred -> Just n)
   where
     FS (UnsafeIx n) = UnsafeIx (1 + n)
+
+{-# COMPLETE FZ, FS #-}
