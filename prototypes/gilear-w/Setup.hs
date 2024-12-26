@@ -1,28 +1,25 @@
+#!/usr/bin/env cabal
+{- cabal:
+build-depends:
+  , base   >=4.13 && <5
+  , Cabal  >=3.0  && <4
+default-language:   GHC
+ghc-options:        -Wall
+-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
-module Main where
-
-import Data.List (intersperse)
-import Distribution.Simple (Args, UserHooks (..), defaultMainWithHooks, simpleUserHooks)
+import Distribution.Simple (UserHooks (..), defaultMainWithHooks, simpleUserHooks)
 import Distribution.Simple.PreProcess (PPSuffixHandler, PreProcessor (..), knownSuffixHandlers, mkSimplePreProcessor, unsorted)
 #if MIN_VERSION_Cabal(3,14,0)
 import Distribution.Simple.PreProcess.Types (Suffix (..))
 #endif
 import Distribution.Simple.Program (Program, runDbProgram, simpleProgram)
-import Distribution.Simple.Setup (BuildFlags (buildVerbosity), ConfigFlags (configVerbosity), fromFlagOrDefault)
-import Distribution.Simple.Utils (createDirectoryIfMissingVerbose, intercalate, moreRecentFile, notice)
-import Distribution.Types.BuildInfo (BuildInfo, hsSourceDirs)
+import Distribution.Simple.Utils (notice)
+import Distribution.Types.BuildInfo (BuildInfo)
 import Distribution.Types.ComponentLocalBuildInfo (ComponentLocalBuildInfo)
 import Distribution.Types.LocalBuildInfo (LocalBuildInfo (LocalBuildInfo, withPrograms))
-import Distribution.Types.PackageDescription (PackageDescription (PackageDescription, extraSrcFiles, extraTmpFiles))
-import Distribution.Utils.Path (getSymbolicPath)
-import Distribution.Verbosity (Verbosity, normal)
-
-srcDir :: FilePath
-srcDir = "src"
-
-autogenDir :: FilePath
-autogenDir = "autogen"
+import Distribution.Verbosity (Verbosity)
 
 #if MIN_VERSION_Cabal(3,14,0)
 agdaSuffixHandler :: PPSuffixHandler
@@ -36,21 +33,12 @@ main :: IO ()
 main =
   defaultMainWithHooks
     simpleUserHooks
-      { preConf = \args configFlags -> do
-          makeAutogenDir args configFlags
-          preConf simpleUserHooks args configFlags
-      , hookedPreProcessors =
+      { hookedPreProcessors =
           knownSuffixHandlers <> [agdaSuffixHandler]
       }
 
-makeAutogenDir :: Args -> ConfigFlags -> IO ()
-makeAutogenDir _args configFlags = do
-  let verbosity = fromFlagOrDefault normal (configVerbosity configFlags)
-  notice verbosity $ "Create directory for generated modules: " ++ autogenDir
-  createDirectoryIfMissingVerbose verbosity True autogenDir
-
 preProcessAgda :: BuildInfo -> LocalBuildInfo -> ComponentLocalBuildInfo -> PreProcessor
-preProcessAgda buildInfo localBuildInfo componentLocalBuildInfo =
+preProcessAgda _buildInfo localBuildInfo _componentLocalBuildInfo =
   PreProcessor
     { platformIndependent = True
     , runPreProcessor = mkSimplePreProcessor agdaPreprocessor
