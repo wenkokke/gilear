@@ -1,5 +1,3 @@
-{-# OPTIONS --no-auto-inline #-}
-
 module GilearW where
 
 open import Level using (Level) renaming (zero to lzero; suc to lsuc)

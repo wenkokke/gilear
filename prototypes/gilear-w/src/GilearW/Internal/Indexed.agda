@@ -1,5 +1,3 @@
-{-# OPTIONS --no-auto-inline #-}
-
 open import Level using (Level; _⊔_) renaming (zero to lzero; suc to lsuc)
 
 module GilearW.Internal.Indexed where

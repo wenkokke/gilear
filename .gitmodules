@@ -4,3 +4,9 @@
 [submodule "packages/tree-sitter/vendor/tree-sitter"]
 	path = packages/tree-sitter-capi/vendor/tree-sitter
 	url = git@github.com:tree-sitter/tree-sitter.git
+[submodule "prototypes/gilear-w/vendor/agda2hs"]
+	path = prototypes/gilear-w/vendor/agda2hs
+	url = git@github.com:agda/agda2hs.git
+[submodule "prototypes/gilear-w/vendor/agda-stdlib"]
+	path = prototypes/gilear-w/vendor/agda-stdlib
+	url = git@github.com:agda/agda-stdlib.git
