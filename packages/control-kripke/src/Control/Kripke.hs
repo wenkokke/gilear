@@ -10,134 +10,144 @@ import Data.Kind (Type)
 import Prelude hiding (id, (.))
 
 type All :: (k -> Type) -> Type
-type All f = forall x. f x
+type All p = forall w. p w
 
 infixr 0 -->
 
 type (-->) :: (k -> Type) -> (k -> Type) -> (k -> Type)
-type (-->) f g x = f x -> g x
+type (-->) p q x = p x -> q x
 
 data World :: Type
 
 type Path :: (World -> World -> Type) -> World -> World -> Type
-data Path step r t where
-  Refl :: Path step r r
-  Step :: Path step r s -> step s t -> Path step r t
+data Path e u v where
+  Refl :: Path e u u
+  Step :: Path e u v -> e v w -> Path e u w
 
-compose :: Path step s t -> Path step r s -> Path step r t
-compose Refl prs = prs
-compose (Step psu ut) prs = Step (compose psu prs) ut
+singleton :: e v w -> Path e v w
+singleton = Step Refl
 
-instance Category (Path step) where
-  id :: Path step a a
+trans :: Path e u v -> Path e v w -> Path e u w
+trans uv Refl = uv
+trans uv (Step vt vw) = Step (trans uv vt) vw
+
+instance Category (Path e) where
+  id :: Path e u u
   id = Refl
-  (.) :: Path step b c -> Path step a b -> Path step a c
-  (.) = compose
+  (.) :: Path e v w -> Path e u v -> Path e u w
+  (.) = flip trans
 
 class
   Kripke
-    (step :: World -> World -> Type)
-    (v :: World -> Type)
-    | v -> step
+    (e :: World -> World -> Type)
+    (p :: World -> Type)
+    | p -> e
   where
-  -- | Update a 'Kripke' value with a single 'step'.
-  updateWithStep :: step r t -> v r -> v t
+  -- | Step a value along an edge.
+  step :: e u w -> p u -> p w
 
-  -- | Update a 'Kripke' value with a 'Path'.
-  update :: Path step r t -> v r -> v t
-  update Refl v = v
-  update (Step prs st) v = updateWithStep st (update prs v)
+  -- | Move a value along a path.
+  move :: Path e u w -> p u -> p w
+  move Refl p = p
+  move (Step uv vw) p = step vw (move uv p)
 
+-- | The /necessity/ modality from modal logic.
 type Box :: (World -> World -> Type) -> (World -> Type) -> World -> Type
-type Box step v s = forall t. Path step s t -> v t
+type Box e p u = forall w. Path e u w -> p w
 
-kripke :: (Kripke step v) => All (v --> Box step v)
-kripke v pst = update pst v
+box :: (Kripke e p) => All (p --> Box e p)
+box p uv = move uv p
 
 class
   MonadKripke
-    (step :: World -> World -> Type)
+    (e :: World -> World -> Type)
     (m :: (World -> Type) -> World -> Type)
   where
-  tpure ::
-    (Kripke step v) =>
-    All (v --> m v)
+  kpure ::
+    (Kripke e p) =>
+    All (p --> m p)
 
-  tbind ::
-    (Kripke step v, Kripke step w) =>
-    m v s ->
-    (forall t. Path step s t -> Box step v t -> m w t) ->
-    m w s
+  kbind ::
+    (Kripke e p, Kripke e q) =>
+    m p u ->
+    (forall v. Path e u v -> Box e p v -> m q v) ->
+    m q u
 
-  tdrop ::
-    (Kripke step v, Kripke step w) =>
-    m v s ->
-    (forall t. Path step s t -> m w t) ->
-    m w s
-  tdrop mv mw = mv `tbind` \pst _ -> mw pst
+  kdrop ::
+    (Kripke e p, Kripke e q) =>
+    m p u ->
+    (forall v. Path e u v -> m q v) ->
+    m q u
+  kdrop mpu mqv = mpu `kbind` \uv _ -> mqv uv
 
 data
   Free
-    (step :: World -> World -> Type)
+    (e :: World -> World -> Type)
     (c :: (World -> Type) -> World -> Type)
-    (v :: World -> Type)
-    (s :: World) ::
+    (p :: World -> Type)
+    (u :: World) ::
     Type
   where
   Pure ::
-    forall step c v s.
-    v s ->
-    Free step c v s
+    forall e c p u.
+    p u ->
+    Free e c p u
   Call ::
-    forall step c v w s.
-    c w s ->
-    All (Path step s --> w --> Free step c v) ->
-    Free step c v s
+    forall e c p q u.
+    c q u ->
+    All (Path e u --> q --> Free e c p) ->
+    Free e c p u
 
 instance
-  ( forall w. Kripke step (c w)
-  , Kripke step v
+  ( forall q. Kripke e (c q)
+  , Kripke e p
   ) =>
-  Kripke step (Free step c v)
+  Kripke e (Free e c p)
   where
-  updateWithStep ::
-    (forall (w :: World -> Type). Kripke step (c w), Kripke step v) =>
-    step r s ->
-    Free step c v r ->
-    Free step c v s
-  updateWithStep rs (Pure v) =
-    Pure (updateWithStep rs v)
-  updateWithStep rs (Call c k) =
-    Call (updateWithStep rs c) $ \pst w -> k (pst . Step Refl rs) w
+  step ::
+    ( forall (q :: World -> Type).
+      Kripke e (c q)
+    , Kripke e p
+    ) =>
+    e u v ->
+    Free e c p u ->
+    Free e c p v
+  step uv (Pure p) =
+    Pure (step uv p)
+  step uv (Call c k) =
+    Call (step uv c) $ \vw w -> k (vw . singleton uv) w
 
-  update ::
-    (forall (w :: World -> Type). Kripke step (c w), Kripke step v) =>
-    Path step r s ->
-    Free step c v r ->
-    Free step c v s
-  update prs (Pure v) =
-    Pure (update prs v)
-  update prs (Call c k) =
-    Call (update prs c) $ \pst w -> k (pst . prs) w
+  move ::
+    ( forall (q :: World -> Type).
+      Kripke e (c q)
+    , Kripke e p
+    ) =>
+    Path e u v ->
+    Free e c p u ->
+    Free e c p v
+  move uv (Pure p) =
+    Pure (move uv p)
+  move uv (Call c k) =
+    Call (move uv c) $ \vw q -> k (vw . uv) q
 
-instance MonadKripke step (Free step c) where
-  tpure ::
-    (Kripke step v) =>
-    All (v --> Free step c v)
-  tpure = Pure
+instance MonadKripke e (Free e c) where
+  kpure ::
+    (Kripke e p) =>
+    All (p --> Free e c p)
+  kpure = Pure
 
-  tbind ::
-    (Kripke step v, Kripke step w) =>
-    Free step c v s ->
-    ( forall (t :: World).
-      Path step s t ->
-      Box step v t ->
-      Free step c w t
+  kbind ::
+    (Kripke e p, Kripke e q) =>
+    Free e c p u ->
+    ( forall (v :: World).
+      Path e u v ->
+      Box e p v ->
+      Free e c q v
     ) ->
-    Free step c w s
-  Pure v `tbind` k =
-    k Refl (kripke v)
-  Call c j `tbind` k =
-    Call c $ \psr wr ->
-      j psr wr `tbind` \prt ->
-        k (prt . psr)
+    Free e c q u
+  Pure p `kbind` k =
+    k Refl (box p)
+  Call c j `kbind` k =
+    Call c $ \uw wr ->
+      j uw wr `kbind` \vw ->
+        k (vw . uw)
