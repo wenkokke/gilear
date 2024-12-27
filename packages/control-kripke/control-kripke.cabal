@@ -25,4 +25,4 @@ library
   exposed-modules: Control.Kripke
   build-depends:
     , base             >=4.13 && <5
-    , control-indexed
+    , control-indexed  >=0.1  && <0.2
