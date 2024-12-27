@@ -1,5 +1,6 @@
 prelude:
   implicit: true
+  hiding: ["seq"]
 
 rewrites:
   - from: "GilearW.Internal.Monad.Timed.Timed.return"
