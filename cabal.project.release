@@ -1,6 +1,11 @@
 index-state:
   , hackage.haskell.org 2024-11-25T17:52:41Z
 
+-- 2024-12-27:
+-- co-log and chronos have not been updated to work with GHC 9.10
+if impl(ghc >= 9.10.1)
+  allow-newer: base
+
 -- NOTE(newpackage): This must list all Cabal packages.
 packages:
   packages/base-compat-constptr
