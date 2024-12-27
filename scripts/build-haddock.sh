@@ -46,6 +46,8 @@ if ! ${HADDOCK} \
   --read-interface=tree-sitter,./doc/reference/tree-sitter/tree-sitter.haddock \
   --read-interface=tree-sitter-capi,./doc/reference/tree-sitter-capi/tree-sitter-capi.haddock \
   --read-interface=tree-sitter-gilear,./doc/reference/tree-sitter-gilear/tree-sitter-gilear.haddock \
-  --read-interface=tree-sitter-while,./doc/reference/tree-sitter-while/tree-sitter-while.haddock; then
+  --read-interface=tree-sitter-while,./doc/reference/tree-sitter-while/tree-sitter-while.haddock \
+  --read-interface=gilear-animate-ast,./doc/reference/gilear-animate-ast/gilear-animate-ast.haddock \
+  --read-interface=gilear-w,./doc/reference/gilear-w/gilear-w.haddock; then
   exit 1
 fi

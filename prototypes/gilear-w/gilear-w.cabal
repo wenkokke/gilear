@@ -1,0 +1,39 @@
+cabal-version:   3.4
+name:            gilear-w
+version:         0.0.0.0
+synopsis:
+  Prototype for Gilear as System W based on Conor McBride's Effing W
+
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/prototypes/gilear-w/#README>
+
+license:         AGPL-3.0-only
+author:          Wen Kokke
+maintainer:      wenkokke@users.noreply.github.com
+category:        Language
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common language
+  ghc-options:        -Wall
+  default-language:   GHC2021
+  default-extensions: ImportQualifiedPost
+
+library
+  import:          language
+  hs-source-dirs:  src
+  exposed-modules: Gilear.W
+  build-depends:
+    , base             >=4.13 && <5
+    , control-indexed  >=0.1  && <0.2
+    , control-kripke   >=0.1  && <0.2
+    , data-debruijn    >=0.1  && <0.2
+
+test-suite gilear-w-test
+  import:         language
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  build-depends:
+    , base      >=4.13 && <5
+    , gilear-w
