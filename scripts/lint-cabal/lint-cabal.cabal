@@ -13,7 +13,7 @@ build-type:    Simple
 
 common language
   ghc-options:        -Wall
-  default-language:   Haskell2010
+  default-language:   GHC2021
   default-extensions: ImportQualifiedPost
 
 library
