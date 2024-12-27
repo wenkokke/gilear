@@ -12,19 +12,18 @@ category:           Language
 build-type:         Custom
 extra-doc-files:    CHANGELOG.md
 extra-source-files:
+  src/GilearW/Internal/Common.agda
   src/GilearW/Internal/Indexed.agda
   src/GilearW/Internal/Ix.agda
-  src/GilearW/Internal/Monad/Timed/Free.agda
-  src/GilearW/Internal/Monad/Timed.agda
   src/GilearW/Internal/Name.agda
   src/GilearW/Internal/Time.agda
+  src/GilearW/Internal/Timed/Monad/Free.agda
+  src/GilearW/Internal/Timed/Monad.agda
+  src/GilearW/Internal/Timed.agda
   src/GilearW.agda
 
 common language
-  ghc-options:
-    -Wall
-    -Wno-unused-imports
-    -Wno-star-is-type
+  ghc-options:        -Wall -Wno-unused-imports -Wno-star-is-type
   default-language:   GHC2021
   default-extensions:
     AllowAmbiguousTypes

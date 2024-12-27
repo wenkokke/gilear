@@ -1,5 +1,8 @@
 module GilearW.Internal.Common where
 
+{-# FOREIGN AGDA2HS
+import Data.Kind (Constraint, Type)
+#-}
 open import Level using (Level; _⊔_)
 
 -- Only sensible things here
@@ -30,5 +33,5 @@ Compose f g = \ x -> f (g x)
 
 {-# FOREIGN AGDA2HS
 -- TODO: a, b and c are kind; can we simplify this?
-type Compose a b c f g x = f (g x)
+type Compose ka kb kc p q x = p (q x)
 #-}

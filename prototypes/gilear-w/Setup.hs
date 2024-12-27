@@ -39,8 +39,8 @@ main =
       { preConf = \args configFlags -> do
           let verbosity = fromFlagOrDefault normal (configVerbosity configFlags)
           makeAutogenDir verbosity
-          preConf simpleUserHooks args configFlags,
-        hookedPreProcessors =
+          preConf simpleUserHooks args configFlags
+      , hookedPreProcessors =
           knownSuffixHandlers <> [agdaSuffixHandler]
       }
 
@@ -51,7 +51,7 @@ makeAutogenDir :: Verbosity -> IO ()
 makeAutogenDir verbosity = do
   autogenDirExists <- doesPathExist autogenDir
   unless autogenDirExists $ do
-    notice verbosity $ "Create directory for generated modules: " ++ autogenDir
+    notice verbosity $ "Create directory for generated modules: " <> autogenDir
     createDirectoryIfMissingVerbose verbosity True autogenDir
 
 writeAgdaLibrariesFile :: Verbosity -> IO ()
