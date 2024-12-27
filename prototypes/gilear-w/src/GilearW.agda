@@ -43,8 +43,8 @@ open SchAt public
 -- Step
 record Sub (@0 s t : Time) : Set where
   field
-    tgt : Name
-    sub : Ty Z
+    targetName : Name
+    replacementTy : Ty Z
 open Sub public
 {-# COMPILE AGDA2HS Sub #-}
 
