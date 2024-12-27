@@ -1,5 +1,5 @@
 cabal-version:   3.4
-name:            debruijn
+name:            data-debruijn
 version:         0.0.0.0
 synopsis:        Implementation of de Bruijn indices backed by a Natural.
 description:
@@ -29,9 +29,9 @@ library debruijn-arbitrary
   hs-source-dirs:  src-arbitrary
   exposed-modules: Data.DeBruijn.Arbitrary
   build-depends:
-    , base        >=4.13 && <5
-    , debruijn
-    , QuickCheck  >=2.14 && <2.15
+    , base           >=4.13 && <5
+    , data-debruijn
+    , QuickCheck     >=2.14 && <2.15
 
 test-suite debruijn-test
   import:         language
@@ -39,7 +39,7 @@ test-suite debruijn-test
   hs-source-dirs: test
   main-is:        Main.hs
   build-depends:
-    , base                         >=4.13 && <5
-    , debruijn
-    , debruijn:debruijn-arbitrary
-    , QuickCheck                   >=2.14 && <2.15
+    , base                              >=4.13 && <5
+    , data-debruijn
+    , data-debruijn:debruijn-arbitrary
+    , QuickCheck                        >=2.14 && <2.15

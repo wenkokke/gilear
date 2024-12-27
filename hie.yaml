@@ -1,3 +1,4 @@
+# NOTE(newpackage): This must list all Cabal packages.
 cradle:
   multi:
     - path: "./packages/base-compat-constptr"
@@ -5,7 +6,17 @@ cradle:
         cradle:
           cabal:
 
-    - path: "./packages/debruijn"
+    - path: "./packages/control-indexed"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/control-kripke"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/data-debruijn"
       config:
         cradle:
           cabal:
