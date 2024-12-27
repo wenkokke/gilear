@@ -4,6 +4,7 @@ index-state:
 -- NOTE(newpackage): This must list all Cabal packages.
 packages:
   packages/base-compat-constptr
+  packages/debruijn
   packages/gilear
   packages/gilear-lsp
   packages/tree-sitter

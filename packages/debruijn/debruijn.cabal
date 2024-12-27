@@ -1,0 +1,45 @@
+cabal-version:   3.4
+name:            debruijn
+version:         0.0.0.0
+synopsis:        Implementation of de Bruijn indices backed by a Natural.
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/packages/base-compat-constptr/#README>
+
+license:         AGPL-3.0-only
+author:          Wen Kokke
+maintainer:      wenkokke@users.noreply.github.com
+copyright:       2023 (c) Wen Kokke
+category:        Language
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common language
+  ghc-options:        -Wall
+  default-language:   GHC2021
+  default-extensions: ImportQualifiedPost
+
+library
+  import:          language
+  hs-source-dirs:  src
+  exposed-modules: Data.DeBruijn
+  build-depends:   base >=4.13 && <5
+
+library debruijn-arbitrary
+  import:          language
+  hs-source-dirs:  src-arbitrary
+  exposed-modules: Data.DeBruijn.Arbitrary
+  build-depends:
+    , base        >=4.13 && <5
+    , debruijn
+    , QuickCheck  >=2.14 && <2.15
+
+test-suite debruijn-test
+  import:         language
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  build-depends:
+    , base                         >=4.13 && <5
+    , debruijn
+    , debruijn:debruijn-arbitrary
+    , QuickCheck                   >=2.14 && <2.15
