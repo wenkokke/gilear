@@ -7,7 +7,9 @@ module Data.DeBruijn (
   Ix (FZ, FS),
   toNatural,
   safePred,
+  raiseBy,
   raise,
+  injectBy,
   inject,
   tabulate,
   SomeIx (..),
@@ -16,13 +18,14 @@ module Data.DeBruijn (
   Natural,
   Z,
   S,
+  KnownNat (natSing),
   SNat,
   fromSNat,
   type (+),
 ) where
 
 import GHC.Num.Natural (Natural, naturalIsZero, naturalSubUnsafe, naturalZero)
-import GHC.TypeNats (SNat, fromSNat, type (+))
+import GHC.TypeNats (KnownNat (..), SNat, fromSNat, type (+))
 
 -- | Zero.
 type Z :: Natural
@@ -61,12 +64,20 @@ safePred (UnsafeIx n)
   | otherwise = Just (UnsafeIx (n `naturalSubUnsafe` 1))
 
 -- | Raise the value of a DeBruijn index by some known natural `m`.
-raise :: SNat m -> Ix n -> Ix (m + n)
-raise m (UnsafeIx n) = UnsafeIx (fromSNat m + n)
+raiseBy :: SNat m -> Ix n -> Ix (m + n)
+raiseBy m (UnsafeIx n) = UnsafeIx (fromSNat m + n)
+
+-- | Raise the value of a DeBruijn index by some known natural `m`.
+raise :: (KnownNat m) => Ix n -> Ix (m + n)
+raise = raiseBy natSing
 
 -- | Raise the range of a DeBruijn index by some known natural `m`.
-inject :: SNat m -> Ix n -> Ix (m + n)
-inject _m (UnsafeIx index) = UnsafeIx index
+injectBy :: SNat m -> Ix n -> Ix (m + n)
+injectBy _m (UnsafeIx index) = UnsafeIx index
+
+-- | Raise the range of a DeBruijn index by some known natural `m`.
+inject :: (KnownNat m) => Ix n -> Ix (m + n)
+inject = injectBy natSing
 
 -- | List all DeBruijn indices between `0` and some known natural `n`.
 tabulate :: SNat n -> [Ix n]
