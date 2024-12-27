@@ -5,7 +5,7 @@ index-state:
 packages:
   packages/base-compat-constptr
   packages/control-kripke
-  packages/debruijn
+  packages/data-debruijn
   packages/gilear
   packages/gilear-lsp
   packages/tree-sitter

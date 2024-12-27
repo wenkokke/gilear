@@ -39,7 +39,7 @@ if ! ${HADDOCK} \
   --gen-contents \
   --read-interface=base-compat-constptr,./doc/reference/base-compat-constptr/base-compat-constptr.haddock \
   --read-interface=control-kripke,./doc/reference/control-kripke/control-kripke.haddock \
-  --read-interface=debruijn,./doc/reference/debruijn/debruijn.haddock \
+  --read-interface=data-debruijn,./doc/reference/data-debruijn/data-debruijn.haddock \
   --read-interface=gilear,./doc/reference/gilear/gilear.haddock \
   --read-interface=gilear-lsp,./doc/reference/gilear-lsp/gilear-lsp.haddock \
   --read-interface=tree-sitter,./doc/reference/tree-sitter/tree-sitter.haddock \
