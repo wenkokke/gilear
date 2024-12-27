@@ -17,6 +17,8 @@
     - default: false
     - name: "-Wno-unused-top-binds"
       within: "TreeSitter.Internal"
+    - name: "-Wno-orphans"
+      within: "Data.DeBruijn.Arbitrary"
 
 # Control which modules can be used
 - modules:
