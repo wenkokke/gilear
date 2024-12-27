@@ -1,3 +1,4 @@
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
@@ -6,6 +7,7 @@
 module Control.Kripke where
 
 import Control.Category (Category (..))
+import Control.Indexed (type All, type (-->))
 import Data.Kind (Type)
 import Prelude hiding (id, (.))
 
@@ -14,14 +16,6 @@ import Prelude hiding (id, (.))
 {-# ANN module ("HLint: ignore Eta reduce" :: String) #-}
 
 --------------------------------------------------------------------------------
-
-type All :: (k -> Type) -> Type
-type All p = forall w. p w
-
-infixr 0 -->
-
-type (-->) :: (k -> Type) -> (k -> Type) -> (k -> Type)
-type (-->) p q x = p x -> q x
 
 data World :: Type
 

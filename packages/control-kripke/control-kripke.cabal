@@ -22,5 +22,7 @@ common language
 library
   import:          language
   hs-source-dirs:  src
-  build-depends:   base >=4.13 && <5
   exposed-modules: Control.Kripke
+  build-depends:
+    , base             >=4.13 && <5
+    , control-indexed
