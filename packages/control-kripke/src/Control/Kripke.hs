@@ -28,20 +28,14 @@ data World :: Type
 type Path :: (World -> World -> Type) -> World -> World -> Type
 data Path e u v where
   Refl :: Path e u u
-  Step :: Path e u v -> e v w -> Path e u w
-
-singleton :: e v w -> Path e v w
-singleton = Step Refl
-
-trans :: Path e u v -> Path e v w -> Path e u w
-trans uv Refl = uv
-trans uv (Step vt vw) = Step (trans uv vt) vw
+  Step :: e u v -> Path e u v
+  Trans :: Path e u v -> Path e v w -> Path e u w
 
 instance Category (Path e) where
   id :: Path e u u
   id = Refl
   (.) :: Path e v w -> Path e u v -> Path e u w
-  (.) = flip trans
+  (.) = flip Trans
 
 class
   Kripke
@@ -55,11 +49,12 @@ class
   -- | Walk a value along a path.
   walk :: p u -> Path e u w -> p w
   walk p Refl = p
-  walk p (Step uv vw) = step (walk p uv) vw
+  walk p (Step uw) = step p uw
+  walk p (Trans uv vw) = walk (walk p uv) vw
 
 instance Kripke e (Path e u) where
   step :: Path e u v -> e v w -> Path e u w
-  step = Step
+  step uv vw = Trans uv (Step vw)
 
 -- | The /necessity/ modality from modal logic.
 type Box :: (World -> World -> Type) -> (World -> Type) -> World -> Type
@@ -125,7 +120,7 @@ instance
   step (Pure p) uv =
     Pure (step p uv)
   step (Call c k) uv =
-    Call (step c uv) $ \vw w -> k (vw . singleton uv) w
+    Call (step c uv) $ \vw w -> k (vw . Step uv) w
 
   walk ::
     ( forall (q :: World -> Type).
