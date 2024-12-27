@@ -1,6 +1,12 @@
+# NOTE(newpackage): This must list all Cabal packages.
 cradle:
   multi:
     - path: "./packages/base-compat-constptr"
+      config:
+        cradle:
+          cabal:
+
+    - path: "./packages/control-indexed"
       config:
         cradle:
           cabal:

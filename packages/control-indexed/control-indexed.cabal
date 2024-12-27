@@ -1,5 +1,5 @@
 cabal-version:   3.0
-name:            control-kripke
+name:            control-indexed
 version:         0.1.0.0
 synopsis:
   Support for type-safe updates based on Conor McBride's Effing-W
@@ -22,7 +22,5 @@ common language
 library
   import:          language
   hs-source-dirs:  src
-  exposed-modules: Control.Kripke
-  build-depends:
-    , base             >=4.13 && <5
-    , control-indexed
+  build-depends:   base >=4.13 && <5
+  exposed-modules: Control.Indexed

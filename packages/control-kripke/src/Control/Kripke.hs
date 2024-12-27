@@ -1,3 +1,4 @@
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
@@ -6,36 +7,29 @@
 module Control.Kripke where
 
 import Control.Category (Category (..))
+import Control.Indexed (type All, type (-->))
 import Data.Kind (Type)
 import Prelude hiding (id, (.))
 
-type All :: (k -> Type) -> Type
-type All p = forall w. p w
+--------------------------------------------------------------------------------
 
-infixr 0 -->
+{-# ANN module ("HLint: ignore Eta reduce" :: String) #-}
 
-type (-->) :: (k -> Type) -> (k -> Type) -> (k -> Type)
-type (-->) p q x = p x -> q x
+--------------------------------------------------------------------------------
 
 data World :: Type
 
 type Path :: (World -> World -> Type) -> World -> World -> Type
 data Path e u v where
   Refl :: Path e u u
-  Step :: Path e u v -> e v w -> Path e u w
-
-singleton :: e v w -> Path e v w
-singleton = Step Refl
-
-trans :: Path e u v -> Path e v w -> Path e u w
-trans uv Refl = uv
-trans uv (Step vt vw) = Step (trans uv vt) vw
+  Step :: e u v -> Path e u v
+  Trans :: Path e u v -> Path e v w -> Path e u w
 
 instance Category (Path e) where
   id :: Path e u u
   id = Refl
   (.) :: Path e v w -> Path e u v -> Path e u w
-  (.) = flip trans
+  (.) = flip Trans
 
 class
   Kripke
@@ -44,19 +38,24 @@ class
     | p -> e
   where
   -- | Step a value along an edge.
-  step :: e u w -> p u -> p w
+  step :: p u -> e u w -> p w
 
-  -- | Move a value along a path.
-  move :: Path e u w -> p u -> p w
-  move Refl p = p
-  move (Step uv vw) p = step vw (move uv p)
+  -- | Walk a value along a path.
+  walk :: p u -> Path e u w -> p w
+  walk p Refl = p
+  walk p (Step uw) = step p uw
+  walk p (Trans uv vw) = walk (walk p uv) vw
+
+instance Kripke e (Path e u) where
+  step :: Path e u v -> e v w -> Path e u w
+  step uv vw = Trans uv (Step vw)
 
 -- | The /necessity/ modality from modal logic.
 type Box :: (World -> World -> Type) -> (World -> Type) -> World -> Type
 type Box e p u = forall w. Path e u w -> p w
 
 box :: (Kripke e p) => All (p --> Box e p)
-box p uv = move uv p
+box p uv = walk p uv
 
 class
   MonadKripke
@@ -109,26 +108,26 @@ instance
       Kripke e (c q)
     , Kripke e p
     ) =>
-    e u v ->
     Free e c p u ->
+    e u v ->
     Free e c p v
-  step uv (Pure p) =
-    Pure (step uv p)
-  step uv (Call c k) =
-    Call (step uv c) $ \vw w -> k (vw . singleton uv) w
+  step (Pure p) uv =
+    Pure (step p uv)
+  step (Call c k) uv =
+    Call (step c uv) $ \vw w -> k (vw . Step uv) w
 
-  move ::
+  walk ::
     ( forall (q :: World -> Type).
       Kripke e (c q)
     , Kripke e p
     ) =>
-    Path e u v ->
     Free e c p u ->
+    Path e u v ->
     Free e c p v
-  move uv (Pure p) =
-    Pure (move uv p)
-  move uv (Call c k) =
-    Call (move uv c) $ \vw q -> k (vw . uv) q
+  walk (Pure p) uv =
+    Pure (walk p uv)
+  walk (Call c k) uv =
+    Call (walk c uv) $ \vw q -> k (vw . uv) q
 
 instance MonadKripke e (Free e c) where
   kpure ::
