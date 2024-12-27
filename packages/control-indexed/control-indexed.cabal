@@ -1,0 +1,26 @@
+cabal-version:   3.0
+name:            control-indexed
+version:         0.1.0.0
+synopsis:
+  Support for type-safe updates based on Conor McBride's Effing-W
+
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/packages/control-kripke/#README>
+
+license:         AGPL-3.0-only
+author:          Wen Kokke
+maintainer:      wenkokke@users.noreply.github.com
+category:        Language
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common language
+  ghc-options:        -Wall
+  default-language:   GHC2021
+  default-extensions: ImportQualifiedPost
+
+library
+  import:          language
+  hs-source-dirs:  src
+  build-depends:   base >=4.13 && <5
+  exposed-modules: Control.Indexed
