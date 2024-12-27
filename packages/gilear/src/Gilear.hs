@@ -7,7 +7,6 @@ module Gilear where
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
@@ -38,7 +37,7 @@ newTCEnv = pure TCEnv
      state being threaded through sequentially.
 -}
 type TC :: Type -> Type
-newtype TC a = TC {unTC :: ReaderT TCEnv (ResourceT IO) a}
+newtype TC a = TC {unTC :: ReaderT TCEnv IO a}
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO)
 
 -- | Get the type-checker environment.
@@ -47,4 +46,4 @@ askTCEnv = TC ask
 
 -- | Run the type-checker monad.
 runTC :: TCEnv -> TC a -> IO a
-runTC env action = runResourceT (runReaderT (unTC action) env)
+runTC env action = runReaderT (unTC action) env
