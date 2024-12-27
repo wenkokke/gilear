@@ -46,6 +46,8 @@
       as: "BSL"
       importStyle: "explicitOrQualified"
       qualifiedStyle: "post"
+    - name: "Prelude"
+      importStyle: "unqualified"
     - name: "**"
       importStyle: "explicitOrQualified"
       qualifiedStyle: "post"

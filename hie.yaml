@@ -5,6 +5,11 @@ cradle:
         cradle:
           cabal:
 
+    - path: "./packages/control-kripke"
+      config:
+        cradle:
+          cabal:
+
     - path: "./packages/debruijn"
       config:
         cradle:
