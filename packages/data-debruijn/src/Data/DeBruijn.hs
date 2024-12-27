@@ -11,10 +11,26 @@ module Data.DeBruijn (
   inject,
   tabulate,
   SomeIx (..),
+
+  -- * Re-export 'GHC.TypeNats'
+  Natural,
+  Z,
+  S,
+  SNat,
+  fromSNat,
+  type (+),
 ) where
 
 import GHC.Num.Natural (Natural, naturalIsZero, naturalSubUnsafe, naturalZero)
 import GHC.TypeNats (SNat, fromSNat, type (+))
+
+-- | Zero.
+type Z :: Natural
+type Z = 0
+
+-- | Successor.
+type S :: Natural -> Natural
+type S n = 1 + n
 
 -- | The type of DeBruijn indices.
 newtype Ix (n :: Natural) = UnsafeIx {unIx :: Natural}
@@ -25,13 +41,13 @@ toNatural :: Ix n -> Natural
 toNatural = unIx
 
 -- | Zero.
-pattern FZ :: Ix (1 + n)
+pattern FZ :: Ix (S n)
 pattern FZ <- (safePred -> Nothing)
   where
     FZ = UnsafeIx naturalZero
 
 -- | Successor.
-pattern FS :: Ix n -> Ix (1 + n)
+pattern FS :: Ix n -> Ix (S n)
 pattern FS n <- (safePred -> Just n)
   where
     FS (UnsafeIx n) = UnsafeIx (1 + n)
@@ -39,7 +55,7 @@ pattern FS n <- (safePred -> Just n)
 {-# COMPLETE FZ, FS #-}
 
 -- | Take the precessor of the DeBruijn index.
-safePred :: Ix (1 + n) -> Maybe (Ix n)
+safePred :: Ix (S n) -> Maybe (Ix n)
 safePred (UnsafeIx n)
   | naturalIsZero n = Nothing
   | otherwise = Just (UnsafeIx (n `naturalSubUnsafe` 1))
