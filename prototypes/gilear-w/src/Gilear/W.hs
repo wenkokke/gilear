@@ -2,11 +2,12 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Gilear.W where
 
 import Control.Indexed (K (..), type All, type (-->))
-import Control.Kripke (Free (..), Kripke (step), Path (..), World)
+import Control.Kripke (Free (..), Kripke (step), MonadKripke (..), Path (..), World)
 import Control.Monad.Writer.Strict (MonadWriter (writer), Writer, runWriter)
 import Data.DeBruijn (Ix (..), Nat (S, Z), thick, thin)
 import Data.Function (on)
@@ -128,9 +129,10 @@ instance Kripke Sub SchemeAt where
 inst :: Scheme (S Z) -> All (TyAt --> SchemeAt)
 inst s (TyAt t) = SchemeAt (usubScheme t FZ s)
 
--- | Generalisation of an /existential/ variable into a /universal/ variable.
---
---  @'gen' n s@ generalises the /existential/ variable @n@ to a /universal/ variable in @s@.
+{-| Generalisation of an /existential/ variable into a /universal/ variable.
+
+ @'gen' n s@ generalises the /existential/ variable @n@ to a /universal/ variable in @s@.
+-}
 gen :: Name -> All (SchemeAt --> SchemeAt)
 gen n (SchemeAt s) =
   case runWriter (eusubScheme FZ n s) of
@@ -162,3 +164,15 @@ supply :: (Kripke Sub p) => Word -> All (MonadW p --> MonadW p)
 supply n (Call Next k) = supply (n + 1) $ k Refl (K n)
 supply _ p@(Pure _) = p
 supply n (Call c k) = Call c $ \uv q -> supply n $ k uv q
+
+op :: (Kripke Sub p) => c p u -> Free Sub c p u
+op c = Call c $ \_ p -> Pure p
+
+instance Kripke Sub (K a) where
+  step :: K a u -> Sub u w -> K a w
+  step (K x) _ = K x
+
+fresh :: Text -> Free Sub W (K Name) u
+fresh text =
+  op Next `kbind` \_uv p ->
+    kpure (K $ Name text (unK (p Refl)))

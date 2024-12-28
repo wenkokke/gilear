@@ -25,12 +25,12 @@ library
   exposed-modules: Gilear.W
   build-depends:
     , base             >=4.13 && <5
+    , containers       >=0.6  && <0.7
     , control-indexed  >=0.1  && <0.2
     , control-kripke   >=0.1  && <0.2
     , data-debruijn    >=0.1  && <0.2
     , mtl              >=2.3  && <2.4
     , text             >=2.1  && <2.2
-    , containers       >=0.6  && <0.7
 
 test-suite gilear-w-test
   import:         language

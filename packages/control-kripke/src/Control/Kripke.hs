@@ -7,7 +7,7 @@
 module Control.Kripke where
 
 import Control.Category (Category (..))
-import Control.Indexed (type All, type (-->))
+import Control.Indexed (K, type All, type (-->))
 import Data.Kind (Type)
 import Prelude hiding (id, (.))
 
