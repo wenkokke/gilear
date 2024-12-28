@@ -1,87 +1,124 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
 
 module Data.DeBruijn (
-  Ix (FZ, FS),
-  toNatural,
-  safePred,
-  raise,
-  inject,
-  tabulate,
-  SomeIx (..),
-
-  -- * Re-export 'GHC.TypeNats'
-  Natural,
-  Z,
-  S,
-  SNat,
-  fromSNat,
+  -- * Type-level natural numbers
+  Nat (..),
+  type Pred,
   type (+),
+
+  -- * De Bruijn Indices
+  Ix (FZ, FS),
+  toWord,
+  thin,
+  thick,
+  inject,
 ) where
 
-import GHC.Num.Natural (Natural, naturalIsZero, naturalSubUnsafe, naturalZero)
-import GHC.TypeNats (SNat, fromSNat, type (+))
+import Data.Kind (Constraint, Type)
+import Data.Proxy (Proxy)
+import Unsafe.Coerce (unsafeCoerce)
 
--- | Zero.
-type Z :: Natural
-type Z = 0
+-- | Type-level natural numbers.
+data Nat = Z | S Nat
 
--- | Successor.
-type S :: Natural -> Natural
-type S n = 1 + n
+-- | Addition of type-level naturals.
+type family (+) (n :: Nat) (m :: Nat) = (r :: Nat) where
+  Z + m = m
+  S n + m = S (n + m)
 
--- | The type of DeBruijn indices.
-newtype Ix (n :: Natural) = UnsafeIx {unIx :: Natural}
-  deriving (Eq, Ord)
+-- | Predecessor of type-level naturals.
+type family Pred (n :: Nat) = (r :: Nat) where
+  Pred (S n) = n
 
--- | Convert a DeBruijn index 'Ix' to the underlying 'Natural'.
-toNatural :: Ix n -> Natural
-toNatural = unIx
+{-| @'SNat'@ is the singleton type for natural numbers.
+newtype SNat (n :: Nat) = UnsafeSN {unSN :: Word}
+type role SNat nominal
+-}
 
--- | Zero.
-pattern FZ :: Ix (S n)
-pattern FZ <- (safePred -> Nothing)
+-- | @'Ix' n@ is the type of natural numbers less than @n@.
+newtype Ix (n :: Nat) = UnsafeIx {unIx :: Word}
+
+type role Ix nominal
+
+-- | Convert an 'Ix' to 'Word'.
+toWord :: Ix n -> Word
+toWord = unIx
+
+-- | @'IxF'@ is the base functor of @'Ix'@.
+data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
+  FZF :: (S m ~ n) => IxF ix n
+  FSF :: (S m ~ n) => ix m -> IxF ix n
+
+-- | @'Dict' c@ is the type that holds the evidence for constraint @c@.
+data Dict (c :: Constraint) :: Type where
+  Dict :: (c) => Dict c
+
+unsafeHasPred :: forall n. Dict (S (Pred n) ~ n)
+unsafeHasPred = unsafeCoerce (Dict @(n ~ n))
+
+unsafeWithHasPred :: forall n f. f (S (Pred n)) -> f n
+unsafeWithHasPred i = case unsafeHasPred @n of Dict -> i
+
+suc :: Ix (Pred n) -> Ix n
+suc (UnsafeIx index) = UnsafeIx (index + 1)
+
+project :: Ix n -> IxF Ix n
+project (UnsafeIx index) =
+  unsafeWithHasPred $
+    if index == 0
+      then FZF
+      else FSF (UnsafeIx (index - 1))
+
+embed :: IxF Ix (S (Pred n)) -> Ix n
+embed FZF = UnsafeIx 0
+embed (FSF i) = suc i
+
+pattern FZ :: forall n. Ix n
+pattern FZ <- (project -> FZF)
   where
-    FZ = UnsafeIx naturalZero
+    FZ = embed FZF
+{-# INLINE FZ #-}
 
--- | Successor.
-pattern FS :: Ix n -> Ix (S n)
-pattern FS n <- (safePred -> Just n)
+pattern FS :: forall n. Ix (Pred n) -> Ix n
+pattern FS i <- (project -> FSF i)
   where
-    FS (UnsafeIx n) = UnsafeIx (1 + n)
+    FS i = embed (FSF i)
+{-# INLINE FS #-}
 
 {-# COMPLETE FZ, FS #-}
 
--- | Take the precessor of the DeBruijn index.
-safePred :: Ix (S n) -> Maybe (Ix n)
-safePred (UnsafeIx n)
-  | naturalIsZero n = Nothing
-  | otherwise = Just (UnsafeIx (n `naturalSubUnsafe` 1))
+-- | Thinning.
+thin :: Ix (S n) -> Ix n -> Ix (S n)
+thin = thin'
+ where
+  thin' :: Ix n -> Ix (Pred n) -> Ix n
+  thin' FZ j = FS j
+  thin' (FS _) FZ = FZ
+  thin' (FS i) (FS j) = FS (thin' i j)
 
--- | Raise the value of a DeBruijn index by some known natural `m`.
-raise :: SNat m -> Ix n -> Ix (m + n)
-raise m (UnsafeIx n) = UnsafeIx (fromSNat m + n)
+-- | Thickening.
+thick :: Ix (S n) -> Ix (S n) -> Maybe (Ix n)
+thick = thick'
+ where
+  thick' :: Ix n -> Ix n -> Maybe (Ix (Pred n))
+  thick' FZ FZ = Nothing
+  thick' FZ (FS j) = Just j
+  thick' (FS _) FZ = Just FZ
+  thick' (FS i) (FS j) = FS <$> thick' i j
 
--- | Raise the range of a DeBruijn index by some known natural `m`.
-inject :: SNat m -> Ix n -> Ix (m + n)
-inject _m (UnsafeIx index) = UnsafeIx index
+-- | Inject.
+inject :: Proxy n -> Ix m -> Ix (n + m)
+inject _ = unsafeCoerce
 
--- | List all DeBruijn indices between `0` and some known natural `n`.
-tabulate :: SNat n -> [Ix n]
-tabulate n = fmap UnsafeIx [0 .. fromSNat n]
-
-instance Show (Ix n) where
-  show :: Ix n -> String
-  show (UnsafeIx n) = show n
-
--- | An existential wrapper for DeBruijn indices.
-data SomeIx = forall n. SomeIx
-  { ixBound :: SNat n
-  , ixValue :: Ix n
-  }
-
-instance Show SomeIx where
-  show :: SomeIx -> String
-  show (SomeIx _bound value) = show value
+{-| Raise.
+raise :: SNat n -> Ix m -> Ix (n + m)
+raise  SZ    i = i
+raise (SS n) i = FS (raise n i)
+-}

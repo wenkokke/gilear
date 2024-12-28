@@ -23,23 +23,3 @@ library
   hs-source-dirs:  src
   exposed-modules: Data.DeBruijn
   build-depends:   base >=4.18 && <5
-
-library debruijn-arbitrary
-  import:          language
-  hs-source-dirs:  src-arbitrary
-  exposed-modules: Data.DeBruijn.Arbitrary
-  build-depends:
-    , base           >=4.18 && <5
-    , data-debruijn
-    , QuickCheck     >=2.14 && <2.15
-
-test-suite debruijn-test
-  import:         language
-  type:           exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is:        Main.hs
-  build-depends:
-    , base                              >=4.18 && <5
-    , data-debruijn
-    , data-debruijn:debruijn-arbitrary
-    , QuickCheck                        >=2.14 && <2.15
