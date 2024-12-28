@@ -2,12 +2,14 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LiberalTypeSynonyms #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Gilear.W where
 
+import Control.Category (Category (..))
 import Control.Indexed (K (..), type All, type (-->))
-import Control.Kripke (Free (..), Kripke (step), MonadKripke (..), Path (..), World)
+import Control.Kripke (Box, Free (..), Kripke (step), MonadKripke (..), Path (..), World, walk)
 import Control.Monad.Writer.Strict (MonadWriter (writer), Writer, runWriter)
 import Data.DeBruijn (Ix (..), Nat (S, Z), thick, thin)
 import Data.Function (on)
@@ -16,6 +18,7 @@ import Data.Monoid (Any (..))
 import Data.Set (Set)
 import Data.Text (Text)
 import Unsafe.Coerce (unsafeCoerce)
+import Prelude hiding (id, (.))
 
 data Name = Name
   { text :: !Text
@@ -176,3 +179,49 @@ fresh :: Text -> Free Sub W (K Name) u
 fresh text =
   op Next `kbind` \_uv p ->
     kpure (K $ Name text (unK (p Refl)))
+
+-- handle Find...
+decl :: (Kripke Sub p) => Name -> All (SchemeAt --> MonadW p --> MonadW p)
+-- ...by giving the scheme if we're looking up this decl
+decl n s (Call (Find m) k) | n == m = decl n s $ k Refl s
+-- forward everything else, but...
+decl _ _ (Pure p) = Pure p
+-- ...be sure to update the scheme in the light of progress
+decl n s (Call c k) = Call c $ \uv p -> decl n (walk s uv) $ k uv p
+
+mkETyAt :: All (Box e (K Name) --> TyAt)
+mkETyAt n = TyAt (EVar (unK (n Refl)))
+
+bloc :: All (MonadW TyAt --> MonadW SchemeAt)
+-- if we're instantiating a monotype, we're done
+bloc (Call (Inst (SchemeAt (Mono t))) k) = bloc $ k Refl (TyAt t)
+-- if we're instantiating a polytype, we're
+-- inventing a fresh existential variable and guessing it
+bloc (Call (Inst (SchemeAt (Poly s))) k) =
+  fresh "x" `kbind` \uv n ->
+    guess (n Refl) . bloc $
+      op (Inst (inst s (mkETyAt n))) `kbind` \vw t ->
+        k (vw . uv) (t Refl)
+bloc (Pure (TyAt t)) = Pure (SchemeAt (Mono t))
+-- otherwise forward
+bloc (Call c k) = Call c $ \uv p -> bloc $ k uv p
+
+-- handle Make, but also do generalisation (note we're computing type schemes)
+guess :: All (K Name --> MonadW SchemeAt --> MonadW SchemeAt)
+guess = undefined
+
+-- -- when Make shows up, we have four possibilities
+-- guessing (K e) (Call c@(Make ds (Ty t) x) k) = case (e == x, dep e t) of
+--   -- (is it me?, do I occur in the definiens)
+--   (True, True)  -- it's me and the occur check failed; oh noes!
+--     -> op Barf
+--   (True, False)  -- it's me, so extrude my dependencies and substitute me!
+--     -> foldr (guessing . K) (k (Now :< (t :/: x)) (K ())) ds
+--   (False, True)  -- it's not me, but I occur, so extrude me!
+--     -> Call (Make (e : ds) (Ty t) x) k
+--   (False, False)  -- it's nothing to do with me, so leave alone!
+--     -> Call c $ \ u r -> guessing (K e) $ k u r
+-- -- nobody made me; I could be anything; pawn becomes queen!
+-- guessing e (RetNow s) = RetNow (gen e s)
+-- -- forward the rest (the update is a no-op)
+-- guessing (K e) (Call c k) = Call c $ \ u r -> guessing (K e) $ k u r
