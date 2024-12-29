@@ -60,7 +60,7 @@ toWord = unIx
 -- | @'IxF'@ is the base functor of @'Ix'@.
 data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
   FZF :: (n ~ S m) => IxF ix n
-  FSF :: (n ~ S m) => ix m -> IxF ix n
+  FSF :: (n ~ S m) => !(ix m) -> IxF ix n
 
 -- | @'Dict' c@ is the type that holds the evidence for constraint @c@.
 data Dict (c :: Constraint) :: Type where
