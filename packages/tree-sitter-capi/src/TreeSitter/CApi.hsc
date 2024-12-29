@@ -641,7 +641,7 @@ foreign import ccall "wrapper"
   mkTSLogFunPtr :: TSLog -> IO (FunPtr TSLog)
 
 #{def
-  void _wrap_ts_logger_delete(TSLogger *log) {
+  void _wrap_ts_logger_delete(TSLogger *logger) {
     free(logger->payload);
     free(logger);
   }
@@ -1326,8 +1326,8 @@ ts_parser_set_logger ::
   TSLog ->
   IO ()
 ts_parser_set_logger = \self logFun ->
-  bracket (mkTSLogFunPtr logFun) $ \logFun_p ->
-    bracket (_wrap_ts_logger_new logFun_p) $ \logger_p ->
+  bracket (mkTSLogFunPtr logFun) freeHaskellFunPtr $ \logFun_p ->
+    bracket (_wrap_ts_logger_new logFun_p) _wrap_ts_logger_delete $ \logger_p ->
       _wrap_ts_parser_set_logger self logger_p
 
 #{def
