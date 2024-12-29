@@ -33,47 +33,54 @@ instance Ord Name where
   compare :: Name -> Name -> Ordering
   compare = compare `on` uniq
 
-data Ty (n :: Nat) :: Type where
-  EVar :: Name -> Ty n
-  UVar :: Ix n -> Ty n
-  (:->) :: Ty n -> Ty n -> Ty n
+data TyF (t :: Type)
+  = t :-> t
+  | t :*  t
+  | Bool
+  deriving (Eq, Show, Functor, Foldable, Traversable)
+
+data Ty (n :: Nat)
+  = E Name
+  | U (Ix n)
+  | C (TyF (Ty n))
+  -- deriving (Eq, Show)
 
 {-| Substitution for /existential/ variables.
 
-  @'esub' r n t@ replaces @'EVar' n@ with @r@ in @t@.
+  @'esub' r n t@ replaces @'E' n@ with @r@ in @t@.
 -}
 esub :: Ty Z -> Name -> Ty n -> Ty n
 esub r m = go
  where
-  go (EVar n) | m == n = closed r
-  go (s :-> t) = go s :-> go t
+  go (E n) | m == n = closed r
+  go (C t) = C (fmap go t)
   go t = t
 
 {-| Conversion from /existential/ variable to /universal/ variable.
 
-    @'eusub' i n t@ replaces @'EVar' n@ with @'UVar' i@ in @t@.
+    @'eusub' i n t@ replaces @'E' n@ with @'U' i@ in @t@.
     The 'Writer' effect tracks whether or not @n@ occurred in @t@.
 -}
 eusub :: Ix (S n) -> Name -> Ty n -> Writer Any (Ty (S n))
 eusub i m = go
  where
-  go (EVar n)
-    | m == n = writer (UVar i, Any True)
-    | otherwise = pure (EVar n)
-  go (UVar j) = pure (UVar (thin i j))
-  go (s :-> t) = (:->) <$> go s <*> go t
+  go (E n)
+    | m == n = writer (U i, Any True)
+    | otherwise = pure (E n)
+  go (U j) = pure (U (thin i j))
+  go (C t) = C <$> traverse go t
 
 {-| Substitution for /universal/ variables.
 
-  @'usub' r i t@ replaces @'UVar' i@ with @r@ in @t@.
+  @'usub' r i t@ replaces @'U' i@ with @r@ in @t@.
 -}
 usub :: Ty Z -> Ix (S n) -> Ty (S n) -> Ty n
 usub r = go
  where
   go :: Ix (S n) -> Ty (S n) -> Ty n
-  go _ (EVar n) = EVar n
-  go j (UVar i) = maybe (closed r) UVar (thick j i)
-  go j (s :-> t) = go j s :-> go j t
+  go _ (E n) = E n
+  go j (U i) = maybe (closed r) U (thick j i)
+  go j (C t) = C (fmap (go j) t)
 
 newtype TyAt (w :: World) = TyAt (Ty Z)
 
@@ -83,7 +90,7 @@ data Scheme (n :: Nat) :: Type where
 
 {-| Conversion from /existential/ variable to /universal/ variable.
 
-    @'eusub' i n t@ replaces @'EVar' n@ with @'UVar' i@ in @t@.
+    @'eusub' i n t@ replaces @'E' n@ with @'U' i@ in @t@.
     The 'Writer' effect tracks whether or not @n@ occurred in @t@.
 -}
 eusubScheme :: Ix (S n) -> Name -> Scheme n -> Writer Any (Scheme (S n))
@@ -190,7 +197,7 @@ decl _ _ (Pure p) = Pure p
 decl n s (Call c k) = Call c $ \uv p -> decl n (walk s uv) $ k uv p
 
 mkETyAt :: All (Box e (K Name) --> TyAt)
-mkETyAt n = TyAt (EVar (unK (n Refl)))
+mkETyAt n = TyAt (E (unK (n Refl)))
 
 bloc :: All (MonadW TyAt --> MonadW SchemeAt)
 -- if we're instantiating a monotype, we're done
