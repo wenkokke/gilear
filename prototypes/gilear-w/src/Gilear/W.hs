@@ -19,6 +19,7 @@ import Data.Set (Set)
 import Data.Text (Text)
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding (id, (.))
+import Data.Text qualified as T
 
 data Name = Name
   { text :: !Text
@@ -33,17 +34,21 @@ instance Ord Name where
   compare :: Name -> Name -> Ordering
   compare = compare `on` uniq
 
+instance Show Name where
+  show :: Name -> String
+  show = T.unpack . text
+
 data TyF (t :: Type)
   = t :-> t
   | t :*  t
   | Bool
-  deriving (Eq, Show, Functor, Foldable, Traversable)
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Ty (n :: Nat)
   = E Name
   | U (Ix n)
   | C (TyF (Ty n))
-  -- deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 {-| Substitution for /existential/ variables.
 
