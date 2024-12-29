@@ -1,0 +1,25 @@
+prelude:
+  implicit: true
+  hiding: ["seq"]
+
+rewrites:
+  - from: "GilearW.Internal.Monad.Timed.Timed.return"
+    to: "pure"
+  - from: "GilearW.Internal.Monad.Timed.Timed._>>=_"
+    to: "_>>=_"
+  - from: "Agda.Builtin.String.String"
+    to: "Text"
+    importing: "Data.Text"
+  - from: "Agda.Builtin.String.primStringUncons"
+    to: "uncons"
+    importing: "Data.Text"
+  - from: "Agda.Builtin.String.primStringToList"
+    to: "unpack"
+    importing: "Data.Text"
+  - from: "Agda.Builtin.String.primStringFromList"
+    to: "pack"
+    importing: "Data.Text"
+  - from: "Agda.Builtin.String.primStringAppend"
+    to: "mappend"
+  - from: "Agda.Builtin.String.primStringEquality"
+    to: "(==)"

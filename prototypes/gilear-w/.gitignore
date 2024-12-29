@@ -1,0 +1,3 @@
+_build/
+autogen/**/*.hs
+autogen/libraries

@@ -67,7 +67,7 @@ test-suite tree-sitter-test
     , base-compat-constptr
     , bytestring
     , directory                       >=1.3     && <1.4
-    , filepath                        >=1.5     && <1.6
+    , filepath                        >=1.4     && <1.6
     , Glob                            >=0.10    && <0.11
     , graphviz                        >=2999.20 && <2999.21
     , tasty                           >=1.5     && <1.6
