@@ -241,8 +241,10 @@ import Foreign
 import Foreign.C
 import Foreign.C.ConstPtr.Compat (ConstPtr(..))
 import GHC.TypeLits (Natural)
+import Debug.Trace (traceShow)
 
 #include <tree_sitter/api.h>
+-- string.h: required for memcpy
 #include <string.h>
 
 {----------------------------}
@@ -1343,7 +1345,7 @@ ts_parser_logger ::
 ts_parser_logger = \self -> do
   logFun_p <- _wrap_ts_parser_logger self
   pure $
-    if logFun_p == nullFunPtr
+    if logFun_p /= nullFunPtr
       then Just $ unTSLogFunPtr logFun_p
       else Nothing
 {-# INLINE ts_parser_logger #-}
@@ -1361,7 +1363,7 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_logger"
     // Get the current logger
     TSLogger logger = ts_parser_logger(self);
     // Copy the payload into the log function
-    if (logger.payload) {
+    if(logger.payload) {
       TSLog log;
       memcpy(&log, logger.payload, sizeof log);
       return log;
