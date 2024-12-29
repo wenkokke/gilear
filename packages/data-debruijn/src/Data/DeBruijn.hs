@@ -42,6 +42,12 @@ newtype SNat (n :: Nat) = UnsafeSN {unSN :: Word}
 type role SNat nominal
 -}
 
+{-| @'SNatF'@ is the base functor of @'SNat'@.
+data SNatF (snat :: Nat -> Type) (n :: Nat) :: Type where
+  SZF :: (n ~ Z) => SNatF snat n
+  SSF :: (n ~ S m) => snat m -> SNatF snat n
+-}
+
 -- | @'Ix' n@ is the type of natural numbers less than @n@.
 newtype Ix (n :: Nat) = UnsafeIx {unIx :: Word}
 
@@ -53,43 +59,48 @@ toWord = unIx
 
 -- | @'IxF'@ is the base functor of @'Ix'@.
 data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
-  FZF :: (S m ~ n) => IxF ix n
-  FSF :: (S m ~ n) => ix m -> IxF ix n
+  FZF :: (n ~ S m) => IxF ix n
+  FSF :: (n ~ S m) => ix m -> IxF ix n
 
 -- | @'Dict' c@ is the type that holds the evidence for constraint @c@.
 data Dict (c :: Constraint) :: Type where
   Dict :: (c) => Dict c
 
-unsafeHasPred :: forall n. Dict (S (Pred n) ~ n)
+unsafeHasPred :: forall n. Dict (n ~ S (Pred n))
 unsafeHasPred = unsafeCoerce (Dict @(n ~ n))
 
 unsafeWithHasPred :: forall n f. f (S (Pred n)) -> f n
 unsafeWithHasPred i = case unsafeHasPred @n of Dict -> i
 
-suc :: Ix (Pred n) -> Ix n
-suc (UnsafeIx index) = UnsafeIx (index + 1)
+unsafeSucIx :: Ix (Pred n) -> Ix n
+unsafeSucIx (UnsafeIx index) = UnsafeIx (index + 1)
 
-project :: Ix n -> IxF Ix n
-project (UnsafeIx index) =
+projectIx :: Ix n -> IxF Ix n
+projectIx (UnsafeIx index) =
   unsafeWithHasPred $
     if index == 0
       then FZF
       else FSF (UnsafeIx (index - 1))
 
-embed :: IxF Ix (S (Pred n)) -> Ix n
-embed FZF = UnsafeIx 0
-embed (FSF i) = suc i
+embedIx :: IxF Ix (S (Pred n)) -> Ix n
+embedIx FZF = UnsafeIx 0
+embedIx (FSF i) = unsafeSucIx i
+
+-- TODO:
+-- Type signatures for pattern synonyms are weird.
+-- We may be able to use that to simplify this code?
+-- https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/pattern_synonyms.html#typing-of-pattern-synonyms
 
 pattern FZ :: forall n. Ix n
-pattern FZ <- (project -> FZF)
+pattern FZ <- (projectIx -> FZF)
   where
-    FZ = embed FZF
+    FZ = embedIx FZF
 {-# INLINE FZ #-}
 
 pattern FS :: forall n. Ix (Pred n) -> Ix n
-pattern FS i <- (project -> FSF i)
+pattern FS i <- (projectIx -> FSF i)
   where
-    FS i = embed (FSF i)
+    FS i = embedIx (FSF i)
 {-# INLINE FS #-}
 
 {-# COMPLETE FZ, FS #-}
