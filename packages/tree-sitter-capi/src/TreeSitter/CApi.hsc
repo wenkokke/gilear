@@ -33,20 +33,14 @@ module TreeSitter.CApi
   , TSRange (..)
   , TSInput
   , TSRead
-  , mkTSReadFunPtr
   , TSLogType (TSLogTypeParse, TSLogTypeLex, ..)
   , TSLogger
   , TSLog
-  , mkTSLogFunPtr
   , TSInputEdit (..)
   , TSNode (..)
   , TSNodeContext (..)
-  , peekTSNodeContext
-  , pokeTSNodeContext
   , TSTreeCursor (..)
   , TSTreeCursorContext (..)
-  , peekTSTreeCursorContext
-  , pokeTSTreeCursorContext
   , TSQueryCapture (..)
   , TSQuantifier (TSQuantifierZero, TSQuantifierZeroOrOne, TSQuantifierZeroOrMore, TSQuantifierOne, TSQuantifierOneOrMore, ..)
   , TSQueryMatch (..)
@@ -64,6 +58,7 @@ module TreeSitter.CApi
   , ts_parser_included_ranges
   , ts_parser_set_logger
   , ts_parser_logger
+  , ts_parser_remove_logger
   , ts_parser_parse
   , ts_parser_parse_string
   , ts_parser_parse_string_encoding
@@ -235,7 +230,7 @@ module TreeSitter.CApi
   , ts_set_allocator
   ) where
 
-import Control.Exception (bracket)
+import Control.Exception (bracket, mask_)
 #ifdef TREE_SITTER_FEATURE_WASM
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS (packCString, useAsCString)
@@ -640,10 +635,19 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_new"
 foreign import ccall "wrapper"
   mkTSLogFunPtr :: TSLog -> IO (FunPtr TSLog)
 
+{-| Convert a C function pointer for a `TSLog` function
+    to the corresponding Haskell function.
+ -}
+foreign import ccall "dynamic"
+  unTSLogFunPtr :: FunPtr TSLog -> TSLog
+
 #{def
-  void _wrap_ts_logger_delete(TSLogger *logger) {
+  TSLog _wrap_ts_logger_delete(TSLogger *logger) {
+    TSLog log;
+    memcpy(&log, logger->payload, sizeof log);
     free(logger->payload);
     free(logger);
+    return log;
   }
 }
 
@@ -653,7 +657,7 @@ foreign import ccall "wrapper"
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_delete"
   _wrap_ts_logger_delete ::
     Ptr TSLogger ->
-    IO ()
+    IO (FunPtr TSLog)
 
 {-|
   > typedef struct TSInputEdit {
@@ -1179,9 +1183,9 @@ ts_parser_parse ::
   TSRead ->
   TSInputEncoding ->
   IO (Ptr TSTree)
-ts_parser_parse = \self old_tree readFun inputEncoding -> do
-  bracket (mkTSReadFunPtr readFun) freeHaskellFunPtr $ \readFun_p -> do
-    bracket (_wrap_ts_input_new readFun_p inputEncoding) _wrap_ts_input_delete $ \input_p -> do
+ts_parser_parse = \self old_tree readFun encoding ->
+  bracket (mkTSReadFunPtr readFun) freeHaskellFunPtr $ \readFun_p ->
+    bracket (_wrap_ts_input_new readFun_p encoding) _wrap_ts_input_delete $ \input_p ->
       _wrap_ts_parser_parse self old_tree input_p
 
 #{def
@@ -1325,10 +1329,10 @@ ts_parser_set_logger ::
   Ptr TSParser ->
   TSLog ->
   IO ()
-ts_parser_set_logger = \self logFun ->
-  bracket (mkTSLogFunPtr logFun) freeHaskellFunPtr $ \logFun_p ->
-    bracket (_wrap_ts_logger_new logFun_p) _wrap_ts_logger_delete $ \logger_p ->
-      _wrap_ts_parser_set_logger self logger_p
+ts_parser_set_logger = \self logFun -> mask_ $ do
+  logFun_p <- mkTSLogFunPtr logFun
+  logger_p <- _wrap_ts_logger_new logFun_p
+  _wrap_ts_parser_set_logger self logger_p
 
 #{def
   void _wrap_ts_parser_set_logger(
@@ -1350,32 +1354,45 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_set_logger"
   Get the parser's current logger.
 
   > TSLogger ts_parser_logger(const TSParser *self);
+
+  The returned result is allocated using @malloc@ and
+  the caller is responsible for freeing it using @free@.
 -}
 ts_parser_logger ::
   ConstPtr TSParser ->
-  IO TSLogger
-ts_parser_logger = undefined
--- \self ->
---   alloca $ \result_p -> do
---     _wrap_ts_parser_logger self result_p
---     peek result_p
--- {-# INLINE ts_parser_logger #-}
+  IO (Ptr TSLogger)
+ts_parser_logger = _wrap_ts_parser_logger
+{-# INLINE ts_parser_logger #-}
 
 #{def
-  void _wrap_ts_parser_logger(
-    const TSParser *self,
-    TSLogger *result
+  TSLogger *_wrap_ts_parser_logger(
+    const TSParser *self
   )
   {
+    TSLogger *result = malloc(sizeof result);
     *result = ts_parser_logger(self);
+    return result;
   }
 }
 
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_logger"
   _wrap_ts_parser_logger ::
     ConstPtr TSParser ->
-    Ptr TSLogger ->
-    IO ()
+    IO (Ptr TSLogger)
+
+{-|
+  Remove the parser's current logger.
+-}
+ts_parser_remove_logger ::
+  Ptr TSParser ->
+  IO TSLog
+ts_parser_remove_logger parser = mask_ $ do
+  logger_p <- _wrap_ts_parser_logger (ConstPtr parser)
+  logFun_p <- _wrap_ts_logger_delete logger_p
+  let logFun = unTSLogFunPtr logFun_p
+  freeHaskellFunPtr logFun_p
+  _wrap_ts_parser_set_logger parser nullPtr
+  pure logFun
 
 {-|
   Set the file descriptor to which the parser should write debugging graphs
@@ -1547,9 +1564,9 @@ foreign import capi unsafe "tree_sitter/api.h ts_tree_edit"
   You need to pass the old tree that was passed to parse, as well as the new
   tree that was returned from that function.
 
-  The returned array is allocated using `malloc` and the caller is responsible
-  for freeing it using `free`. The length of the array will be written to the
-  given `length` pointer.
+  The returned array is allocated using @malloc@ and the caller is responsible
+  for freeing it using @free@. The length of the array will be written to the
+  given @length@ pointer.
 
   > TSRange *ts_tree_get_changed_ranges(
   >   const TSTree *old_tree,
@@ -1816,8 +1833,8 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_node_end_point"
 {-|
   Get an S-expression representing the node as a string.
 
-  This string is allocated with `malloc` and the caller is responsible for
-  freeing it using `free`.
+  This string is allocated with @malloc@ and the caller is responsible for
+  freeing it using @free@.
 
   > char *ts_node_string(TSNode self);
 -}
