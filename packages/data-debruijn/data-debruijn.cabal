@@ -1,6 +1,6 @@
 cabal-version:   3.4
 name:            data-debruijn
-version:         0.0.0.0
+version:         0.1.0.0
 synopsis:        Implementation of de Bruijn indices backed by a Natural.
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/base-compat-constptr/#README>
