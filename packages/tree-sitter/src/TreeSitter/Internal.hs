@@ -35,7 +35,7 @@ module TreeSitter.Internal (
   Point (Point, pointColumn, pointRow),
   Range (Range, rangeStartPoint, rangeEndPoint, rangeStartByte, rangeEndByte),
   Input,
-  LogType,
+  LogType (LogTypeLex, LogTypeParse),
   InputEdit (InputEdit, inputEditStartByte, inputEditOldEndByte, inputEditNewEndByte, inputEditStartPoint, inputEditOldEndPoint, inputEditNewEndPoint),
   Node,
   NodeId (..),

@@ -3,7 +3,7 @@
 module Test.TreeSitter.Internal where
 
 import Control.Exception (handle)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.ByteString.Char8 qualified as BSC
 import Data.GraphViz.Commands (GraphvizOutput (..), runGraphviz)
 import Data.GraphViz.Types (parseDotGraph)
@@ -20,6 +20,7 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
 import TreeSitter.While (tree_sitter_while)
+import Data.Foldable (for_)
 
 tests :: TestTree
 tests =
@@ -89,13 +90,12 @@ test_parserSetLogger =
     -- Set the logger
     hasLogger <- TS.parserHasLogger parser
     assertBool "parser has logger" (not hasLogger)
-    let logFun logStateRef _logType msg =
-          IORef.atomicModifyIORef' logStateRef $ \logState ->
-            (BSC.unpack msg : logState, ())
     let logState1 = []
     logStateRef <- IORef.newIORef logState1
-    logger <- TS.loggerNew logStateRef logFun
-    TS.parserSetLogger parser logger
+    let logFun _logType msg =
+          IORef.atomicModifyIORef' logStateRef $ \logState ->
+            (BSC.unpack msg : logState, ())
+    TS.parserSetLogger parser logFun
     -- An example program
     let program =
           unlines
@@ -113,9 +113,8 @@ test_parserSetLogger =
     IORef.writeIORef logStateRef []
     assertBool "parse log is empty" (not . null $ logState2)
     -- Remove logger
-    maybeLogger <- TS.parserRemoveLogger parser
-    assertBool "removed logger is NULL" (isJust maybeLogger)
-    maybe (pure ()) TS.unsafeLoggerDelete maybeLogger
+    maybeLogFun <- TS.parserRemoveLogger parser
+    assertBool "removed logger is NULL" (isJust maybeLogFun)
     -- Parse example program (without logger)
     maybeTree2 <- TS.parserParseString parser Nothing program
     tree2 <- maybe (assertFailure "failed to parse the program") pure maybeTree2
