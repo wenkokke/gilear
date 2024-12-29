@@ -50,6 +50,8 @@ data SNatF (snat :: Nat -> Type) (n :: Nat) :: Type where
 
 -- | @'Ix' n@ is the type of natural numbers less than @n@.
 newtype Ix (n :: Nat) = UnsafeIx {unIx :: Word}
+  deriving stock (Eq, Ord)
+  deriving newtype (Show)
 
 type role Ix nominal
 
