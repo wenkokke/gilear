@@ -365,12 +365,19 @@ pattern Range
 
 {-# COMPLETE Range #-}
 
-newtype Input = WrapTSInput {unWrapTSInput :: C.TSInput}
+type Input =
+  -- | Byte index.
+  Word32 ->
+  -- | Position.
+  Point ->
+  -- | Bytes read.
+  Word32 ->
+  IO ByteString
 
-type ReadInput a = a -> Word32 -> Point -> Word32 -> ByteString
-
--- inputNew :: s -> ReadInput s -> IO Input
--- inputNew initialState readInput = _
+inputToTSRead :: Input -> C.TSRead
+inputToTSRead input = \byteIndex position_p bytesRead -> do
+  position <- peek position_p
+  _TODO
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
@@ -632,10 +639,9 @@ parserRemoveLogger parser =
   withParserAsTSParserPtr parser $
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
-{-| See @`C.ts_parser_parse`@.
-parserParse :: Parser -> Input -> IO ()
-parserParse = _
--}
+-- | See @`C.ts_parser_parse`@.
+parserParse :: Parser -> Maybe Tree -> Input -> IO ()
+parserParse parser oldTree input = _
 
 -- | See @`C.ts_parser_parse_string`@.
 parserParseString :: Parser -> Maybe Tree -> String -> IO (Maybe Tree)
