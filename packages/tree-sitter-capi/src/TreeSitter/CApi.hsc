@@ -600,6 +600,14 @@ type TSLog =
   ConstPtr CChar ->
   IO ()
 
+{-|
+ > TSLogger *_wrap_ts_logger_new(TSLog log);
+ -}
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_new"
+  _wrap_ts_logger_new ::
+    FunPtr TSLog ->
+    IO (Ptr TSLogger)
+
 #{def
   void _wrap_ts_logger_log(
     void *payload,
@@ -622,14 +630,6 @@ type TSLog =
   }
 }
 
-{-|
- > TSLogger *_wrap_ts_logger_new(TSLog log);
- -}
-foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_new"
-  _wrap_ts_logger_new ::
-    FunPtr TSLog ->
-    IO (Ptr TSLogger)
-
 {-| Allocate a C function pointer for a `TSLog` function.
  -}
 foreign import ccall "wrapper"
@@ -641,23 +641,39 @@ foreign import ccall "wrapper"
 foreign import ccall "dynamic"
   unTSLogFunPtr :: FunPtr TSLog -> TSLog
 
-#{def
-  TSLog _wrap_ts_logger_delete(TSLogger *logger) {
-    TSLog log;
-    memcpy(&log, logger->payload, sizeof log);
-    free(logger->payload);
-    free(logger);
-    return log;
-  }
-}
-
 {-|
- > TSLogger *_wrap_ts_logger_delete(TSLog log);
+ > void _wrap_ts_logger_delete(TSLogger *logger);
  -}
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_delete"
   _wrap_ts_logger_delete ::
     Ptr TSLogger ->
+    IO ()
+
+#{def
+  void _wrap_ts_logger_delete(TSLogger *logger) {
+    free(logger->payload);
+    free(logger);
+  }
+}
+
+{-|
+ > TSLog _wrap_ts_logger_payload(const TSLogger *logger);
+ -}
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_payload"
+  _wrap_ts_logger_payload ::
+    ConstPtr TSLogger ->
     IO (FunPtr TSLog)
+
+#{def
+  TSLog _wrap_ts_logger_payload(const TSLogger *logger) {
+    if (logger && logger->payload) {
+      TSLog log;
+      memcpy(&log, logger->payload, sizeof log);
+      return log;
+    }
+    return NULL;
+  }
+}
 
 {-|
   > typedef struct TSInputEdit {
@@ -1360,9 +1376,20 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_set_logger"
 -}
 ts_parser_logger ::
   ConstPtr TSParser ->
-  IO (Ptr TSLogger)
-ts_parser_logger = _wrap_ts_parser_logger
+  IO (Maybe TSLog)
+ts_parser_logger = \self -> do
+  logger_p <- _wrap_ts_parser_logger self
+  logFun_p <- _wrap_ts_logger_payload (ConstPtr logger_p)
+  pure $
+    if logFun_p == nullFunPtr
+      then Just $ unTSLogFunPtr logFun_p
+      else Nothing
 {-# INLINE ts_parser_logger #-}
+
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_logger"
+  _wrap_ts_parser_logger ::
+    ConstPtr TSParser ->
+    IO (Ptr TSLogger)
 
 #{def
   TSLogger *_wrap_ts_parser_logger(
@@ -1375,24 +1402,23 @@ ts_parser_logger = _wrap_ts_parser_logger
   }
 }
 
-foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_logger"
-  _wrap_ts_parser_logger ::
-    ConstPtr TSParser ->
-    IO (Ptr TSLogger)
-
 {-|
   Remove the parser's current logger.
 -}
 ts_parser_remove_logger ::
   Ptr TSParser ->
-  IO TSLog
-ts_parser_remove_logger parser = mask_ $ do
-  logger_p <- _wrap_ts_parser_logger (ConstPtr parser)
-  logFun_p <- _wrap_ts_logger_delete logger_p
-  let logFun = unTSLogFunPtr logFun_p
-  freeHaskellFunPtr logFun_p
-  _wrap_ts_parser_set_logger parser nullPtr
-  pure logFun
+  IO (Maybe TSLog)
+ts_parser_remove_logger = \self -> mask_ $ do
+  logger_p <- _wrap_ts_parser_logger (ConstPtr self)
+  logFun_p <- _wrap_ts_logger_payload (ConstPtr logger_p)
+  _wrap_ts_logger_delete logger_p
+  if logFun_p == nullFunPtr
+    then pure Nothing
+    else do
+      let logFun = unTSLogFunPtr logFun_p
+      freeHaskellFunPtr logFun_p
+      _wrap_ts_parser_set_logger self nullPtr
+      pure $ Just logFun
 
 {-|
   Set the file descriptor to which the parser should write debugging graphs
