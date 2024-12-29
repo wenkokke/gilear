@@ -469,30 +469,37 @@ data
   {-# CTYPE "tree_sitter/api.h" "struct TSInput" #-}
   TSInput
 
-#{def
-  typedef void (*TSRead)(
-    uint32_t byte_index,
-    TSPoint *position,
-    uint32_t *bytes_read,
-    char *buffer
-  );
-}
-
 {-| The type of the @`read`@ argument of the @`_wrap_ts_input_new`@ function.
 
   > typedef void (*TSRead)(
   >   uint32_t byte_index,
   >   TSPoint *position,
   >   uint32_t *bytes_read,
+  >   size_t buffer_size,
   >   char *buffer
   > );
- -}
+  -}
 type TSRead =
   ( #{type uint32_t} ) ->
   Ptr TSPoint ->
   Ptr ( #{type uint32_t} ) ->
+  ( #{type size_t} ) ->
   Ptr CChar ->
   IO ()
+
+-- | Convert a Haskell 'TSRead' closure to a C 'TSRead' function pointer.
+foreign import ccall "wrapper"
+  mkTSReadFunPtr :: TSRead -> IO (FunPtr TSRead)
+
+#{def
+  typedef void (*TSRead)(
+    uint32_t byte_index,
+    TSPoint *position,
+    uint32_t *bytes_read,
+    size_t buffer_size,
+    char *buffer
+  );
+}
 
 -- | Create a @`TSInput`@.
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_new"
@@ -502,48 +509,15 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_new"
     TSInputEncoding ->
     IO (Ptr TSInput)
 
--- | Delete a @`TSInput`@.
-foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_delete"
-  _wrap_ts_input_delete ::
-    Ptr TSInput ->
-    IO ()
-
--- | Convert a Haskell 'TSRead' closure to a C 'TSRead' function pointer.
-foreign import ccall "wrapper"
-  mkTSReadFunPtr :: TSRead -> IO (FunPtr TSRead)
-
-#{def
-  typedef struct {
-    TSRead callback;
-    size_t size;
-    char buffer[];
-  } TSPayload;
-}
-
-#{def
-  const char *_wrap_ts_input_read(
-    void *payload,
-    uint32_t byte_index,
-    TSPoint position,
-    uint32_t *bytes_read
-  ) {
-    TSRead read;
-    // TODO: cast the payload to the expected type?
-    memcpy(&read, payload, sizeof read);
-    read(byte_index, &position, bytes_read, payload->buffer);
-  }
-}
-
 #{def
   TSInput *_wrap_ts_input_new(
     TSRead read,
     size_t buffer_size,
     TSInputEncoding encoding
   ) {
-    // TODO: malloc space for callback?
     TSPayload *payload = malloc(sizeof(TSPayload) + buffer_size);
     payload->callback = read;
-    payload->size = 0; // buffer_size;
+    payload->buffer_size = buffer_size;
     payload->buffer[0] = 0;
 
     TSInput *input = malloc(sizeof *input);
@@ -554,13 +528,40 @@ foreign import ccall "wrapper"
   }
 }
 
+-- | Delete a @`TSInput`@.
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_delete"
+  _wrap_ts_input_delete ::
+    Ptr TSInput ->
+    IO ()
+
 #{def
   void _wrap_ts_input_delete(
     TSInput *input
   ) {
-    // TODO: free payload
     free(input->payload);
     free(input);
+  }
+}
+
+#{def
+  typedef struct {
+    TSRead callback;
+    size_t buffer_size;
+    char buffer[];
+  } TSPayload;
+}
+
+#{def
+  const char *_wrap_ts_input_read(
+    void *payload_p,
+    uint32_t byte_index,
+    TSPoint position,
+    uint32_t *bytes_read
+  ) {
+    TSPayload *payload = payload_p;
+    TSRead read = payload->callback;
+    read(byte_index, &position, bytes_read, payload->buffer_size, payload->buffer);
+    return payload->buffer;
   }
 }
 
@@ -1182,6 +1183,13 @@ ts_parser_parse = \self old_tree readFun buffer_size encoding ->
     bracket (_wrap_ts_input_new readFun_p buffer_size encoding) _wrap_ts_input_delete $ \input_p ->
       _wrap_ts_parser_parse self old_tree input_p
 
+foreign import capi safe "TreeSitter/CApi_hsc.h _wrap_ts_parser_parse"
+  _wrap_ts_parser_parse ::
+    Ptr TSParser ->
+    ConstPtr TSTree ->
+    Ptr TSInput ->
+    IO (Ptr TSTree)
+
 #{def
   TSTree *_wrap_ts_parser_parse(
     TSParser *self,
@@ -1192,13 +1200,6 @@ ts_parser_parse = \self old_tree readFun buffer_size encoding ->
     return ts_parser_parse(self, old_tree, *input);
   }
 }
-
-foreign import capi safe "TreeSitter/CApi_hsc.h _wrap_ts_parser_parse"
-  _wrap_ts_parser_parse ::
-    Ptr TSParser ->
-    ConstPtr TSTree ->
-    Ptr TSInput ->
-    IO (Ptr TSTree)
 
 {-|
   Use the parser to parse some source code stored in one contiguous buffer.
