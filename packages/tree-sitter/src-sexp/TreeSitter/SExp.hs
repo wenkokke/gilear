@@ -21,7 +21,7 @@ import Data.Algorithm.Diff (getGroupedDiff)
 import Data.Algorithm.DiffOutput (ppDiff)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Prettyprinter (Doc, Pretty (..), (<+>), dquotes)
+import Prettyprinter (Doc, Pretty (..), dquotes, (<+>))
 import Prettyprinter qualified as PP
 import Prettyprinter.Render.String (renderString)
 import Text.Parsec (ParseError, SourceName)
@@ -66,11 +66,11 @@ pSExp =
 
 pString :: Parser Text
 pString = P.between (P.char '"') (P.char '"') (T.concat <$> many (pNotQuote <|> pEscapedQuote))
-  where
-    pNotQuote :: Parser Text
-    pNotQuote = T.singleton <$> P.satisfy (/='"')
-    pEscapedQuote :: Parser Text
-    pEscapedQuote = T.pack "\\\"" <$ P.char '\\' <* P.char '"'
+ where
+  pNotQuote :: Parser Text
+  pNotQuote = T.singleton <$> P.satisfy (/= '"')
+  pEscapedQuote :: Parser Text
+  pEscapedQuote = T.pack "\\\"" <$ P.char '\\' <* P.char '"'
 
 parseSExp :: SourceName -> Text -> Either ParseError SExp
 parseSExp = P.runParser pSExp ()

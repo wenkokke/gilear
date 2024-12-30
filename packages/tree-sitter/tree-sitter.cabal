@@ -11,6 +11,8 @@ maintainer:      wenkokke@users.noreply.github.com
 category:        Language
 build-type:      Simple
 extra-doc-files: CHANGELOG.md
+data-files:
+  test/data/jQuery.js
 
 common language
   ghc-options:        -Wall
@@ -59,6 +61,7 @@ test-suite tree-sitter-test
   hs-source-dirs: test
   main-is:        Main.hs
   other-modules:
+    Paths_tree_sitter
     Test.TreeSitter.Corpus
     Test.TreeSitter.Internal
 

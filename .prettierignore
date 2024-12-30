@@ -1,3 +1,6 @@
+# packages/tree-sitter
+/packages/tree-sitter/test/data/
+
 # packages/tree-sitter-capi
 /packages/tree-sitter-capi/vendor/
 

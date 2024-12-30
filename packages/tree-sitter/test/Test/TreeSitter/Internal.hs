@@ -22,7 +22,9 @@ import System.IO.Temp (withSystemTempDirectory)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
+import TreeSitter.JavaScript (tree_sitter_javascript)
 import TreeSitter.While (tree_sitter_while)
+import Paths_tree_sitter (getDataFileName)
 
 tests :: TestTree
 tests =
@@ -32,6 +34,7 @@ tests =
     , test_treePrintDotGraph
     , test_queryErrorNew
     , test_parserParse
+    , test_parseJQuery
     ]
 
 -- | Does query error conversion work?
@@ -155,6 +158,30 @@ test_parserParse =
           let stop = fromIntegral bufferSize
           pure $ BS.take stop (BS.drop (start - 1) program)
     maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
+    tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
+    rootNode <- TS.treeRootNode tree
+    rootNodeString <- TS.showNodeAsString rootNode
+    assertBool "rootNode string is empty" (not . null $ rootNodeString)
+
+-- | Does tree-sitter-javascript parse jQuery?
+test_parseJQuery :: TestTree
+test_parseJQuery = do
+  testCase "test_parseJQuery" $ do
+    -- Create the parser
+    parser <- TS.parserNew
+    -- Set the language
+    languageJavaScript <- TS.unsafeToLanguage =<< tree_sitter_javascript
+    success <- TS.parserSetLanguage parser languageJavaScript
+    unless success (assertFailure "failed to set parser language")
+    -- Get the jQuery source file
+    jQueryFile <- getDataFileName "test/data/jQuery.js"
+    jQueryContent <- BS.readFile jQueryFile
+    let input :: TS.Input
+        input byteIndex _position bufferSize = do
+          let start = fromIntegral byteIndex
+          let stop = fromIntegral bufferSize
+          pure $ BS.take stop (BS.drop (start - 1) jQueryContent)
+    maybeTree <- TS.parserParse parser Nothing input 4096 TS.InputEncodingUTF8
     tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
     rootNode <- TS.treeRootNode tree
     rootNodeString <- TS.showNodeAsString rootNode
