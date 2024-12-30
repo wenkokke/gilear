@@ -8,3 +8,6 @@
 # packages/tree-sitter-while
 /packages/tree-sitter-while/src/grammar.json
 /packages/tree-sitter-while/src/node-types.json
+
+# packages/tree-sitter-javascript
+/packages/tree-sitter-javascript/vendor/
