@@ -25,6 +25,7 @@ import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
 import TreeSitter.JavaScript (tree_sitter_javascript)
 import TreeSitter.While (tree_sitter_while)
+import Data.Foldable (for_)
 
 tests :: TestTree
 tests =
@@ -176,12 +177,14 @@ test_parseJQuery = do
     jQueryFile <- getDataFileName "test/data/jQuery.js"
     jQueryContent <- BS.readFile jQueryFile
     let input :: TS.Input
-        input byteIndex _position bufferSize = do
+        input byteIndex _position = do
           let start = fromIntegral byteIndex
-          let stop = fromIntegral bufferSize
-          pure $ BS.take stop (BS.drop (start - 1) jQueryContent)
-    maybeTree <- TS.parserParse parser Nothing input 4096 TS.InputEncodingUTF8
-    tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
-    rootNode <- TS.treeRootNode tree
-    rootNodeString <- TS.showNodeAsString rootNode
-    assertBool "rootNode string is empty" (not . null $ rootNodeString)
+          let chunk = BS.take 4096 (BS.drop (start - 1) jQueryContent)
+          -- NOTE: Copy the chunk to 
+          pure $ BS.copy chunk
+    for_ [1..1000] $ \(_time :: Int) -> do
+      maybeTree <- TS.parserParse parser Nothing input TS.InputEncodingUTF8
+      tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
+      rootNode <- TS.treeRootNode tree
+      rootNodeString <- TS.showNodeAsString rootNode
+      assertBool "rootNode string is empty" (not . null $ rootNodeString)
