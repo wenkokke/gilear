@@ -76,6 +76,7 @@ test-suite tree-sitter-test
     , text                            >=2.1     && <2.2
     , text-rope                       >=0.2     && <0.3
     , tree-sitter
+    , tree-sitter-javascript
     , tree-sitter-while
     , tree-sitter:tree-sitter-corpus
     , tree-sitter:tree-sitter-sexp

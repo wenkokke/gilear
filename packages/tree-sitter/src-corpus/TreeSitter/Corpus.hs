@@ -158,7 +158,7 @@ readCorpusFileToStream fp = parse start . TL.lines <$> TLIO.readFile fp
             parse
               CPS
                 { line = line + 1
-                , code = code <> TLB.fromLazyText l
+                , code = code <> TLB.fromLazyText l <> TLB.fromString "\n"
                 , ..
                 }
               ls

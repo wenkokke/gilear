@@ -17,7 +17,12 @@ import Test.Tasty.HUnit (
  )
 import TreeSitter.Corpus qualified as TSC
 import TreeSitter.Internal qualified as TS
-import TreeSitter.SExp (parseSExp, prettySExpDiff)
+import TreeSitter.SExp (
+  loose,
+  parseSExp,
+  prettySExp,
+  prettySExpDiff,
+ )
 
 makeCorpusTests :: IO (ConstPtr tsLanguage) -> FilePath -> IO [TestTree]
 makeCorpusTests languageConstructor corpusDirectory = do
@@ -46,13 +51,23 @@ makeCorpusTest languageConstructor corpusFile entry =
         node <- TS.treeRootNode tree
         sexpByteString <- TS.showNode node
         expectSExp <-
-          either (assertFailure . displayException) pure $
+          either (assertFailure . displayException) (pure . loose) $
             parseSExp corpusFile (TL.toStrict (TSC.sexp entry))
         actualSExp <-
-          either (assertFailure . displayException) pure $
+          either (assertFailure . displayException) (pure . loose) $
             parseSExp "tree-sitter" (TE.decodeUtf8 sexpByteString)
         unless (expectSExp == actualSExp) . assertFailure . unlines $
-          [ "Found S-expression that was different from the expected result:"
+          [ "Found S-expression that was different from the expected result."
           , ""
+          , "Source:"
+          , TSC.codeString entry
+          , ""
+          , "Result Diff:"
           , prettySExpDiff expectSExp actualSExp
+          , ""
+          , "Expected Result:"
+          , prettySExp expectSExp
+          , ""
+          , "Actual Result:"
+          , prettySExp actualSExp
           ]

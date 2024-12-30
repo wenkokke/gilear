@@ -10,10 +10,10 @@ import Foreign.C.ConstPtr.Compat (ConstPtr (..))
 import Paths_tree_sitter_javascript (getDataFileName)
 
 getNodeTypesPath :: IO FilePath
-getNodeTypesPath = getDataFileName "src/node-types.json"
+getNodeTypesPath = getDataFileName "vendor/src/node-types.json"
 
 getTestCorpusDir :: IO FilePath
-getTestCorpusDir = getDataFileName "test/corpus"
+getTestCorpusDir = getDataFileName "vendor/test/corpus"
 
 data
   {-# CTYPE "tree-sitter-javascript.h" "TSLanguage" #-}
