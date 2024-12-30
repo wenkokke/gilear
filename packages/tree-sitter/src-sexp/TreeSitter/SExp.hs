@@ -10,6 +10,7 @@ module TreeSitter.SExp (
   Symbol (..),
   FieldName (..),
   SExp (..),
+  loose,
   prettySExp,
   prettySExpDiff,
   parseSExp,
@@ -20,7 +21,7 @@ import Data.Algorithm.Diff (getGroupedDiff)
 import Data.Algorithm.DiffOutput (ppDiff)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Prettyprinter (Doc, Pretty (..), (<+>))
+import Prettyprinter (Doc, Pretty (..), dquotes, (<+>))
 import Prettyprinter qualified as PP
 import Prettyprinter.Render.String (renderString)
 import Text.Parsec (ParseError, SourceName)
@@ -50,24 +51,8 @@ data SExp
   = Atom Symbol
   | List [SExp]
   | Field FieldName SExp
+  | String Text
   deriving (Eq, Show)
-
-instance Pretty SExp where
-  pretty :: SExp -> Doc ann
-  pretty = \case
-    Atom symbol ->
-      pretty symbol
-    List sexps ->
-      PP.parens (PP.nest 2 (PP.vsep (pretty <$> sexps)))
-    Field fieldName sexp ->
-      pretty fieldName <> pretty ":" <+> pretty sexp
-
-prettySExp :: SExp -> String
-prettySExp = renderString . PP.layoutSmart PP.defaultLayoutOptions . pretty
-
-prettySExpDiff :: SExp -> SExp -> String
-prettySExpDiff sexp1 sexp2 =
-  ppDiff $ getGroupedDiff (lines . prettySExp $ sexp1) (lines . prettySExp $ sexp2)
 
 pSExp :: Parser SExp
 pSExp =
@@ -76,7 +61,37 @@ pSExp =
       [ Atom <$> P.try pSymbol <* P.spaces
       , List <$> P.between (P.char '(' <* P.spaces) (P.char ')' <* P.spaces) (P.many1 pSExp)
       , Field <$> pFieldName <* P.spaces <*> pSExp
+      , String <$> pString
       ]
+
+pString :: Parser Text
+pString = P.between (P.char '"') (P.char '"') (T.concat <$> many (pNotQuote <|> pEscapedQuote))
+ where
+  pNotQuote :: Parser Text
+  pNotQuote = T.singleton <$> P.satisfy (/= '"')
+  pEscapedQuote :: Parser Text
+  pEscapedQuote = T.pack "\\\"" <$ P.char '\\' <* P.char '"'
 
 parseSExp :: SourceName -> Text -> Either ParseError SExp
 parseSExp = P.runParser pSExp ()
+
+loose :: SExp -> SExp
+loose sexp@(Atom _) = sexp
+loose (List sexps) = List (loose <$> sexps)
+loose (Field _name sexp) = loose sexp
+loose sexp@(String _) = sexp
+
+instance Pretty SExp where
+  pretty :: SExp -> Doc ann
+  pretty = \case
+    Atom symbol -> pretty symbol
+    List sexps -> PP.parens (PP.nest 2 (PP.vsep (pretty <$> sexps)))
+    Field name sexp -> pretty name <> pretty ":" <+> pretty sexp
+    String text -> dquotes (pretty text)
+
+prettySExp :: SExp -> String
+prettySExp = renderString . PP.layoutSmart PP.defaultLayoutOptions . pretty
+
+prettySExpDiff :: SExp -> SExp -> String
+prettySExpDiff sexp1 sexp2 =
+  ppDiff $ getGroupedDiff (lines . prettySExp $ sexp1) (lines . prettySExp $ sexp2)
