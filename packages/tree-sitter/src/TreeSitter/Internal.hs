@@ -221,8 +221,8 @@ module TreeSitter.Internal (
 
 import Control.Exception (Exception (..), assert, bracket, throwIO)
 import Control.Monad ((<=<))
-import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Internal (ByteString (BS))
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Unsafe qualified as BSU
@@ -231,6 +231,7 @@ import Data.Maybe (isJust)
 import Foreign
 import Foreign.C (CBool, CInt (CInt), CSize (..))
 import Foreign.C.ConstPtr.Compat (ConstPtr (..))
+import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 import GHC.IO.FD (FD (..))
 import GHC.IO.Handle.FD (handleToFd)
 import System.IO (Handle)
@@ -371,22 +372,16 @@ type Input =
   Word32 ->
   -- | Position.
   Point ->
-  -- | Buffer size.
-  CSize ->
   IO ByteString
 
 inputToTSRead :: Input -> C.TSRead
-inputToTSRead input = \byteIndex position_p bytesRead bufferSize buffer -> do
+inputToTSRead input = \byteIndex position_p bytesRead -> do
   position <- peek position_p
-  chunk <- input byteIndex (coerce position) (coerce bufferSize)
-  BSU.unsafeUseAsCStringLen chunk $ \(chunkPtr, chunkLenInt) -> do
-    let chunkLen = fromIntegral chunkLenInt
-    poke bytesRead (fromIntegral chunkLen)
-    _result <- memcpy buffer chunkPtr chunkLen
-    pure ()
-
-foreign import ccall unsafe "memcpy"
-  memcpy :: Ptr a -> Ptr a -> CSize -> IO (Ptr ())
+  BS chunkForeignPtr chunkLenInt <- input byteIndex (coerce position)
+  let chunkLen = fromIntegral chunkLenInt
+  poke bytesRead chunkLen
+  let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
+  pure chunkPtr
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)

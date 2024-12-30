@@ -153,10 +153,9 @@ test_parserParse =
             , "y := x + 1"
             ]
     let input :: TS.Input
-        input byteIndex _position bufferSize = do
-          let start = fromIntegral byteIndex
-          let stop = fromIntegral bufferSize
-          pure $ BS.take stop (BS.drop (start - 1) program)
+        input byteIndex _position = do
+          let start = fromIntegral byteIndex - 1
+          pure $ BS.take 2 (BS.drop start program)
     maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
     tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
     rootNode <- TS.treeRootNode tree
