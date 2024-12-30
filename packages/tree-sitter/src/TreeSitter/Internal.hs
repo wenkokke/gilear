@@ -237,6 +237,7 @@ import GHC.IO.Handle.FD (handleToFd)
 import System.IO (Handle)
 import TreeSitter.CApi qualified as C
 import TreeSitter.CApi qualified as TSNode (TSNode (..))
+import Data.IORef (newIORef, writeIORef)
 
 --------------------------------------------------------------------------------
 
@@ -366,22 +367,6 @@ pattern Range
         )
 
 {-# COMPLETE Range #-}
-
-type Input =
-  -- | Byte index.
-  Word32 ->
-  -- | Position.
-  Point ->
-  IO ByteString
-
-inputToTSRead :: Input -> C.TSRead
-inputToTSRead input = \byteIndex position_p bytesRead -> do
-  position <- peek position_p
-  BS chunkForeignPtr chunkLenInt <- input byteIndex (coerce position)
-  let chunkLen = fromIntegral chunkLenInt
-  poke bytesRead chunkLen
-  let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
-  pure chunkPtr
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
@@ -643,16 +628,49 @@ parserRemoveLogger parser =
   withParserAsTSParserPtr parser $
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
+
+
+inputToTSRead :: Input -> C.TSRead
+inputToTSRead input = \byteIndex position_p bytesRead -> do
+  position <- peek position_p
+  BS chunkForeignPtr chunkLenInt <- input byteIndex (coerce position)
+  let chunkLen = fromIntegral chunkLenInt
+  poke bytesRead chunkLen
+  let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
+  pure chunkPtr
+
+type Input =
+  -- | Byte index.
+  Word32 ->
+  -- | Position.
+  Point ->
+  IO ByteString
+
 -- | See @`C.ts_parser_parse`@.
 parserParse :: Parser -> Maybe Tree -> Input -> InputEncoding -> IO (Maybe Tree)
 parserParse parser oldTree input encoding =
   withParserAsTSParserPtr parser $ \parserPtr ->
     withMaybeTreeAsTSTreePtr oldTree $ \oldTreePtr -> do
+      -- NOTE: The purpose of `chunkRef` is to hold on to a reference to
+      --       the current chunk and prevent its garbage collection until
+      --       the next call to `tsRead`. Incorrect management of these
+      --       references will cause either a memory leak or a use-after-free
+      --       error, since by using `unsafeForeignPtrToPtr` we circumvent the
+      --       foreign pointer finalizer.
+      chunkRef <- newIORef BS.empty
+      let tsRead = \byteIndex position_p bytesRead -> do
+            position <- WrapTSPoint <$> peek position_p
+            chunk@(BS chunkForeignPtr chunkLenInt) <- input byteIndex position
+            writeIORef chunkRef chunk
+            let chunkLen = fromIntegral chunkLenInt
+            poke bytesRead chunkLen
+            let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
+            pure chunkPtr
       newTreePtr <-
         C.ts_parser_parse
           parserPtr
           (ConstPtr oldTreePtr)
-          (inputToTSRead input)
+          tsRead
           (coerce encoding)
       toMaybeTree newTreePtr
 
