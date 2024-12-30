@@ -370,14 +370,22 @@ type Input =
   Word32 ->
   -- | Position.
   Point ->
-  -- | Bytes read.
-  Word32 ->
+  -- | Buffer size.
+  CSize ->
   IO ByteString
 
 inputToTSRead :: Input -> C.TSRead
-inputToTSRead input = \byteIndex position_p bytesRead -> do
+inputToTSRead input = \byteIndex position_p bytesRead bufferSize buffer -> do
   position <- peek position_p
-  _TODO
+  chunk <- input byteIndex (coerce position) (coerce bufferSize)
+  BSU.unsafeUseAsCStringLen chunk $ \(chunkPtr, chunkLenInt) -> do
+    let chunkLen = fromIntegral chunkLenInt
+    poke bytesRead (fromIntegral chunkLen)
+    _result <- memcpy buffer chunkPtr chunkLen
+    pure ()
+
+foreign import ccall unsafe "memcpy"
+  memcpy :: Ptr a -> Ptr a -> CSize -> IO (Ptr ())
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
@@ -640,8 +648,18 @@ parserRemoveLogger parser =
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
 -- | See @`C.ts_parser_parse`@.
-parserParse :: Parser -> Maybe Tree -> Input -> IO ()
-parserParse parser oldTree input = _
+parserParse :: Parser -> Maybe Tree -> Input -> Word64 -> InputEncoding -> IO (Maybe Tree)
+parserParse parser oldTree input bufferSize encoding =
+  withParserAsTSParserPtr parser $ \parserPtr ->
+    withMaybeTreeAsTSTreePtr oldTree $ \oldTreePtr -> do
+      newTreePtr <-
+        C.ts_parser_parse
+          parserPtr
+          (ConstPtr oldTreePtr)
+          (inputToTSRead input)
+          bufferSize
+          (coerce encoding)
+      toMaybeTree newTreePtr
 
 -- | See @`C.ts_parser_parse_string`@.
 parserParseString :: Parser -> Maybe Tree -> String -> IO (Maybe Tree)
