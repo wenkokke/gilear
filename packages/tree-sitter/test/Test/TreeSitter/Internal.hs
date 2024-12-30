@@ -26,6 +26,7 @@ import TreeSitter qualified as TS
 import TreeSitter.JavaScript (tree_sitter_javascript)
 import TreeSitter.While (tree_sitter_while)
 import Data.Foldable (for_)
+import System.Mem (performMajorGC, performMinorGC)
 
 tests :: TestTree
 tests =
@@ -178,6 +179,7 @@ test_parseJQuery = do
     jQueryContent <- BS.readFile jQueryFile
     let input :: TS.Input
         input byteIndex _position = do
+          performMinorGC
           let start = fromIntegral byteIndex
           let chunk = BS.take 4096 (BS.drop (start - 1) jQueryContent)
           -- NOTE: copy the chunk to ensure it has its own memory (to leak)
@@ -188,3 +190,4 @@ test_parseJQuery = do
       rootNode <- TS.treeRootNode tree
       rootNodeString <- TS.showNodeAsString rootNode
       assertBool "rootNode string is empty" (not . null $ rootNodeString)
+      performMajorGC

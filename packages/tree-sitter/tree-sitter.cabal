@@ -57,6 +57,7 @@ library tree-sitter-corpus
 test-suite tree-sitter-test
   import:          language
   type:            exitcode-stdio-1.0
+  ghc-options:     -rtsopts
   hs-source-dirs:  test
   main-is:         Main.hs
   autogen-modules: Paths_tree_sitter
