@@ -15,6 +15,7 @@ import Data.IORef qualified as IORef
 import Data.Maybe (isJust)
 import Data.Text.Lazy (LazyText)
 import Data.Text.Lazy.IO qualified as TL
+import Paths_tree_sitter (getDataFileName)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 import System.IO (IOMode (..), withFile)
@@ -24,7 +25,6 @@ import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
 import TreeSitter.JavaScript (tree_sitter_javascript)
 import TreeSitter.While (tree_sitter_while)
-import Paths_tree_sitter (getDataFileName)
 
 tests :: TestTree
 tests =

@@ -3,7 +3,7 @@
 module Main where
 
 import Data.Functor ((<&>))
-import Test.Tasty (defaultMain, localOption, testGroup, askOption)
+import Test.Tasty (askOption, defaultMain, localOption, testGroup)
 import Test.Tasty.Patterns.Types (Expr (..))
 import Test.Tasty.Runners (TestPattern (..))
 import Test.TreeSitter.Corpus (makeCorpusTests)
@@ -27,7 +27,9 @@ main = do
   -- TODO: These failing tests are the result of the corpus parser,
   --       which is not being respectful and should be parsing the
   --       contents of the corpus files as a ByteString.
-  let ignoreKnownFailures = foldr1 And $
+  let ignoreKnownFailures =
+        foldr1
+          And
           [ Not (ERE "Non-breaking spaces as whitespace")
           , Not (ERE "U+2028 as a line terminator")
           , Not (ERE "Unicode identifiers")
@@ -43,8 +45,9 @@ main = do
       "TreeSitter"
       [ Internal.tests
       , askOption $ \(TestPattern maybeExpr) -> do
-          let testPattern = TestPattern . Just $
-                maybe ignoreKnownFailures (ignoreKnownFailures `And`) maybeExpr
+          let testPattern =
+                TestPattern . Just $
+                  maybe ignoreKnownFailures (ignoreKnownFailures `And`) maybeExpr
           localOption testPattern javascriptCorpusTests
       , whileCorpusTests
       ]

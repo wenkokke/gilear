@@ -11,8 +11,7 @@ maintainer:      wenkokke@users.noreply.github.com
 category:        Language
 build-type:      Simple
 extra-doc-files: CHANGELOG.md
-data-files:
-  test/data/jQuery.js
+data-files:      test/data/jQuery.js
 
 common language
   ghc-options:        -Wall
@@ -56,10 +55,11 @@ library tree-sitter-corpus
     , text  >=2.1  && <2.2
 
 test-suite tree-sitter-test
-  import:         language
-  type:           exitcode-stdio-1.0
-  hs-source-dirs: test
-  main-is:        Main.hs
+  import:          language
+  type:            exitcode-stdio-1.0
+  hs-source-dirs:  test
+  main-is:         Main.hs
+  autogen-modules: Paths_tree_sitter
   other-modules:
     Paths_tree_sitter
     Test.TreeSitter.Corpus
