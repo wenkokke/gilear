@@ -227,6 +227,7 @@ import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Internal (ByteString (BS))
 import Data.ByteString.Unsafe qualified as BSU
 import Data.Coerce (coerce)
+import Data.IORef (newIORef, writeIORef)
 import Data.Maybe (isJust)
 import Foreign
 import Foreign.C (CBool, CInt (CInt), CSize (..))
@@ -237,7 +238,6 @@ import GHC.IO.Handle.FD (handleToFd)
 import System.IO (Handle)
 import TreeSitter.CApi qualified as C
 import TreeSitter.CApi qualified as TSNode (TSNode (..))
-import Data.IORef (newIORef, writeIORef)
 
 --------------------------------------------------------------------------------
 
@@ -627,8 +627,6 @@ parserRemoveLogger :: Parser -> IO (Maybe Log)
 parserRemoveLogger parser =
   withParserAsTSParserPtr parser $
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
-
-
 
 inputToTSRead :: Input -> C.TSRead
 inputToTSRead input = \byteIndex position_p bytesRead -> do

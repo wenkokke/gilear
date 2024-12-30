@@ -8,6 +8,7 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
+import Data.Foldable (for_)
 import Data.GraphViz.Commands (GraphvizOutput (..), runGraphviz)
 import Data.GraphViz.Types (parseDotGraph)
 import Data.GraphViz.Types.Generalised (DotGraph)
@@ -20,13 +21,12 @@ import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 import System.IO (IOMode (..), withFile)
 import System.IO.Temp (withSystemTempDirectory)
+import System.Mem (performMajorGC, performMinorGC)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
 import TreeSitter.JavaScript (tree_sitter_javascript)
 import TreeSitter.While (tree_sitter_while)
-import Data.Foldable (for_)
-import System.Mem (performMajorGC, performMinorGC)
 
 tests :: TestTree
 tests =
@@ -184,7 +184,7 @@ test_parseJQuery = do
           let chunk = BS.take 4096 (BS.drop (start - 1) jQueryContent)
           -- NOTE: copy the chunk to ensure it has its own memory (to leak)
           pure $ BS.copy chunk
-    for_ [1..1000] $ \(_time :: Int) -> do
+    for_ [1 .. 1000] $ \(_time :: Int) -> do
       maybeTree <- TS.parserParse parser Nothing input TS.InputEncodingUTF8
       tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
       rootNode <- TS.treeRootNode tree
