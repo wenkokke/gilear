@@ -112,6 +112,7 @@ import TreeSitter.Internal (
   parserLanguage,
   parserLogger,
   parserNew,
+  parserParse,
   parserParseByteString,
   parserParseByteStringWithEncoding,
   parserParseString,
