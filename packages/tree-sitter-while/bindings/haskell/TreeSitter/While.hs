@@ -10,7 +10,7 @@ import Foreign.C.ConstPtr.Compat (ConstPtr (..))
 import Paths_tree_sitter_while (getDataFileName)
 
 getNodeTypesPath :: IO FilePath
-getNodeTypesPath = getDataFileName "src/node-types.gilear"
+getNodeTypesPath = getDataFileName "src/node-types.json"
 
 getTestCorpusDir :: IO FilePath
 getTestCorpusDir = getDataFileName "test/corpus"
