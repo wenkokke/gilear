@@ -156,7 +156,7 @@ test_parserParse =
         input byteIndex _position = do
           let start = fromIntegral byteIndex - 1
           pure $ BS.take 2 (BS.drop start program)
-    maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
+    maybeTree <- TS.parserParse parser Nothing input TS.InputEncodingUTF8
     tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
     rootNode <- TS.treeRootNode tree
     rootNodeString <- TS.showNodeAsString rootNode

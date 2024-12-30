@@ -222,9 +222,9 @@ module TreeSitter.Internal (
 import Control.Exception (Exception (..), assert, bracket, throwIO)
 import Control.Monad ((<=<))
 import Data.ByteString qualified as BS
-import Data.ByteString.Internal (ByteString (BS))
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Internal (ByteString (BS))
 import Data.ByteString.Unsafe qualified as BSU
 import Data.Coerce (coerce)
 import Data.Maybe (isJust)
@@ -644,8 +644,8 @@ parserRemoveLogger parser =
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
 -- | See @`C.ts_parser_parse`@.
-parserParse :: Parser -> Maybe Tree -> Input -> Word64 -> InputEncoding -> IO (Maybe Tree)
-parserParse parser oldTree input bufferSize encoding =
+parserParse :: Parser -> Maybe Tree -> Input -> InputEncoding -> IO (Maybe Tree)
+parserParse parser oldTree input encoding =
   withParserAsTSParserPtr parser $ \parserPtr ->
     withMaybeTreeAsTSTreePtr oldTree $ \oldTreePtr -> do
       newTreePtr <-
@@ -653,7 +653,6 @@ parserParse parser oldTree input bufferSize encoding =
           parserPtr
           (ConstPtr oldTreePtr)
           (inputToTSRead input)
-          bufferSize
           (coerce encoding)
       toMaybeTree newTreePtr
 

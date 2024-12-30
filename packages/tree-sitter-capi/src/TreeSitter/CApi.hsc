@@ -499,7 +499,6 @@ foreign import ccall "wrapper"
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_new"
   _wrap_ts_input_new ::
     FunPtr TSRead ->
-    ( #{type size_t} ) ->
     TSInputEncoding ->
     IO (Ptr TSInput)
 
@@ -520,7 +519,6 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_new"
 #{def
   TSInput *_wrap_ts_input_new(
     TSRead read,
-    size_t buffer_size,
     TSInputEncoding encoding
   ) {
     TSInput *input = malloc(sizeof *input);
@@ -1157,12 +1155,11 @@ ts_parser_parse ::
   Ptr TSParser ->
   ConstPtr TSTree ->
   TSRead ->
-  ( #{type size_t} ) ->
   TSInputEncoding ->
   IO (Ptr TSTree)
-ts_parser_parse = \self old_tree readFun buffer_size encoding ->
+ts_parser_parse = \self old_tree readFun encoding ->
   bracket (mkTSReadFunPtr readFun) freeHaskellFunPtr $ \readFun_p ->
-    bracket (_wrap_ts_input_new readFun_p buffer_size encoding) _wrap_ts_input_delete $ \input_p ->
+    bracket (_wrap_ts_input_new readFun_p encoding) _wrap_ts_input_delete $ \input_p ->
       _wrap_ts_parser_parse self old_tree input_p
 
 foreign import capi safe "TreeSitter/CApi_hsc.h _wrap_ts_parser_parse"
