@@ -651,10 +651,12 @@ parserParse parser oldTree input encoding =
     withMaybeTreeAsTSTreePtr oldTree $ \oldTreePtr -> do
       -- NOTE: The purpose of `chunkRef` is to hold on to a reference to
       --       the current chunk and prevent its garbage collection until
-      --       the next call to `tsRead`. Incorrect management of these
-      --       references will cause either a memory leak or a use-after-free
-      --       error, since by using `unsafeForeignPtrToPtr` we circumvent the
-      --       foreign pointer finalizer.
+      --       the next call to `tsRead`.
+      --       Incorrect management of these references can potentially cause
+      --       either a memory leak or a use-after-free error, since by using
+      --       `unsafeForeignPtrToPtr` we bypass the foreign pointer finalizer.
+      -- NOTE: Despite my best efforts, I have not been able to demonstrate
+      --       that this code without the `IORef` leaks memory.
       chunkRef <- newIORef BS.empty
       let tsRead = \byteIndex position_p bytesRead -> do
             position <- WrapTSPoint <$> peek position_p
