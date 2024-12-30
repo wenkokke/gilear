@@ -13,7 +13,6 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 extra-source-files:
   bindings/c/tree-sitter-while.h
-  bindings/c/tree-sitter-while.pc.in
   grammar.js
   package.json
   src/parser.c
