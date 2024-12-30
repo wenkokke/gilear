@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,10 +35,7 @@ module TreeSitter.Internal (
   Point (Point, pointColumn, pointRow),
   Range (Range, rangeStartPoint, rangeEndPoint, rangeStartByte, rangeEndByte),
   Input,
-  LogType,
-  Logger,
-  loggerNew,
-  unsafeLoggerDelete,
+  LogType (LogTypeLex, LogTypeParse),
   InputEdit (InputEdit, inputEditStartByte, inputEditOldEndByte, inputEditNewEndByte, inputEditStartPoint, inputEditOldEndPoint, inputEditNewEndPoint),
   Node,
   NodeId (..),
@@ -66,7 +62,7 @@ module TreeSitter.Internal (
   parserLogger,
   parserHasLogger,
   parserRemoveLogger,
-  unsafeParserDeleteLogger,
+  parserParse,
   parserParseString,
   parserParseByteString,
   parserParseByteStringWithEncoding,
@@ -224,7 +220,7 @@ module TreeSitter.Internal (
 ) where
 
 import Control.Exception (Exception (..), assert, bracket, throwIO)
-import Control.Monad ((<=<), (>=>))
+import Control.Monad ((<=<))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BSB
@@ -232,37 +228,7 @@ import Data.ByteString.Char8 qualified as BSC
 import Data.ByteString.Unsafe qualified as BSU
 import Data.Coerce (coerce)
 import Data.Maybe (isJust)
-import Foreign (
-  ForeignPtr,
-  Int64,
-  Ptr,
-  Storable (peek, poke),
-  Word32,
-  Word64,
-  WordPtr (WordPtr),
-  addForeignPtrFinalizer,
-  alloca,
-  castFunPtr,
-  castPtr,
-  castPtrToStablePtr,
-  castStablePtrToPtr,
-  deRefStablePtr,
-  finalizeForeignPtr,
-  freeHaskellFunPtr,
-  freeStablePtr,
-  fromBool,
-  mallocForeignPtr,
-  newForeignPtr,
-  newStablePtr,
-  nullFunPtr,
-  nullPtr,
-  peekArray,
-  ptrToWordPtr,
-  toBool,
-  with,
-  withArray,
-  withForeignPtr,
- )
+import Foreign
 import Foreign.C (CBool, CInt (CInt), CSize (..))
 import Foreign.C.ConstPtr.Compat (ConstPtr (..))
 import GHC.IO.FD (FD (..))
@@ -271,7 +237,13 @@ import System.IO (Handle)
 import TreeSitter.CApi qualified as C
 import TreeSitter.CApi qualified as TSNode (TSNode (..))
 
--- import TreeSitter.CApi qualified as TSTreeCursor (TSTreeCursor (..))
+--------------------------------------------------------------------------------
+
+{-# ANN module ("HLint: ignore Redundant lambda" :: String) #-}
+
+{-# ANN module ("HLint: ignore Foreign should be imported post-qualified or with an explicit import list" :: String) #-}
+
+--------------------------------------------------------------------------------
 
 -- * Types
 
@@ -394,7 +366,27 @@ pattern Range
 
 {-# COMPLETE Range #-}
 
-newtype Input = WrapTSInput {unWrapTSInput :: C.TSInput}
+type Input =
+  -- | Byte index.
+  Word32 ->
+  -- | Position.
+  Point ->
+  -- | Buffer size.
+  CSize ->
+  IO ByteString
+
+inputToTSRead :: Input -> C.TSRead
+inputToTSRead input = \byteIndex position_p bytesRead bufferSize buffer -> do
+  position <- peek position_p
+  chunk <- input byteIndex (coerce position) (coerce bufferSize)
+  BSU.unsafeUseAsCStringLen chunk $ \(chunkPtr, chunkLenInt) -> do
+    let chunkLen = fromIntegral chunkLenInt
+    poke bytesRead (fromIntegral chunkLen)
+    _result <- memcpy buffer chunkPtr chunkLen
+    pure ()
+
+foreign import ccall unsafe "memcpy"
+  memcpy :: Ptr a -> Ptr a -> CSize -> IO (Ptr ())
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
@@ -411,44 +403,15 @@ instance Show LogType where
   show LogTypeParse = "LogTypeParse"
   show LogTypeLex = "LogTypeLex"
 
-newtype Logger = WrapTSLogger {unWrapTSLogger :: C.TSLogger}
+type Log = LogType -> ByteString -> IO ()
 
-type Log a = a -> LogType -> ByteString -> IO ()
+logToTSLog :: Log -> C.TSLog
+logToTSLog logFun = \logType logMsg ->
+  BS.packCString (unConstPtr logMsg) >>= logFun (coerce logType)
 
-loggerNew :: s -> Log s -> IO Logger
-loggerNew initialState logFun = do
-  logFunPtr <- C.mkTSLogFunPtr $ \statePtr logType buffer -> do
-    let stateStablePtr = castPtrToStablePtr (castPtr statePtr)
-    state <- deRefStablePtr stateStablePtr
-    logMsg <- BS.packCString (coerce buffer)
-    logFun state (coerce logType) logMsg
-  stateStablePtr <- newStablePtr initialState
-  let statePtr = castPtr (castStablePtrToPtr stateStablePtr)
-  pure . coerce $ C.TSLogger statePtr logFunPtr
-
-loggerNull :: Logger
-loggerNull = WrapTSLogger (C.TSLogger nullPtr nullFunPtr)
-
-loggerIsNull :: Logger -> Bool
-loggerIsNull (WrapTSLogger (C.TSLogger statePtr logFunPtr)) =
-  statePtr == nullPtr && logFunPtr == nullFunPtr
-
-{-| Delete the 'Logger'.
-
-__Warning__: Using the 'Logger' after calling 'unsafeLoggerDelete' leads to undefined behaviour.
--}
-unsafeLoggerDelete :: Logger -> IO ()
-unsafeLoggerDelete (WrapTSLogger (C.TSLogger statePtr logFunPtr)) = do
-  -- The initial logger sets both the payload pointer as well as
-  -- the log function pointer to NULL, so these checks guard against
-  -- accidentally freeing the __initial__ logger.
-  -- However, if the logger has been set from C or from the C API,
-  -- bad things will happen.
-  assert (statePtr /= nullPtr) $ do
-    let stateStablePtr = castPtrToStablePtr (castPtr statePtr)
-    freeStablePtr stateStablePtr
-  assert (logFunPtr /= nullFunPtr) $
-    freeHaskellFunPtr logFunPtr
+tsLogToLog :: C.TSLog -> Log
+tsLogToLog logFun = \logType logMsg ->
+  BS.useAsCString logMsg $ logFun (coerce logType) . ConstPtr
 
 newtype InputEdit = WrapTSInputEdit {unWrapTSInputEdit :: C.TSInputEdit}
 
@@ -608,7 +571,7 @@ See @`C.ts_parser_delete`@.
 
 __Warning__: Using the 'Parser' after calling 'unsafeParserDelete' leads to undefined behaviour.
 
-__Warning__: If the 'Parser' has a 'Logger', this function does not delete it.
+__Warning__: If the 'Parser' has a logger, this function does not delete it.
 -}
 unsafeParserDelete :: Parser -> IO ()
 unsafeParserDelete = coerce finalizeForeignPtr
@@ -659,51 +622,45 @@ parserIncludedRanges parser =
 
   See @`C.ts_parser_set_logger`@.
 -}
-parserSetLogger :: Parser -> Logger -> IO ()
-parserSetLogger parser logger =
+parserSetLogger :: Parser -> Log -> IO ()
+parserSetLogger parser logFun =
   withParserAsTSParserPtr parser $ \parserPtr ->
-    coerce C.ts_parser_set_logger parserPtr logger
+    C.ts_parser_set_logger (coerce parserPtr) (logToTSLog logFun)
 
 {-| Get the 'Logger' for a 'Parser'.
 
   If no 'Logger' was set, 'parserLogger' returns 'Nothing'.
 
   See @`C.ts_parser_logger`@.
-
-  __Warning__:
 -}
-parserLogger :: Parser -> IO (Maybe Logger)
+parserLogger :: Parser -> IO (Maybe Log)
 parserLogger parser =
   withParserAsTSParserPtr parser $
-    coerce C.ts_parser_logger >=> \case
-      logger
-        | loggerIsNull logger -> pure Nothing
-        | otherwise -> pure $ Just logger
+    fmap (fmap tsLogToLog) . C.ts_parser_logger . coerce
 
 -- | Test if the 'Parser' has a 'Logger'.
 parserHasLogger :: Parser -> IO Bool
 parserHasLogger = fmap isJust . parserLogger
 
 -- | If the 'Parser' has a 'Logger', remove and pure it.
-parserRemoveLogger :: Parser -> IO (Maybe Logger)
-parserRemoveLogger parser = do
-  maybeLogger <- parserLogger parser
-  parserSetLogger parser loggerNull
-  pure maybeLogger
+parserRemoveLogger :: Parser -> IO (Maybe Log)
+parserRemoveLogger parser =
+  withParserAsTSParserPtr parser $
+    fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
-{-| If the 'Parser' has a 'Logger', delete it.
-
-__Warning__: Using the 'Logger' after calling 'unsafeParserDeleteLogger' leads to undefined behaviour.
--}
-unsafeParserDeleteLogger :: Parser -> IO ()
-unsafeParserDeleteLogger parser = do
-  maybeLogger <- parserRemoveLogger parser
-  maybe (pure ()) unsafeLoggerDelete maybeLogger
-
-{-| See @`C.ts_parser_parse`@.
-parserParse :: Parser -> Input -> IO ()
-parserParse = _
--}
+-- | See @`C.ts_parser_parse`@.
+parserParse :: Parser -> Maybe Tree -> Input -> Word64 -> InputEncoding -> IO (Maybe Tree)
+parserParse parser oldTree input bufferSize encoding =
+  withParserAsTSParserPtr parser $ \parserPtr ->
+    withMaybeTreeAsTSTreePtr oldTree $ \oldTreePtr -> do
+      newTreePtr <-
+        C.ts_parser_parse
+          parserPtr
+          (ConstPtr oldTreePtr)
+          (inputToTSRead input)
+          bufferSize
+          (coerce encoding)
+      toMaybeTree newTreePtr
 
 -- | See @`C.ts_parser_parse_string`@.
 parserParseString :: Parser -> Maybe Tree -> String -> IO (Maybe Tree)

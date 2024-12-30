@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.TreeSitter.Internal where
 
 import Control.Exception (handle)
 import Control.Monad (unless)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
 import Data.GraphViz.Commands (GraphvizOutput (..), runGraphviz)
 import Data.GraphViz.Types (parseDotGraph)
@@ -28,6 +31,7 @@ tests =
     [ test_parserSetLogger
     , test_treePrintDotGraph
     , test_queryErrorNew
+    , test_parserParse
     ]
 
 -- | Does query error conversion work?
@@ -86,16 +90,16 @@ test_parserSetLogger =
     languageWhile <- TS.unsafeToLanguage =<< tree_sitter_while
     success <- TS.parserSetLanguage parser languageWhile
     unless success (assertFailure "failed to set parser language")
-    -- Set the logger
+    -- Assert the parser has no logger
     hasLogger <- TS.parserHasLogger parser
     assertBool "parser has logger" (not hasLogger)
-    let logFun logStateRef _logType msg =
-          IORef.atomicModifyIORef' logStateRef $ \logState ->
-            (BSC.unpack msg : logState, ())
+    -- Set the logger
     let logState1 = []
     logStateRef <- IORef.newIORef logState1
-    logger <- TS.loggerNew logStateRef logFun
-    TS.parserSetLogger parser logger
+    let logFun _logType msg =
+          IORef.atomicModifyIORef' logStateRef $ \logState ->
+            (BSC.unpack msg : logState, ())
+    TS.parserSetLogger parser logFun
     -- An example program
     let program =
           unlines
@@ -113,9 +117,8 @@ test_parserSetLogger =
     IORef.writeIORef logStateRef []
     assertBool "parse log is empty" (not . null $ logState2)
     -- Remove logger
-    maybeLogger <- TS.parserRemoveLogger parser
-    assertBool "removed logger is NULL" (isJust maybeLogger)
-    maybe (pure ()) TS.unsafeLoggerDelete maybeLogger
+    maybeLogFun <- TS.parserRemoveLogger parser
+    assertBool "removed logger is NULL" (isJust maybeLogFun)
     -- Parse example program (without logger)
     maybeTree2 <- TS.parserParseString parser Nothing program
     tree2 <- maybe (assertFailure "failed to parse the program") pure maybeTree2
@@ -128,3 +131,31 @@ test_parserSetLogger =
     TS.unsafeParserDelete parser
     TS.unsafeLanguageDelete languageWhile
     pure ()
+
+-- | Does the parser with callback work?
+test_parserParse :: TestTree
+test_parserParse =
+  testCase "test_parserParse" $ do
+    -- Create the parser
+    parser <- TS.parserNew
+    -- Set the language
+    languageWhile <- TS.unsafeToLanguage =<< tree_sitter_while
+    success <- TS.parserSetLanguage parser languageWhile
+    unless success (assertFailure "failed to set parser language")
+    -- An example program
+    let program :: ByteString
+        program =
+          BSC.unlines
+            [ "x := 0;"
+            , "y := x + 1"
+            ]
+    let input :: TS.Input
+        input byteIndex _position bufferSize = do
+          let start = fromIntegral byteIndex
+          let stop = fromIntegral bufferSize
+          pure $ BS.take stop (BS.drop (start - 1) program)
+    maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
+    tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
+    rootNode <- TS.treeRootNode tree
+    rootNodeString <- TS.showNodeAsString rootNode
+    assertBool "rootNode string is empty" (not . null $ rootNodeString)

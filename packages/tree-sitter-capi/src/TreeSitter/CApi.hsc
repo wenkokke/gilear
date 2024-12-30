@@ -31,21 +31,16 @@ module TreeSitter.CApi
   , TSSymbolType (TSSymbolTypeRegular, TSSymbolTypeAnonymous, TSSymbolTypeSupertype, TSSymbolTypeAuxiliary, ..)
   , TSPoint (..)
   , TSRange (..)
-  , TSInput (..)
+  , TSInput
   , TSRead
   , TSLogType (TSLogTypeParse, TSLogTypeLex, ..)
-  , TSLogger (..)
+  , TSLogger
   , TSLog
-  , mkTSLogFunPtr
   , TSInputEdit (..)
   , TSNode (..)
   , TSNodeContext (..)
-  , peekTSNodeContext
-  , pokeTSNodeContext
   , TSTreeCursor (..)
   , TSTreeCursorContext (..)
-  , peekTSTreeCursorContext
-  , pokeTSTreeCursorContext
   , TSQueryCapture (..)
   , TSQuantifier (TSQuantifierZero, TSQuantifierZeroOrOne, TSQuantifierZeroOrMore, TSQuantifierOne, TSQuantifierOneOrMore, ..)
   , TSQueryMatch (..)
@@ -63,6 +58,7 @@ module TreeSitter.CApi
   , ts_parser_included_ranges
   , ts_parser_set_logger
   , ts_parser_logger
+  , ts_parser_remove_logger
   , ts_parser_parse
   , ts_parser_parse_string
   , ts_parser_parse_string_encoding
@@ -234,6 +230,7 @@ module TreeSitter.CApi
   , ts_set_allocator
   ) where
 
+import Control.Exception (bracket, mask_)
 #ifdef TREE_SITTER_FEATURE_WASM
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS (packCString, useAsCString)
@@ -246,6 +243,8 @@ import Foreign.C.ConstPtr.Compat (ConstPtr(..))
 import GHC.TypeLits (Natural)
 
 #include <tree_sitter/api.h>
+-- string.h: required for memcpy
+#include <string.h>
 
 {----------------------------}
 {- Section - ABI Versioning -}
@@ -457,49 +456,114 @@ instance Storable TSRange where
 {-|
   > typedef struct TSInput {
   >   void *payload;
-  >   const char *(*read)(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read);
+  >   const char *(*read)(
+  >     void *payload,
+  >     uint32_t byte_index,
+  >     TSPoint position,
+  >     uint32_t *bytes_read
+  >   );
   >   TSInputEncoding encoding;
   > } TSInput;
   -}
 data
   {-# CTYPE "tree_sitter/api.h" "struct TSInput" #-}
-  TSInput = forall x. TSInput
-  { _payload  :: {-# UNPACK #-} !(Ptr x)
-  , _read     :: {-# UNPACK #-} !(FunPtr (TSRead x))
-  , _encoding :: {-# UNPACK #-} !TSInputEncoding
-  }
+  TSInput
 
-instance Storable TSInput where
-  alignment _ = #{alignment TSInput}
-  sizeOf _ = #{size TSInput}
-  peek ptr = do
-    _payload <- #{peek TSInput, payload} ptr
-    _read <- #{peek TSInput, read} ptr
-    _encoding <- #{peek TSInput, encoding} ptr
-    return TSInput{..}
-  poke ptr TSInput{..} = do
-    #{poke TSInput, payload} ptr _payload
-    #{poke TSInput, read} ptr _read
-    #{poke TSInput, encoding} ptr _encoding
+{-| The type of the @`read`@ argument of the @`_wrap_ts_input_new`@ function.
 
-{-| The type of the @`_read`@ field of the @`TSInput`@ struct.
-
-  > const char *(*read)(void *payload, uint32_t byte_index, TSPoint position, uint32_t *bytes_read);
-
-  _TODO_: This type requires an additional C wrapper, as the Haskell FFI cannot automatically marshall a @`TSPoint`@.
-
-  @
-    foreign import ccall "wrapper"
-      mkTSReadFunPtr :: TSRead x -> IO (FunPtr (TSRead x))
-  @
- -}
-type TSRead x =
-  Ptr x ->
+  > typedef void (*TSRead)(
+  >   uint32_t byte_index,
+  >   TSPoint *position,
+  >   uint32_t *bytes_read,
+  >   size_t buffer_size,
+  >   char *buffer
+  > );
+  -}
+type TSRead =
   ( #{type uint32_t} ) ->
-  TSPoint ->
-  ( #{type uint32_t} ) ->
-  ConstPtr CChar ->
+  Ptr TSPoint ->
+  Ptr ( #{type uint32_t} ) ->
+  ( #{type size_t} ) ->
+  Ptr CChar ->
   IO ()
+
+-- | Convert a Haskell 'TSRead' closure to a C 'TSRead' function pointer.
+foreign import ccall "wrapper"
+  mkTSReadFunPtr :: TSRead -> IO (FunPtr TSRead)
+
+#{def
+  typedef void (*TSRead)(
+    uint32_t byte_index,
+    TSPoint *position,
+    uint32_t *bytes_read,
+    size_t buffer_size,
+    char *buffer
+  );
+}
+
+-- | Create a @`TSInput`@.
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_new"
+  _wrap_ts_input_new ::
+    FunPtr TSRead ->
+    ( #{type size_t} ) ->
+    TSInputEncoding ->
+    IO (Ptr TSInput)
+
+#{def
+  TSInput *_wrap_ts_input_new(
+    TSRead read,
+    size_t buffer_size,
+    TSInputEncoding encoding
+  ) {
+    TSPayload *payload = malloc(sizeof(TSPayload) + buffer_size);
+    payload->callback = read;
+    payload->buffer_size = buffer_size;
+    payload->buffer[0] = 0;
+
+    TSInput *input = malloc(sizeof *input);
+    input->payload = payload;
+    input->read = _wrap_ts_input_read;
+    input->encoding = encoding;
+    return input;
+  }
+}
+
+-- | Delete a @`TSInput`@.
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_delete"
+  _wrap_ts_input_delete ::
+    Ptr TSInput ->
+    IO ()
+
+#{def
+  void _wrap_ts_input_delete(
+    TSInput *input
+  ) {
+    free(input->payload);
+    free(input);
+  }
+}
+
+#{def
+  typedef struct {
+    TSRead callback;
+    size_t buffer_size;
+    char buffer[];
+  } TSPayload;
+}
+
+#{def
+  const char *_wrap_ts_input_read(
+    void *payload_p,
+    uint32_t byte_index,
+    TSPoint position,
+    uint32_t *bytes_read
+  ) {
+    TSPayload *payload = payload_p;
+    TSRead read = payload->callback;
+    read(byte_index, &position, bytes_read, payload->buffer_size, payload->buffer);
+    return payload->buffer;
+  }
+}
 
 {-|
   > typedef enum TSLogType {
@@ -530,36 +594,64 @@ pattern TSLogTypeLex = TSLogType ( #{const TSLogTypeLex} )
   -}
 data
   {-# CTYPE "tree_sitter/api.h" "struct TSLogger" #-}
-  TSLogger = forall a. TSLogger
-  { _payload :: {-# UNPACK #-} !(Ptr a)
-  , _log     :: {-# UNPACK #-} !(FunPtr (TSLog a))
-  }
+  TSLogger
 
-instance Storable TSLogger where
-  alignment _ = #{alignment TSLogger}
-  sizeOf _ = #{size TSLogger}
-  peek ptr = do
-    _payload <- #{peek TSLogger, payload} ptr
-    _log <- #{peek TSLogger, log} ptr
-    return TSLogger{..}
-  poke ptr TSLogger{..} = do
-    #{poke TSLogger, payload} ptr _payload
-    #{poke TSLogger, log} ptr _log
+#{def
+typedef void (*TSLog)(
+  TSLogType log_type,
+  const char *buffer
+);
+}
 
-{-| The type of the @`_log`@ field of the @`TSLogger`@ struct.
+{-| The type of the @`log`@ argument of the @`_wrap_ts_logger_new`@ function.
 
- > void (*log)(void *payload, TSLogType log_type, const char *buffer);
+  > void (*log)(TSLogType log_type, const char *buffer);
  -}
-type TSLog a =
-  Ptr a ->
+type TSLog =
   TSLogType ->
   ConstPtr CChar ->
   IO ()
 
+{-|
+ > TSLogger *_wrap_ts_logger_new(TSLog log);
+ -}
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_logger_new"
+  _wrap_ts_logger_new ::
+    FunPtr TSLog ->
+    IO (Ptr TSLogger)
+
+#{def
+  void _wrap_ts_logger_log(
+    void *payload,
+    TSLogType log_type,
+    const char *buffer
+  ) {
+    TSLog log;
+    memcpy(&log, payload, sizeof log);
+    log(log_type, buffer);
+  }
+}
+
+#{def
+  TSLogger *_wrap_ts_logger_new(TSLog log) {
+    TSLogger *logger = malloc(sizeof *logger);
+    logger->payload = malloc(sizeof log);
+    memcpy(logger->payload, &log, sizeof log);
+    logger->log = _wrap_ts_logger_log;
+    return logger;
+  }
+}
+
 {-| Allocate a C function pointer for a `TSLog` function.
  -}
 foreign import ccall "wrapper"
-  mkTSLogFunPtr :: TSLog x -> IO (FunPtr (TSLog x)) 
+  mkTSLogFunPtr :: TSLog -> IO (FunPtr TSLog)
+
+{-| Convert a C function pointer for a `TSLog` function
+    to the corresponding Haskell function.
+ -}
+foreign import ccall "dynamic"
+  unTSLogFunPtr :: FunPtr TSLog -> TSLog
 
 {-|
   > typedef struct TSInputEdit {
@@ -1082,12 +1174,21 @@ foreign import capi unsafe "tree_sitter/api.h ts_parser_included_ranges"
 ts_parser_parse ::
   Ptr TSParser ->
   ConstPtr TSTree ->
-  TSInput ->
+  TSRead ->
+  ( #{type size_t} ) ->
+  TSInputEncoding ->
   IO (Ptr TSTree)
-ts_parser_parse = \self old_tree input ->
-  with input $ \input_p ->
-    _wrap_ts_parser_parse self old_tree input_p
-{-# INLINE ts_parser_parse #-}
+ts_parser_parse = \self old_tree readFun buffer_size encoding ->
+  bracket (mkTSReadFunPtr readFun) freeHaskellFunPtr $ \readFun_p ->
+    bracket (_wrap_ts_input_new readFun_p buffer_size encoding) _wrap_ts_input_delete $ \input_p ->
+      _wrap_ts_parser_parse self old_tree input_p
+
+foreign import capi safe "TreeSitter/CApi_hsc.h _wrap_ts_parser_parse"
+  _wrap_ts_parser_parse ::
+    Ptr TSParser ->
+    ConstPtr TSTree ->
+    Ptr TSInput ->
+    IO (Ptr TSTree)
 
 #{def
   TSTree *_wrap_ts_parser_parse(
@@ -1099,13 +1200,6 @@ ts_parser_parse = \self old_tree input ->
     return ts_parser_parse(self, old_tree, *input);
   }
 }
-
-foreign import capi safe "TreeSitter/CApi_hsc.h _wrap_ts_parser_parse"
-  _wrap_ts_parser_parse ::
-    Ptr TSParser ->
-    ConstPtr TSTree ->
-    Ptr TSInput ->
-    IO (Ptr TSTree)
 
 {-|
   Use the parser to parse some source code stored in one contiguous buffer.
@@ -1228,12 +1322,12 @@ foreign import capi unsafe "tree_sitter/api.h ts_parser_cancellation_flag"
 -}
 ts_parser_set_logger ::
   Ptr TSParser ->
-  TSLogger ->
+  TSLog ->
   IO ()
-ts_parser_set_logger = \self logger ->
-  with logger $ \logger_p ->
-    _wrap_ts_parser_set_logger self logger_p
-{-# INLINE ts_parser_set_logger #-}
+ts_parser_set_logger = \self logFun -> mask_ $ do
+  logFun_p <- mkTSLogFunPtr logFun
+  logger_p <- _wrap_ts_logger_new logFun_p
+  _wrap_ts_parser_set_logger self logger_p
 
 #{def
   void _wrap_ts_parser_set_logger(
@@ -1258,28 +1352,77 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_set_logger"
 -}
 ts_parser_logger ::
   ConstPtr TSParser ->
-  IO TSLogger
-ts_parser_logger = \self ->
-  alloca $ \result_p -> do
-    _wrap_ts_parser_logger self result_p
-    peek result_p
+  IO (Maybe TSLog)
+ts_parser_logger = \self -> do
+  logFun_p <- _wrap_ts_parser_logger self
+  pure $
+    if logFun_p /= nullFunPtr
+      then Just $ unTSLogFunPtr logFun_p
+      else Nothing
 {-# INLINE ts_parser_logger #-}
-
-#{def
-  void _wrap_ts_parser_logger(
-    const TSParser *self,
-    TSLogger *result
-  )
-  {
-    *result = ts_parser_logger(self);
-  }
-}
 
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_logger"
   _wrap_ts_parser_logger ::
     ConstPtr TSParser ->
-    Ptr TSLogger ->
-    IO ()
+    IO (FunPtr TSLog)
+
+#{def
+  TSLog _wrap_ts_parser_logger(
+    const TSParser *self
+  )
+  {
+    // Get the current logger
+    TSLogger logger = ts_parser_logger(self);
+    // Copy the payload into the log function
+    if(logger.payload) {
+      TSLog log;
+      memcpy(&log, logger.payload, sizeof log);
+      return log;
+    }
+    return NULL;
+  }
+}
+
+{-|
+  Remove the parser's current logger.
+-}
+ts_parser_remove_logger ::
+  Ptr TSParser ->
+  IO (Maybe TSLog)
+ts_parser_remove_logger = \self -> mask_ $ do
+  logFun_p <- _wrap_ts_parser_remove_logger self
+  if logFun_p == nullFunPtr
+    then pure Nothing
+    else do
+      let logFun = unTSLogFunPtr logFun_p
+      freeHaskellFunPtr logFun_p
+      pure $ Just logFun
+
+foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_parser_remove_logger"
+  _wrap_ts_parser_remove_logger ::
+    Ptr TSParser ->
+    IO (FunPtr TSLog)
+
+#{def
+  TSLog _wrap_ts_parser_remove_logger(
+    TSParser *self
+  )
+  {
+    // Get the current logger
+    TSLogger logger = ts_parser_logger(self);
+    // Set the parser's logger to NULL
+    TSLogger logger_null = {NULL, NULL};
+    ts_parser_set_logger(self, logger_null);
+    // Copy the payload into the log function
+    if (logger.payload) {
+      TSLog log;
+      memcpy(&log, logger.payload, sizeof log);
+      free(logger.payload);
+      return log;
+    }
+    return NULL;
+  }
+}
 
 {-|
   Set the file descriptor to which the parser should write debugging graphs
@@ -1451,9 +1594,9 @@ foreign import capi unsafe "tree_sitter/api.h ts_tree_edit"
   You need to pass the old tree that was passed to parse, as well as the new
   tree that was returned from that function.
 
-  The returned array is allocated using `malloc` and the caller is responsible
-  for freeing it using `free`. The length of the array will be written to the
-  given `length` pointer.
+  The returned array is allocated using @malloc@ and the caller is responsible
+  for freeing it using @free@. The length of the array will be written to the
+  given @length@ pointer.
 
   > TSRange *ts_tree_get_changed_ranges(
   >   const TSTree *old_tree,
@@ -1720,8 +1863,8 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_node_end_point"
 {-|
   Get an S-expression representing the node as a string.
 
-  This string is allocated with `malloc` and the caller is responsible for
-  freeing it using `free`.
+  This string is allocated with @malloc@ and the caller is responsible for
+  freeing it using @free@.
 
   > char *ts_node_string(TSNode self);
 -}
