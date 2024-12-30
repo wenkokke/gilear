@@ -1,10 +1,12 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.TreeSitter.Internal where
 
 import Control.Exception (handle)
 import Control.Monad (unless)
+import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
 import Data.GraphViz.Commands (GraphvizOutput (..), runGraphviz)
 import Data.GraphViz.Types (parseDotGraph)
@@ -21,8 +23,6 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
 import TreeSitter.While (tree_sitter_while)
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 
 tests :: TestTree
 tests =
@@ -152,7 +152,7 @@ test_parserParse =
     let input :: TS.Input
         input byteIndex _position bufferSize = do
           let start = fromIntegral byteIndex
-          let stop  = fromIntegral bufferSize
+          let stop = fromIntegral bufferSize
           pure $ BS.take stop (BS.drop (start - 1) program)
     maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
     tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
