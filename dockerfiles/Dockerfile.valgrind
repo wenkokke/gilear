@@ -1,0 +1,17 @@
+FROM ubuntu
+
+RUN DEBIAN_FRONTEND=noninteractive \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential curl libffi-dev libffi8 libgmp-dev libgmp10 libncurses-dev pkg-config valgrind
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
+    BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
+    BOOTSTRAP_HASKELL_GHC_VERSION=9.8.2 \
+    BOOTSTRAP_HASKELL_CABAL_VERSION=3.12.1.0 \
+    BOOTSTRAP_HASKELL_INSTALL_NO_STACK=1 \
+    BOOTSTRAP_HASKELL_DOWNLOADER=curl \
+    sh
+ENV PATH="$PATH:/root/.ghcup/bin"
+RUN cabal build tree-sitter-test --ghc-options="-g -O2"
+
+# TODO: Add valgrind command
