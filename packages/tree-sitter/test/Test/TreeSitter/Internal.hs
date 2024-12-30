@@ -180,7 +180,7 @@ test_parseJQuery = do
         input byteIndex _position = do
           let start = fromIntegral byteIndex
           let chunk = BS.take 4096 (BS.drop (start - 1) jQueryContent)
-          -- NOTE: Copy the chunk to 
+          -- NOTE: copy the chunk to ensure it has its own memory (to leak)
           pure $ BS.copy chunk
     for_ [1..1000] $ \(_time :: Int) -> do
       maybeTree <- TS.parserParse parser Nothing input TS.InputEncodingUTF8
