@@ -24,6 +24,12 @@ import TreeSitter.SExp (
   prettySExpDiff,
  )
 
+-- TODO: makeCorpusTest should read the file as a ByteString in order
+--       to preserve whatever encoding is present
+-- TODO: makeCorpusTest should store the position in the file, rather
+--       than the entire string, in order to lower memory consumption
+--       in the test suite
+
 makeCorpusTests :: IO (ConstPtr tsLanguage) -> FilePath -> IO [TestTree]
 makeCorpusTests languageConstructor corpusDirectory = do
   corpusFiles <- Glob.globDir1 "**/*.txt" corpusDirectory

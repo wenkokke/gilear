@@ -8,6 +8,7 @@ import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
+import Data.Foldable (for_)
 import Data.GraphViz.Commands (GraphvizOutput (..), runGraphviz)
 import Data.GraphViz.Types (parseDotGraph)
 import Data.GraphViz.Types.Generalised (DotGraph)
@@ -20,6 +21,7 @@ import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 import System.IO (IOMode (..), withFile)
 import System.IO.Temp (withSystemTempDirectory)
+import System.Mem (performMajorGC, performMinorGC)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
@@ -153,11 +155,10 @@ test_parserParse =
             , "y := x + 1"
             ]
     let input :: TS.Input
-        input byteIndex _position bufferSize = do
-          let start = fromIntegral byteIndex
-          let stop = fromIntegral bufferSize
-          pure $ BS.take stop (BS.drop (start - 1) program)
-    maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
+        input byteIndex _position = do
+          let start = fromIntegral byteIndex - 1
+          pure $ BS.take 2 (BS.drop start program)
+    maybeTree <- TS.parserParse parser Nothing input TS.InputEncodingUTF8
     tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
     rootNode <- TS.treeRootNode tree
     rootNodeString <- TS.showNodeAsString rootNode
@@ -177,12 +178,16 @@ test_parseJQuery = do
     jQueryFile <- getDataFileName "test/data/jQuery.js"
     jQueryContent <- BS.readFile jQueryFile
     let input :: TS.Input
-        input byteIndex _position bufferSize = do
+        input byteIndex _position = do
+          performMinorGC
           let start = fromIntegral byteIndex
-          let stop = fromIntegral bufferSize
-          pure $ BS.take stop (BS.drop (start - 1) jQueryContent)
-    maybeTree <- TS.parserParse parser Nothing input 4096 TS.InputEncodingUTF8
-    tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
-    rootNode <- TS.treeRootNode tree
-    rootNodeString <- TS.showNodeAsString rootNode
-    assertBool "rootNode string is empty" (not . null $ rootNodeString)
+          let chunk = BS.take 4096 (BS.drop (start - 1) jQueryContent)
+          -- NOTE: copy the chunk to ensure it has its own memory (to leak)
+          pure $ BS.copy chunk
+    for_ [1 .. 1000] $ \(_time :: Int) -> do
+      maybeTree <- TS.parserParse parser Nothing input TS.InputEncodingUTF8
+      tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
+      rootNode <- TS.treeRootNode tree
+      rootNodeString <- TS.showNodeAsString rootNode
+      assertBool "rootNode string is empty" (not . null $ rootNodeString)
+      performMajorGC

@@ -221,16 +221,18 @@ module TreeSitter.Internal (
 
 import Control.Exception (Exception (..), assert, bracket, throwIO)
 import Control.Monad ((<=<))
-import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Internal (ByteString (BS))
 import Data.ByteString.Unsafe qualified as BSU
 import Data.Coerce (coerce)
+import Data.IORef (newIORef, writeIORef)
 import Data.Maybe (isJust)
 import Foreign
 import Foreign.C (CBool, CInt (CInt), CSize (..))
 import Foreign.C.ConstPtr.Compat (ConstPtr (..))
+import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 import GHC.IO.FD (FD (..))
 import GHC.IO.Handle.FD (handleToFd)
 import System.IO (Handle)
@@ -365,28 +367,6 @@ pattern Range
         )
 
 {-# COMPLETE Range #-}
-
-type Input =
-  -- | Byte index.
-  Word32 ->
-  -- | Position.
-  Point ->
-  -- | Buffer size.
-  CSize ->
-  IO ByteString
-
-inputToTSRead :: Input -> C.TSRead
-inputToTSRead input = \byteIndex position_p bytesRead bufferSize buffer -> do
-  position <- peek position_p
-  chunk <- input byteIndex (coerce position) (coerce bufferSize)
-  BSU.unsafeUseAsCStringLen chunk $ \(chunkPtr, chunkLenInt) -> do
-    let chunkLen = fromIntegral chunkLenInt
-    poke bytesRead (fromIntegral chunkLen)
-    _result <- memcpy buffer chunkPtr chunkLen
-    pure ()
-
-foreign import ccall unsafe "memcpy"
-  memcpy :: Ptr a -> Ptr a -> CSize -> IO (Ptr ())
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
@@ -648,17 +628,49 @@ parserRemoveLogger parser =
   withParserAsTSParserPtr parser $
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
+inputToTSRead :: Input -> C.TSRead
+inputToTSRead input = \byteIndex position_p bytesRead -> do
+  position <- peek position_p
+  BS chunkForeignPtr chunkLenInt <- input byteIndex (coerce position)
+  let chunkLen = fromIntegral chunkLenInt
+  poke bytesRead chunkLen
+  let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
+  pure chunkPtr
+
+type Input =
+  -- | Byte index.
+  Word32 ->
+  -- | Position.
+  Point ->
+  IO ByteString
+
 -- | See @`C.ts_parser_parse`@.
-parserParse :: Parser -> Maybe Tree -> Input -> Word64 -> InputEncoding -> IO (Maybe Tree)
-parserParse parser oldTree input bufferSize encoding =
+parserParse :: Parser -> Maybe Tree -> Input -> InputEncoding -> IO (Maybe Tree)
+parserParse parser oldTree input encoding =
   withParserAsTSParserPtr parser $ \parserPtr ->
     withMaybeTreeAsTSTreePtr oldTree $ \oldTreePtr -> do
+      -- NOTE: The purpose of `chunkRef` is to hold on to a reference to
+      --       the current chunk and prevent its garbage collection until
+      --       the next call to `tsRead`.
+      --       Incorrect management of these references can potentially cause
+      --       either a memory leak or a use-after-free error, since by using
+      --       `unsafeForeignPtrToPtr` we bypass the foreign pointer finalizer.
+      -- NOTE: Despite my best efforts, I have not been able to demonstrate
+      --       that this code without the `IORef` leaks memory.
+      chunkRef <- newIORef BS.empty
+      let tsRead = \byteIndex position_p bytesRead -> do
+            position <- WrapTSPoint <$> peek position_p
+            chunk@(BS chunkForeignPtr chunkLenInt) <- input byteIndex position
+            writeIORef chunkRef chunk
+            let chunkLen = fromIntegral chunkLenInt
+            poke bytesRead chunkLen
+            let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
+            pure chunkPtr
       newTreePtr <-
         C.ts_parser_parse
           parserPtr
           (ConstPtr oldTreePtr)
-          (inputToTSRead input)
-          bufferSize
+          tsRead
           (coerce encoding)
       toMaybeTree newTreePtr
 

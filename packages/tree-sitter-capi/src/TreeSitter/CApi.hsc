@@ -471,33 +471,27 @@ data
 
 {-| The type of the @`read`@ argument of the @`_wrap_ts_input_new`@ function.
 
-  > typedef void (*TSRead)(
+  > typedef const char *(*TSRead)(
   >   uint32_t byte_index,
   >   TSPoint *position,
-  >   uint32_t *bytes_read,
-  >   size_t buffer_size,
-  >   char *buffer
+  >   uint32_t *bytes_read
   > );
   -}
 type TSRead =
   ( #{type uint32_t} ) ->
   Ptr TSPoint ->
   Ptr ( #{type uint32_t} ) ->
-  ( #{type size_t} ) ->
-  Ptr CChar ->
-  IO ()
+  IO (ConstPtr CChar)
 
 -- | Convert a Haskell 'TSRead' closure to a C 'TSRead' function pointer.
 foreign import ccall "wrapper"
   mkTSReadFunPtr :: TSRead -> IO (FunPtr TSRead)
 
 #{def
-  typedef void (*TSRead)(
+  typedef const char *(*TSRead)(
     uint32_t byte_index,
     TSPoint *position,
-    uint32_t *bytes_read,
-    size_t buffer_size,
-    char *buffer
+    uint32_t *bytes_read
   );
 }
 
@@ -505,23 +499,31 @@ foreign import ccall "wrapper"
 foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_new"
   _wrap_ts_input_new ::
     FunPtr TSRead ->
-    ( #{type size_t} ) ->
     TSInputEncoding ->
     IO (Ptr TSInput)
 
 #{def
+  const char *_wrap_ts_input_read(
+    void *payload,
+    uint32_t byte_index,
+    TSPoint position,
+    uint32_t *bytes_read
+  ) {
+    TSRead read;
+    memcpy(&read, payload, sizeof read);
+    TSPoint *position_p = &position;
+    return read(byte_index, position_p, bytes_read);
+  }
+}
+
+#{def
   TSInput *_wrap_ts_input_new(
     TSRead read,
-    size_t buffer_size,
     TSInputEncoding encoding
   ) {
-    TSPayload *payload = malloc(sizeof(TSPayload) + buffer_size);
-    payload->callback = read;
-    payload->buffer_size = buffer_size;
-    payload->buffer[0] = 0;
-
     TSInput *input = malloc(sizeof *input);
-    input->payload = payload;
+    input->payload = malloc(sizeof read);
+    memcpy(input->payload, &read, sizeof read);
     input->read = _wrap_ts_input_read;
     input->encoding = encoding;
     return input;
@@ -540,28 +542,6 @@ foreign import capi unsafe "TreeSitter/CApi_hsc.h _wrap_ts_input_delete"
   ) {
     free(input->payload);
     free(input);
-  }
-}
-
-#{def
-  typedef struct {
-    TSRead callback;
-    size_t buffer_size;
-    char buffer[];
-  } TSPayload;
-}
-
-#{def
-  const char *_wrap_ts_input_read(
-    void *payload_p,
-    uint32_t byte_index,
-    TSPoint position,
-    uint32_t *bytes_read
-  ) {
-    TSPayload *payload = payload_p;
-    TSRead read = payload->callback;
-    read(byte_index, &position, bytes_read, payload->buffer_size, payload->buffer);
-    return payload->buffer;
   }
 }
 
@@ -1175,12 +1155,11 @@ ts_parser_parse ::
   Ptr TSParser ->
   ConstPtr TSTree ->
   TSRead ->
-  ( #{type size_t} ) ->
   TSInputEncoding ->
   IO (Ptr TSTree)
-ts_parser_parse = \self old_tree readFun buffer_size encoding ->
+ts_parser_parse = \self old_tree readFun encoding ->
   bracket (mkTSReadFunPtr readFun) freeHaskellFunPtr $ \readFun_p ->
-    bracket (_wrap_ts_input_new readFun_p buffer_size encoding) _wrap_ts_input_delete $ \input_p ->
+    bracket (_wrap_ts_input_new readFun_p encoding) _wrap_ts_input_delete $ \input_p ->
       _wrap_ts_parser_parse self old_tree input_p
 
 foreign import capi safe "TreeSitter/CApi_hsc.h _wrap_ts_parser_parse"
