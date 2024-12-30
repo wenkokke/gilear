@@ -9,8 +9,7 @@ packages:
   packages/data-debruijn
   packages/gilear
   packages/gilear-lsp
-  packages/tree-sitter
-  packages/tree-sitter-capi
+  packages/hs-tree-sitter
   packages/tree-sitter-gilear
   packages/tree-sitter-while
   prototypes/gilear-animate-ast/gilear-animate-ast.cabal

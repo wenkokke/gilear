@@ -29,10 +29,10 @@ executable gilear-animate-ast
     , base-compat-constptr  >=0.1  && <0.2
     , bytestring            >=0.12 && <0.13
     , filepath              >=1.5  && <1.6
+    , hs-tree-sitter        >=0.13 && <0.14
     , myers-diff            >=0.3  && <0.4
     , optparse-applicative  >=0.18 && <0.19
     , text                  >=2.1  && <2.2
     , text-rope             >=0.2  && <0.3
-    , tree-sitter           >=0.13 && <0.14
     , tree-sitter-gilear    >=0.0  && <0.1
     , vector                >=0.13 && <0.14

@@ -31,12 +31,7 @@ cradle:
         cradle:
           cabal:
 
-    - path: "./packages/tree-sitter"
-      config:
-        cradle:
-          cabal:
-
-    - path: "./packages/tree-sitter-capi"
+    - path: "./packages/hs-tree-sitter"
       config:
         cradle:
           cabal:

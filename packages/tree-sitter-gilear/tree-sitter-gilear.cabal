@@ -40,9 +40,9 @@ library
   autogen-modules:  Paths_tree_sitter_gilear
   other-modules:    Paths_tree_sitter_gilear
   build-depends:
-    , base                  >=4.13 && <5
-    , base-compat-constptr  >=0.1  && <0.2
-    , tree-sitter-capi      >=0.13 && <0.14
+    , base                                >=4.13 && <5
+    , base-compat-constptr                >=0.1  && <0.2
+    , hs-tree-sitter:hs-tree-sitter-capi  >=0.13 && <0.14
 
   hs-source-dirs:   bindings/haskell/src
   include-dirs:     src
@@ -56,6 +56,6 @@ test-suite tree-sitter-gilear-test
   main-is:        Main.hs
   build-depends:
     , base
-    , bytestring          >=0.12 && <0.13
-    , tree-sitter-capi    >=0.13 && <0.14
+    , bytestring                          >=0.12 && <0.13
+    , hs-tree-sitter:hs-tree-sitter-capi  >=0.13 && <0.14
     , tree-sitter-gilear

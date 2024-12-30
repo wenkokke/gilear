@@ -1,5 +1,5 @@
-# packages/tree-sitter-capi
-/packages/tree-sitter-capi/vendor/
+# packages/hs-tree-sitter
+/packages/hs-tree-sitter/vendor/
 
 # packages/tree-sitter-gilear
 /packages/tree-sitter-gilear/src/grammar.json
