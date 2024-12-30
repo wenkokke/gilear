@@ -1,9 +1,10 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Test.TreeSitter.Internal where
 
 import Control.Exception (handle)
-import Control.Monad (unless, when)
+import Control.Monad (unless)
 import Data.ByteString.Char8 qualified as BSC
 import Data.GraphViz.Commands (GraphvizOutput (..), runGraphviz)
 import Data.GraphViz.Types (parseDotGraph)
@@ -20,7 +21,8 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, assertEqual, assertFailure, testCase)
 import TreeSitter qualified as TS
 import TreeSitter.While (tree_sitter_while)
-import Data.Foldable (for_)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 
 tests :: TestTree
 tests =
@@ -29,6 +31,7 @@ tests =
     [ test_parserSetLogger
     , test_treePrintDotGraph
     , test_queryErrorNew
+    , test_parserParse
     ]
 
 -- | Does query error conversion work?
@@ -87,9 +90,10 @@ test_parserSetLogger =
     languageWhile <- TS.unsafeToLanguage =<< tree_sitter_while
     success <- TS.parserSetLanguage parser languageWhile
     unless success (assertFailure "failed to set parser language")
-    -- Set the logger
+    -- Assert the parser has no logger
     hasLogger <- TS.parserHasLogger parser
     assertBool "parser has logger" (not hasLogger)
+    -- Set the logger
     let logState1 = []
     logStateRef <- IORef.newIORef logState1
     let logFun _logType msg =
@@ -127,3 +131,31 @@ test_parserSetLogger =
     TS.unsafeParserDelete parser
     TS.unsafeLanguageDelete languageWhile
     pure ()
+
+-- | Does the parser with callback work?
+test_parserParse :: TestTree
+test_parserParse =
+  testCase "test_parserParse" $ do
+    -- Create the parser
+    parser <- TS.parserNew
+    -- Set the language
+    languageWhile <- TS.unsafeToLanguage =<< tree_sitter_while
+    success <- TS.parserSetLanguage parser languageWhile
+    unless success (assertFailure "failed to set parser language")
+    -- An example program
+    let program :: ByteString
+        program =
+          BSC.unlines
+            [ "x := 0;"
+            , "y := x + 1"
+            ]
+    let input :: TS.Input
+        input byteIndex _position bufferSize = do
+          let start = fromIntegral byteIndex
+          let stop  = fromIntegral bufferSize
+          pure $ BS.take stop (BS.drop (start - 1) program)
+    maybeTree <- TS.parserParse parser Nothing input 1 TS.InputEncodingUTF8
+    tree <- maybe (assertFailure "failed to parse the program") pure maybeTree
+    rootNode <- TS.treeRootNode tree
+    rootNodeString <- TS.showNodeAsString rootNode
+    assertBool "rootNode string is empty" (not . null $ rootNodeString)

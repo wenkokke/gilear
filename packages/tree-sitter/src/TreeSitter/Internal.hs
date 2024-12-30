@@ -62,6 +62,7 @@ module TreeSitter.Internal (
   parserLogger,
   parserHasLogger,
   parserRemoveLogger,
+  parserParse,
   parserParseString,
   parserParseByteString,
   parserParseByteStringWithEncoding,
