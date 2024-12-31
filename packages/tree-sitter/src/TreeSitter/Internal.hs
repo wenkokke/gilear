@@ -329,13 +329,13 @@ newtype Point = WrapTSPoint {unWrapTSPoint :: C.TSPoint}
 
 pattern Point :: Word32 -> Word32 -> Point
 pattern Point
-  { pointColumn
-  , pointRow
+  { pointRow
+  , pointColumn
   } =
   WrapTSPoint
     ( C.TSPoint
-        pointColumn
         pointRow
+        pointColumn
       )
 
 {-# COMPLETE Point #-}

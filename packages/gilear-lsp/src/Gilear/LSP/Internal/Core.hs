@@ -2,29 +2,37 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
 module Gilear.LSP.Internal.Core where
 
 import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Reader (MonadReader (..))
 import Control.Monad.Trans.Resource (MonadUnliftIO)
 import Data.Aeson.Types (Value)
 import Data.Kind (Type)
 import Data.Text (Text)
-import Gilear (TC, TCEnv, runTC)
-import Language.LSP.Server (LanguageContextEnv, LspT, MonadLsp, runLspT)
+import Gilear.Internal.Core (TCEnv, TCIO, TCT (..), runTCIO, runTCT)
+import Language.LSP.Protocol.Types (NormalizedUri)
+import Language.LSP.Server (LanguageContextEnv, LspT (..), MonadLsp (..), runLspT)
 
 --------------------------------------------------------------------------------
 -- Language-Server Type-Checker Monad Stack
 --------------------------------------------------------------------------------
 
 type LSPTC :: Type -> Type
-newtype LSPTC a = LSPTC {unLSPTC :: LspT Config TC a}
-  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadLsp Config)
+newtype LSPTC a = LSPTC {unLSPTC :: TCT NormalizedUri (LspT Config TCIO) a}
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (TCEnv NormalizedUri))
 
-runLSPTC :: LanguageContextEnv Config -> TCEnv -> LSPTC a -> IO a
-runLSPTC languageContextEnv tcEnv =
-  runTC tcEnv . runLspT languageContextEnv . unLSPTC
+instance MonadLsp Config LSPTC where
+  getLspEnv :: LSPTC (LanguageContextEnv Config)
+  getLspEnv = LSPTC (TCT getLspEnv)
+
+runLSPTC :: LanguageContextEnv Config -> TCEnv NormalizedUri -> LSPTC a -> IO a
+runLSPTC languageContextEnv tcEnv action =
+  runTCIO (runLspT languageContextEnv (runTCT tcEnv (unLSPTC action)))
 
 --------------------------------------------------------------------------------
 -- Language-Server Configuration
