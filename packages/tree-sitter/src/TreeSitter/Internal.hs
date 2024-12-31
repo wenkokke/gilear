@@ -628,15 +628,6 @@ parserRemoveLogger parser =
   withParserAsTSParserPtr parser $
     fmap (fmap tsLogToLog) . C.ts_parser_remove_logger . coerce
 
-inputToTSRead :: Input -> C.TSRead
-inputToTSRead input = \byteIndex position_p bytesRead -> do
-  position <- peek position_p
-  BS chunkForeignPtr chunkLenInt <- input byteIndex (coerce position)
-  let chunkLen = fromIntegral chunkLenInt
-  poke bytesRead chunkLen
-  let chunkPtr = coerce (unsafeForeignPtrToPtr chunkForeignPtr)
-  pure chunkPtr
-
 type Input =
   -- | Byte index.
   Word32 ->
