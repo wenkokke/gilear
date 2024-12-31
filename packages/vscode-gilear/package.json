@@ -18,6 +18,7 @@
     "watch": "tsc -b -w"
   },
   "dependencies": {
+    "glob": "^11.0.0",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
@@ -26,7 +27,8 @@
     "@types/vscode": "^1.75.1",
     "@vscode/test-electron": "^2.3.9",
     "mocha": "^10.3.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "which": "^5.0.0"
   },
   "contributes": {
     "languages": [
