@@ -30,7 +30,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Version (showVersion)
 import Gilear.Internal.Core (TCEnv, newTCEnv)
-import Gilear.LSP.Internal.Core (Config, LSPTC, runLSPTC)
+import Gilear.LSP.Internal.Core (Config, LSPTC, packageName, runLSPTC)
 import Gilear.LSP.Internal.Core qualified as Core
 import Gilear.LSP.Internal.Handlers (handlers)
 import Language.LSP.Logging (defaultClientLogger)
@@ -41,14 +41,14 @@ import Language.LSP.Protocol.Message (
   TMessage,
   TResponseError,
  )
-import Language.LSP.Protocol.Types (ClientCapabilities, NormalizedUri, SaveOptions (..), TextDocumentSyncKind (..), TextDocumentSyncOptions (..), type (|?) (InR))
+import Language.LSP.Protocol.Types (ClientCapabilities, NormalizedUri, SaveOptions (..), ServerInfo (..), TextDocumentSyncKind (..), TextDocumentSyncOptions (..), type (|?) (InR))
 import Language.LSP.Server (
   Handler,
   Handlers,
   LanguageContextEnv,
   LspM,
   MonadLsp (..),
-  Options (optTextDocumentSync),
+  Options (optServerInfo, optTextDocumentSync),
   ServerDefinition (..),
   defaultOptions,
   mapHandlers,
@@ -79,15 +79,15 @@ run = do
   withLogHandle maybeLogFile $ \logHandle -> do
     let
       -- Setup loggers:
+      -- logs to 'logHandle' (either 'stderr' or 'logFile')
       handleLogger :: (Pretty a) => LogAction IO (WithSeverity a)
       handleLogger = Colog.cmap (addSeverity . fmap prettyText) (Colog.logTextHandle logHandle)
-      -- \^ logs to 'logHandle' (either 'stderr' or 'logFile')
+      -- logs to LSP client
       clientLogger :: (MonadLsp Config m, Pretty a) => LogAction m (WithSeverity a)
       clientLogger = Colog.cmap (fmap prettyText) defaultClientLogger
-      -- \^ logs to LSP client
+      -- logs to both
       dualLogger :: (MonadLsp Config m, Pretty a) => LogAction m (WithSeverity a)
       dualLogger = clientLogger <> Colog.hoistLogAction liftIO handleLogger
-    -- \^ logs to both
     -- Setup global variable holding the TC environment:
     tcEnv <- newTCEnv
     -- Setup global queue with LSP message reactions:
@@ -235,7 +235,13 @@ lspInterpretHandler tcEnv languageContextEnv =
 lspOptions :: Options
 lspOptions =
   defaultOptions
-    { optTextDocumentSync = Just textDocumentSyncOptions
+    { optServerInfo =
+        Just
+          ServerInfo
+            { _name = packageName
+            , _version = Just . T.pack $ showVersion version
+            }
+    , optTextDocumentSync = Just textDocumentSyncOptions
     }
 
 textDocumentSyncOptions :: TextDocumentSyncOptions

@@ -14,9 +14,17 @@ import Control.Monad.Trans.Resource (MonadUnliftIO)
 import Data.Aeson.Types (Value)
 import Data.Kind (Type)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Gilear.Internal.Core (TCEnv, TCIO, TCT (..), runTCIO, runTCT)
 import Language.LSP.Protocol.Types (NormalizedUri)
 import Language.LSP.Server (LanguageContextEnv, LspT (..), MonadLsp (..), runLspT)
+
+--------------------------------------------------------------------------------
+-- Executable Name
+--------------------------------------------------------------------------------
+
+packageName :: Text
+packageName = T.pack "gilear-lsp"
 
 --------------------------------------------------------------------------------
 -- Language-Server Type-Checker Monad Stack

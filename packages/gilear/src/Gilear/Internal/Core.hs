@@ -28,8 +28,8 @@ import Gilear.Internal.Parser.Core qualified as Parser
 -- Executable Name
 --------------------------------------------------------------------------------
 
-executableName :: Text
-executableName = T.pack "gilear-lsp"
+packageName :: Text
+packageName = T.pack "gilear"
 
 --------------------------------------------------------------------------------
 -- Type-Checker Environments
