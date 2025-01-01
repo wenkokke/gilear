@@ -54,6 +54,12 @@
       "type": "object",
       "title": "Gilear",
       "properties": {
+        "gilear.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
+        },
         "gilear.trace.server": {
           "scope": "window",
           "type": "string",
@@ -63,7 +69,7 @@
             "verbose"
           ],
           "default": "messages",
-          "description": "Traces the communication between VS Code and the language server."
+          "description": "Traces the communication between VSCode and the language server."
         }
       }
     }
