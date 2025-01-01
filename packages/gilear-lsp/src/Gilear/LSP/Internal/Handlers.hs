@@ -14,12 +14,14 @@ import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Any (..))
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
-import Data.Text.Lines qualified as Rope
 import Gilear.Internal.Core (lookupCache)
-import Gilear.Internal.Parser (InputEncoding (..), TextEdit (..))
-import Gilear.Internal.Parser qualified as TC
 import Gilear.Internal.Core.Cache (CacheItem (..))
+import Gilear.Internal.Core.Location (Point (..))
+import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToRope)
+import Gilear.Internal.Parser (InputEncoding (..))
+import Gilear.Internal.Parser qualified as TC
 import Gilear.LSP.Internal.Core (LSPTC)
 import Language.LSP.Protocol.Lens (HasContentChanges (..), HasEnd (..), HasParams (..), HasRange (..), HasStart (..), HasText (..), HasTextDocument (..), HasUri (..))
 import Language.LSP.Protocol.Message (SMethod (..))
@@ -28,7 +30,6 @@ import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
 import Language.LSP.VFS (file_text)
 import TreeSitter qualified as TS
-import Data.Text qualified as T
 
 handlers ::
   LogAction LSPTC (WithSeverity Text) ->
@@ -117,18 +118,23 @@ handlers logger clientCapabilities =
 changePartialToTextEdit :: TextDocumentContentChangePartial -> TextEdit
 changePartialToTextEdit changePartial =
   TextEdit
-    { textEditStartPosition = positionToPosition $ changePartial ^. range . start
-    , textEditOldEndPosition = positionToPosition $ changePartial ^. range . end
+    { textEditStart = positionToPoint $ changePartial ^. range . start
+    , textEditOldEnd = positionToPoint $ changePartial ^. range . end
     , textEditNewText = changePartial ^. text
     }
 
-positionToPosition :: LSP.Position -> Rope.Position
-positionToPosition (LSP.Position row column) =
-  Rope.Position (fromIntegral row) (fromIntegral column)
+{-| Convert an `LSP.Position` to a `Point`.
 
-{-| Get all 'TextDocumentContentChangePartial' items. The 'Bool' value is
-    'True' if any of the 'TextDocumentContentChangeEvent' items were
-    'TextDocumentContentChangeWholeDocument' items.
+    __Warning__: `LSP.Position` stores the row/column information as
+    **31-bit** words. Hence, the inverse of this conversion is lossy.
+-}
+positionToPoint :: LSP.Position -> Point
+positionToPoint (LSP.Position row column) = Point (fromIntegral row) (fromIntegral column)
+
+{-| Get all `TextDocumentContentChangePartial` items.
+
+    The `Bool` value is `True` if any of the `TextDocumentContentChangeEvent`
+    items were `TextDocumentContentChangeWholeDocument` items.
 -}
 partialDocumentContentChanges ::
   [TextDocumentContentChangeEvent] ->

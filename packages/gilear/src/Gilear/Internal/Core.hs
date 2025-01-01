@@ -25,6 +25,11 @@ import TreeSitter (Parser)
 import qualified TreeSitter as TS
 import TreeSitter.Gilear (tree_sitter_gilear)
 import Control.Exception (assert)
+import Colog.Core (LogAction, (<&), Severity (..))
+import Colog.Core.Severity (WithSeverity (..))
+import Control.Monad (when)
+import Data.Maybe (isJust)
+import Text.Printf (printf)
 
 --------------------------------------------------------------------------------
 -- Package Name
@@ -106,6 +111,18 @@ modifyCache f = askTCEnv >>= liftIO . (`atomicModifyIORef'` f) . (.cacheVar)
 -- | Variant of `modifyCache` that does not return a result.
 modifyCache_ :: (MonadTC uri m) => (Cache uri -> Cache uri) -> m ()
 modifyCache_ f = modifyCache ((,()) . f)
+
+-- | Assert that there is cache item associated with the given @uri@.
+assertNoCacheItem ::
+  (Show uri, Hashable uri, MonadTC uri m) =>
+  LogAction m (WithSeverity Text) ->
+  uri ->
+  m ()
+assertNoCacheItem logger uri = do
+  maybeCacheItem <- lookupCache uri
+  when (isJust maybeCacheItem) $ do
+    let message = T.pack $ printf "found cache item for %s" (show uri)
+    logger <& WithSeverity message Warning
 
 --------------------------------------------------------------------------------
 -- Type-Checker Monad Stack
