@@ -87,6 +87,7 @@ module TreeSitter (
   nodeGrammarType,
   nodeGrammarTypeAsString,
   nodeGrammarSymbol,
+  nodeRange,
   nodeStartByte,
   nodeStartPoint,
   nodeEndByte,

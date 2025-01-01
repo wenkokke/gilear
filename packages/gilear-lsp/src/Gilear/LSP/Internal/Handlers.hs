@@ -5,35 +5,37 @@
 
 module Gilear.LSP.Internal.Handlers where
 
-import Colog (Severity (..))
-import Colog.Core (LogAction, WithSeverity (WithSeverity), (<&))
+import Colog.Core (LogAction, Severity (..), WithSeverity (..), (<&))
 import Control.Lens ((^.))
-import Control.Monad (void)
+import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
+import Data.Aeson.Text (encodeToLazyText)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Any (..))
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
-import Data.Text.Lines qualified as Rope
-import Gilear.Internal.Core (lookupCache)
-import Gilear.Internal.Parser (InputEncoding (..), TextEdit (..))
+import Data.Text.Lazy qualified as TL
+import Gilear.Internal.Core qualified as TC
+import Gilear.Internal.Core.Cache qualified as TC
+import Gilear.Internal.Core.TextEdit (TextEdit (..))
+import Gilear.Internal.Parser (InputEncoding (..))
 import Gilear.Internal.Parser qualified as TC
-import Gilear.Internal.Parser.Cache (CacheItem (..))
+import Gilear.LSP.Internal.Compat.Gilear qualified as Gilear
 import Gilear.LSP.Internal.Core (LSPTC)
 import Language.LSP.Protocol.Lens (HasContentChanges (..), HasEnd (..), HasParams (..), HasRange (..), HasStart (..), HasText (..), HasTextDocument (..), HasUri (..))
 import Language.LSP.Protocol.Message (SMethod (..))
 import Language.LSP.Protocol.Types (ClientCapabilities, TextDocumentContentChangeEvent (..), TextDocumentContentChangePartial, toNormalizedUri, type (|?) (..))
-import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
-import Language.LSP.VFS (file_text)
+import Language.LSP.VFS (file_text, file_version)
 import TreeSitter qualified as TS
 
 handlers ::
   LogAction LSPTC (WithSeverity Text) ->
   ClientCapabilities ->
   LSP.Handlers LSPTC
-handlers logger _clientCapabilities =
+handlers logger clientCapabilities =
   mconcat
     [ initializedHandler
     , textDocumentDidOpenHandler
@@ -46,6 +48,9 @@ handlers logger _clientCapabilities =
   initializedHandler :: LSP.Handlers LSPTC
   initializedHandler =
     LSP.notificationHandler SMethod_Initialized $ \_notification -> do
+      logger <& WithSeverity (T.pack "ClientCapabilities: " <> TL.toStrict (encodeToLazyText clientCapabilities)) Debug
+      config <- LSP.getConfig
+      logger <& WithSeverity (T.pack "Config: " <> TL.toStrict (encodeToLazyText config)) Debug
       pure ()
 
   textDocumentDidOpenHandler :: LSP.Handlers LSPTC
@@ -58,8 +63,11 @@ handlers logger _clientCapabilities =
         Nothing -> pure () -- TODO: report error
         Just docVirtualFile -> do
           let docRope = docVirtualFile ^. file_text
-          _success <- TC.documentOpen logger InputEncodingUTF8 docUri docRope
-          pure ()
+          success <- TC.documentOpen logger InputEncodingUTF8 docUri docRope
+          when success $ do
+            let docVersion = docVirtualFile ^. file_version
+            logger <& T.pack ("Successfully opened " <> show docUri <> " version " <> show docVersion) `WithSeverity` Debug
+            Gilear.publishParserDiagnostics logger docUri (Just 0)
 
   textDocumentDidSaveHandler :: LSP.Handlers LSPTC
   textDocumentDidSaveHandler =
@@ -87,19 +95,22 @@ handlers logger _clientCapabilities =
           let (docChangesPartial, docChangesWholeDocument) = partialDocumentContentChanges docChanges
           let docTextEdits = changePartialToTextEdit <$> docChangesPartial
           let docRope = docVirtualFile ^. file_text
-          if docChangesWholeDocument
-            -- ... try and parse the whole document from the VFS
-            then void $ TC.documentChangeWholeDocument logger InputEncodingUTF8 docUri docRope
-            -- Otherwise, parse the document incrementally...
-            else void $ TC.documentChangePartial logger InputEncodingUTF8 docUri docRope docTextEdits
-      -- Log the tree for debugging purposes
-      lookupCache docUri >>= \case
-        Nothing -> pure ()
-        Just (CacheItem _docRope docTree) -> do
-          docRootNode <- liftIO $ TS.treeRootNode docTree
-          docTreeString <- liftIO $ TS.showNode docRootNode
-          let message = T.decodeUtf8 docTreeString
-          logger <& WithSeverity message Debug
+          success <-
+            if docChangesWholeDocument
+              -- ... try and parse the whole document from the VFS
+              then TC.documentChangeWholeDocument logger InputEncodingUTF8 docUri docRope
+              -- Otherwise, parse the document incrementally...
+              else TC.documentChangePartial logger InputEncodingUTF8 docUri docRope docTextEdits
+          when success $ do
+            let docVersion = docVirtualFile ^. file_version
+            logger <& T.pack ("Successfully changed " <> show docUri <> " version " <> show docVersion) `WithSeverity` Debug
+            Gilear.publishParserDiagnostics logger docUri (Just . fromIntegral $ docVersion)
+            TC.lookupCache docUri >>= \case
+              Nothing -> pure ()
+              Just cacheItem -> do
+                rootNode <- liftIO (TS.treeRootNode (TC.itemTree cacheItem))
+                nodeText <- liftIO (T.decodeUtf8 <$> TS.showNode rootNode)
+                logger <& nodeText `WithSeverity` Debug
 
   textDocumentDidCloseHandler :: LSP.Handlers LSPTC
   textDocumentDidCloseHandler =
@@ -115,18 +126,15 @@ handlers logger _clientCapabilities =
 changePartialToTextEdit :: TextDocumentContentChangePartial -> TextEdit
 changePartialToTextEdit changePartial =
   TextEdit
-    { textEditStartPosition = positionToPosition $ changePartial ^. range . start
-    , textEditOldEndPosition = positionToPosition $ changePartial ^. range . end
-    , textEditNewText = changePartial ^. text
+    { editStart = Gilear.exportPoint $ changePartial ^. range . start
+    , editOldEnd = Gilear.exportPoint $ changePartial ^. range . end
+    , editNewText = changePartial ^. text
     }
 
-positionToPosition :: LSP.Position -> Rope.Position
-positionToPosition (LSP.Position row column) =
-  Rope.Position (fromIntegral row) (fromIntegral column)
+{-| Get all `TextDocumentContentChangePartial` items.
 
-{-| Get all 'TextDocumentContentChangePartial' items. The 'Bool' value is
-    'True' if any of the 'TextDocumentContentChangeEvent' items were
-    'TextDocumentContentChangeWholeDocument' items.
+    The `Bool` value is `True` if any of the `TextDocumentContentChangeEvent`
+    items were `TextDocumentContentChangeWholeDocument` items.
 -}
 partialDocumentContentChanges ::
   [TextDocumentContentChangeEvent] ->

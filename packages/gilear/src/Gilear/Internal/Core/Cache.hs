@@ -1,13 +1,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
-module Gilear.Internal.Parser.Cache (
+module Gilear.Internal.Core.Cache (
   Cache,
   CacheItem (..),
   empty,
   insert,
   delete,
   lookup,
+  adjust,
 ) where
 
 import Data.HashMap.Strict (HashMap)
@@ -15,6 +16,7 @@ import Data.HashMap.Strict qualified as M
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
 import Data.Text.Mixed.Rope (Rope)
+import Gilear.Internal.Core.Diagnostics (Diagnostics)
 import TreeSitter (Tree)
 import Prelude hiding (lookup)
 
@@ -22,6 +24,7 @@ type CacheItem :: Type
 data CacheItem = CacheItem
   { itemRope :: !Rope
   , itemTree :: !Tree
+  , itemDiagnostics :: !Diagnostics
   }
 
 -- | Collection of ASTs for all open files.
@@ -39,3 +42,6 @@ delete uri cache = Cache $ M.delete uri (unCache cache)
 
 lookup :: (Hashable uri) => uri -> Cache uri -> Maybe CacheItem
 lookup uri cache = M.lookup uri (unCache cache)
+
+adjust :: (Hashable uri) => (CacheItem -> CacheItem) -> uri -> Cache uri -> Cache uri
+adjust f uri cache = Cache $ M.adjust f uri (unCache cache)

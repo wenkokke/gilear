@@ -24,6 +24,7 @@ library
     , base                  >=4.13    && <5
     , co-log                >=0.6     && <0.7
     , co-log-core           >=0.3     && <0.4
+    , data-default          >=0.7     && <0.8
     , gilear                >=0.0     && <0.1
     , lens                  >=5.3     && <5.4
     , lsp                   >=2.7.0.1 && <2.8
@@ -38,8 +39,10 @@ library
     , transformers          >=0.6     && <0.7
     , tree-sitter           >=0.13    && <0.14
 
+  -- , containers            >=0.6     && <0.8
   exposed-modules: Gilear.LSP
   other-modules:
+    Gilear.LSP.Internal.Compat.Gilear
     Gilear.LSP.Internal.Core
     Gilear.LSP.Internal.Handlers
     Paths_gilear_lsp

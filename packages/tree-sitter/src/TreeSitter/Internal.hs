@@ -98,6 +98,7 @@ module TreeSitter.Internal (
   nodeGrammarType,
   nodeGrammarTypeAsString,
   nodeGrammarSymbol,
+  nodeRange,
   nodeStartByte,
   nodeStartPoint,
   nodeEndByte,
@@ -343,6 +344,7 @@ pattern Point
 {-# COMPLETE Point #-}
 
 newtype Range = WrapTSRange {unWrapTSRange :: C.TSRange}
+  deriving stock (Eq, Show)
 
 pattern Range :: Point -> Point -> Word32 -> Word32 -> Range
 pattern Range
@@ -898,6 +900,15 @@ nodeGrammarTypeAsString = fmap (BSC.unpack . coerce) . nodeGrammarType
 nodeGrammarSymbol :: Node -> IO Symbol
 nodeGrammarSymbol = coerce C.ts_node_grammar_symbol
 {-# INLINE nodeGrammarSymbol #-}
+
+-- | Get the `Range` for the `Node`.
+nodeRange :: Node -> IO Range
+nodeRange node = do
+  rangeStartByte <- nodeStartByte node
+  rangeEndByte <- nodeEndByte node
+  rangeStartPoint <- nodeStartPoint node
+  rangeEndPoint <- nodeEndPoint node
+  pure Range{..}
 
 -- | See @`C.ts_node_start_byte`@.
 nodeStartByte :: Node -> IO Word32
