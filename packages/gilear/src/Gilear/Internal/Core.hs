@@ -19,13 +19,15 @@ import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.Kind (Constraint, Type)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Gilear.Internal.Parser.Cache (Cache, CacheItem)
-import Gilear.Internal.Parser.Cache qualified as Cache
-import Gilear.Internal.Parser.Core (Parser)
-import Gilear.Internal.Parser.Core qualified as Parser
+import Gilear.Internal.Core.Cache (Cache, CacheItem)
+import Gilear.Internal.Core.Cache qualified as Cache
+import TreeSitter (Parser)
+import qualified TreeSitter as TS
+import TreeSitter.Gilear (tree_sitter_gilear)
+import Control.Exception (assert)
 
 --------------------------------------------------------------------------------
--- Executable Name
+-- Package Name
 --------------------------------------------------------------------------------
 
 packageName :: Text
@@ -47,10 +49,21 @@ data TCEnv uri = TCEnv
   , cacheVar :: IORef (Cache uri)
   }
 
+-- | Create a new tree-sitter parser.
+--
+--   NOTE: This function is not defined in 'Gilear.Parser' to avoid cyclic dependencies.
+newParser :: IO Parser
+newParser = do
+  parser <- TS.parserNew
+  language <- TS.unsafeToLanguage =<< tree_sitter_gilear
+  success <- TS.parserSetLanguage parser language
+  -- TODO: report an error rather than dying
+  assert success $ pure parser
+
 -- | Create an empty type-checker environment.
 newTCEnv :: IO (TCEnv uri)
 newTCEnv = do
-  parser <- Parser.new
+  parser <- newParser
   cacheVar <- newIORef Cache.empty
   pure $ TCEnv{..}
 

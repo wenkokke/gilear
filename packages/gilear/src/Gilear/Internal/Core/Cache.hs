@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
-module Gilear.Internal.Parser.Cache (
+module Gilear.Internal.Core.Cache (
   Cache,
   CacheItem (..),
   empty,

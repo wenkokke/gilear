@@ -19,7 +19,7 @@ import Data.Text.Lines qualified as Rope
 import Gilear.Internal.Core (lookupCache)
 import Gilear.Internal.Parser (InputEncoding (..), TextEdit (..))
 import Gilear.Internal.Parser qualified as TC
-import Gilear.Internal.Parser.Cache (CacheItem (..))
+import Gilear.Internal.Core.Cache (CacheItem (..))
 import Gilear.LSP.Internal.Core (LSPTC)
 import Language.LSP.Protocol.Lens (HasContentChanges (..), HasEnd (..), HasParams (..), HasRange (..), HasStart (..), HasText (..), HasTextDocument (..), HasUri (..))
 import Language.LSP.Protocol.Message (SMethod (..))
@@ -28,12 +28,13 @@ import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
 import Language.LSP.VFS (file_text)
 import TreeSitter qualified as TS
+import Data.Text qualified as T
 
 handlers ::
   LogAction LSPTC (WithSeverity Text) ->
   ClientCapabilities ->
   LSP.Handlers LSPTC
-handlers logger _clientCapabilities =
+handlers logger clientCapabilities =
   mconcat
     [ initializedHandler
     , textDocumentDidOpenHandler
@@ -46,6 +47,7 @@ handlers logger _clientCapabilities =
   initializedHandler :: LSP.Handlers LSPTC
   initializedHandler =
     LSP.notificationHandler SMethod_Initialized $ \_notification -> do
+      logger <& WithSeverity (T.pack . show $ clientCapabilities) Debug
       pure ()
 
   textDocumentDidOpenHandler :: LSP.Handlers LSPTC

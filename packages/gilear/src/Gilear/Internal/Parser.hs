@@ -25,8 +25,8 @@ import Data.Text.Lines (Position (..))
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
 import Gilear.Internal.Core (MonadTC, lookupCache, modifyCache_, withParser)
-import Gilear.Internal.Parser.Cache (CacheItem (CacheItem))
-import Gilear.Internal.Parser.Cache qualified as Cache
+import Gilear.Internal.Core.Cache (CacheItem (CacheItem))
+import Gilear.Internal.Core.Cache qualified as Cache
 import Text.Printf (printf)
 import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
