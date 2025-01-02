@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Gilear.Internal.Parser (
   InputEncoding (..),
@@ -21,8 +22,9 @@ import Data.Text.Encoding qualified as T
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
 import Gilear.Internal.Core (MonadTC, assertNoCacheItem, lookupCache, modifyCache_, withParser)
-import Gilear.Internal.Core.Cache (CacheItem (CacheItem))
+import Gilear.Internal.Core.Cache (CacheItem (..))
 import Gilear.Internal.Core.Cache qualified as Cache
+import Gilear.Internal.Core.Diagnostics qualified as Diagnostics
 import Gilear.Internal.Core.Location (pointToPosition)
 import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToCacheItem)
 import Text.Printf (printf)
@@ -68,7 +70,7 @@ documentChangeWholeDocument logger encoding uri rope = do
     Just tree -> do
       -- ... update the tree
       -- TODO: do not update tree if it contains errors?
-      modifyCache_ $ Cache.insert uri (CacheItem rope tree)
+      modifyCache_ $ Cache.insert uri (CacheItem rope tree Diagnostics.empty)
       pure True
 
 -- | Change the part of the content of the text document.
@@ -93,7 +95,7 @@ documentChangePartial logger encoding uri newRope edits = do
     -- If an old tree is found...
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
-      CacheItem editedOldRope editedOldTree <-
+      CacheItem {itemRope = editedOldRope, itemTree = editedOldTree, .. } <-
         liftIO $ applyTextEditToCacheItem encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
@@ -113,7 +115,7 @@ documentChangePartial logger encoding uri newRope edits = do
         Just newTree -> do
           -- ... update the tree
           -- TODO: do not update tree if it contains errors?
-          modifyCache_ $ Cache.insert uri (CacheItem newRope newTree)
+          modifyCache_ $ Cache.insert uri (CacheItem { itemRope = newRope, itemTree = newTree, ..})
           pure True
 
 {-| Parse a document from 'Rope'. This function uses the UTF8 encoding,

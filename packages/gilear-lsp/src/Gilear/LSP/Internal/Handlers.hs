@@ -2,6 +2,7 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Gilear.LSP.Internal.Handlers where
 
@@ -19,7 +20,7 @@ import Data.Text.Encoding qualified as T
 import Gilear.Internal.Core (lookupCache)
 import Gilear.Internal.Core.Cache (CacheItem (..))
 import Gilear.Internal.Core.Location (Point (..))
-import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToRope)
+import Gilear.Internal.Core.TextEdit (TextEdit (..))
 import Gilear.Internal.Parser (InputEncoding (..))
 import Gilear.Internal.Parser qualified as TC
 import Gilear.LSP.Internal.Core (LSPTC)
@@ -98,8 +99,8 @@ handlers logger clientCapabilities =
       -- Log the tree for debugging purposes
       lookupCache docUri >>= \case
         Nothing -> pure ()
-        Just (CacheItem _docRope docTree) -> do
-          docRootNode <- liftIO $ TS.treeRootNode docTree
+        Just CacheItem {..} -> do
+          docRootNode <- liftIO $ TS.treeRootNode itemTree
           docTreeString <- liftIO $ TS.showNode docRootNode
           let message = T.decodeUtf8 docTreeString
           logger <& WithSeverity message Debug
@@ -118,9 +119,9 @@ handlers logger clientCapabilities =
 changePartialToTextEdit :: TextDocumentContentChangePartial -> TextEdit
 changePartialToTextEdit changePartial =
   TextEdit
-    { textEditStart = positionToPoint $ changePartial ^. range . start
-    , textEditOldEnd = positionToPoint $ changePartial ^. range . end
-    , textEditNewText = changePartial ^. text
+    { editStart = positionToPoint $ changePartial ^. range . start
+    , editOldEnd = positionToPoint $ changePartial ^. range . end
+    , editNewText = changePartial ^. text
     }
 
 {-| Convert an `LSP.Position` to a `Point`.

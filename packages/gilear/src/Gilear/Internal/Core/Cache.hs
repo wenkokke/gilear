@@ -17,11 +17,13 @@ import Data.Kind (Type)
 import Data.Text.Mixed.Rope (Rope)
 import TreeSitter (Tree)
 import Prelude hiding (lookup)
+import Gilear.Internal.Core.Diagnostics (Diagnostics)
 
 type CacheItem :: Type
 data CacheItem = CacheItem
   { itemRope :: !Rope
   , itemTree :: !Tree
+  , itemDiagnostics :: !Diagnostics
   }
 
 -- | Collection of ASTs for all open files.

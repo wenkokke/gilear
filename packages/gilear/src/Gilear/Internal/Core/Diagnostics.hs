@@ -19,6 +19,9 @@ data Diagnostic = Diagnostic
 
 newtype Diagnostics = Diagnostics {unDiagnostics :: IntervalMap ByteIndex Diagnostic}
 
+empty :: Diagnostics
+empty = Diagnostics IM.empty
+
 insert :: Diagnostic -> Diagnostics -> Diagnostics
 insert diagnostic diagnostics =
   Diagnostics (IM.insert interval diagnostic (unDiagnostics diagnostics))

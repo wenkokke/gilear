@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 module Gilear.Internal.Core.TextEdit where
 
 import Data.Text (Text)
@@ -9,9 +10,9 @@ import Data.Text.Mixed.Rope qualified as Rope
 import Gilear.Internal.Core.Cache (CacheItem (..))
 
 data TextEdit = TextEdit
-  { textEditStart :: Point
-  , textEditOldEnd :: Point
-  , textEditNewText :: Text
+  { editStart :: Point
+  , editOldEnd :: Point
+  , editNewText :: Text
   }
 
 applyTextEditToCacheItem :: InputEncoding -> [TextEdit] -> CacheItem -> IO CacheItem
@@ -19,21 +20,21 @@ applyTextEditToCacheItem encoding = go
  where
   go :: [TextEdit] -> CacheItem -> IO CacheItem
   go [] cacheItem = pure cacheItem
-  go (textEdit : textEdits) (CacheItem oldRope mutTree) = do
-    let (newRope, inputEdit) = applyTextEditToRope encoding textEdit oldRope
+  go (edit : edits) (CacheItem {itemRope = oldRope, itemTree = mutTree, ..}) = do
+    let (newRope, inputEdit) = applyTextEditToRope encoding edit oldRope
     TS.treeEdit mutTree inputEdit
-    go textEdits (CacheItem newRope mutTree)
+    go edits (CacheItem {itemRope = newRope, itemTree = mutTree, ..})
 
 applyTextEditToRope :: InputEncoding -> TextEdit -> Rope -> (Rope, TS.InputEdit)
-applyTextEditToRope encoding textEdit oldRope = (newRope, inputEdit)
+applyTextEditToRope encoding edit oldRope = (newRope, inputEdit)
   where
   -- Compute 'Rope' length in bytes depending on encoding
   lengthInBytes :: Rope -> Word
   lengthInBytes = case encoding of
     TS.InputEncodingUTF8 -> Rope.utf8Length
     TS.InputEncodingUTF16 -> Rope.utf16Length
-  -- Unpack the textEdit
-  (TextEdit startPoint oldEndPoint newText) = textEdit
+  -- Unpack the edit
+  (TextEdit startPoint oldEndPoint newText) = edit
   -- Compute 'startPosition' from 'startPoint' and 'oldEndPosition' from 'oldEndPoint'
   startPosition = pointToPosition startPoint
   oldEndPosition = pointToPosition oldEndPoint
