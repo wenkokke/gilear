@@ -16,10 +16,11 @@ module TreeSitter.Internal (
   C.TREE_SITTER_LANGUAGE_VERSION,
   C.TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION,
 
-  -- * TypesStateId
-  Symbol,
+  -- * Types
+  Symbol (..),
+  StateId (..),
   GrammarType (..),
-  FieldId,
+  FieldId (..),
   FieldName (..),
   CaptureName (..),
   CaptureIndex (..),
@@ -1578,7 +1579,7 @@ languageFieldCount language =
     C.ts_language_field_count languagePtr
 
 -- | See @`C.ts_language_field_name_for_id`@.
-languageFieldNameForId :: Language -> C.TSFieldId -> IO ByteString
+languageFieldNameForId :: Language -> FieldId -> IO ByteString
 languageFieldNameForId language fieldId =
   withLanguageAsTSLanguagePtr language $ \languagePtr ->
     BSU.unsafePackCString =<< coerce C.ts_language_field_name_for_id languagePtr fieldId
