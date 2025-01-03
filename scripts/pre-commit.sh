@@ -74,6 +74,12 @@ if [ ! "${UNSTAGED_MARKDOWN_FILES}" = "" ]; then
 fi
 
 # Run various checks and formatters
+(./scripts/format-cabal-fmt.sh || echo > "${FAIL}")
+echo
+(./scripts/format-fourmolu.sh || echo > "${FAIL}")
+echo
+(./scripts/format-prettier.sh || echo > "${FAIL}")
+echo
 (./scripts/lint-actionlint.sh || echo > "${FAIL}")
 echo
 (./scripts/lint-cabal.sh || echo > "${FAIL}")
@@ -81,12 +87,6 @@ echo
 (./scripts/lint-hlint.sh || echo > "${FAIL}")
 echo
 (./scripts/lint-shellcheck.sh || echo > "${FAIL}")
-echo
-(./scripts/format-cabal-fmt.sh || echo > "${FAIL}")
-echo
-(./scripts/format-fourmolu.sh || echo > "${FAIL}")
-echo
-(./scripts/format-prettier.sh || echo > "${FAIL}")
 echo
 
 # Check whether or not any subcommand failed:
