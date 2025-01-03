@@ -99,7 +99,7 @@ handlers logger clientCapabilities =
       -- Log the tree for debugging purposes
       lookupCache docUri >>= \case
         Nothing -> pure ()
-        Just CacheItem {..} -> do
+        Just CacheItem{..} -> do
           docRootNode <- liftIO $ TS.treeRootNode itemTree
           docTreeString <- liftIO $ TS.showNode docRootNode
           let message = T.decodeUtf8 docTreeString

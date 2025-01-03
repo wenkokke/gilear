@@ -1,8 +1,8 @@
 module Gilear.Internal.Core.Diagnostics where
 
-import Data.Text (Text)
 import Data.IntervalMap.Strict (IntervalMap)
 import Data.IntervalMap.Strict qualified as IM
+import Data.Text (Text)
 import Gilear.Internal.Core.Location (ByteIndex, ByteRange, Range, byteRangeToInterval, rangeToByteRange)
 
 data Severity
@@ -25,11 +25,11 @@ empty = Diagnostics IM.empty
 insert :: Diagnostic -> Diagnostics -> Diagnostics
 insert diagnostic diagnostics =
   Diagnostics (IM.insert interval diagnostic (unDiagnostics diagnostics))
-  where
-    interval = byteRangeToInterval (rangeToByteRange (diagnosticRange diagnostic))
+ where
+  interval = byteRangeToInterval (rangeToByteRange (diagnosticRange diagnostic))
 
 deleteByRange :: ByteRange -> Diagnostics -> Diagnostics
 deleteByRange byteRange diagnostics = Diagnostics (before <> after)
-  where
-    (before, _intersecting, after) =
-      IM.splitIntersecting (unDiagnostics diagnostics) (byteRangeToInterval byteRange)
+ where
+  (before, _intersecting, after) =
+    IM.splitIntersecting (unDiagnostics diagnostics) (byteRangeToInterval byteRange)

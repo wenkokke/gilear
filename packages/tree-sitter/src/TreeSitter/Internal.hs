@@ -342,6 +342,7 @@ pattern Point
 {-# COMPLETE Point #-}
 
 newtype Range = WrapTSRange {unWrapTSRange :: C.TSRange}
+  deriving stock (Eq, Show)
 
 pattern Range :: Point -> Point -> Word32 -> Word32 -> Range
 pattern Range

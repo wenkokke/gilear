@@ -28,7 +28,7 @@ import Gilear.Internal.Core.Diagnostics qualified as Diagnostics
 import Gilear.Internal.Core.Location (pointToPosition)
 import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToCacheItem)
 import Text.Printf (printf)
-import TreeSitter (InputEncoding (..))
+import TreeSitter (InputEncoding (..), unWrapTSNodeId)
 import TreeSitter qualified as TS
 
 -- | Open a text document.
@@ -95,7 +95,7 @@ documentChangePartial logger encoding uri newRope edits = do
     -- If an old tree is found...
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
-      CacheItem {itemRope = editedOldRope, itemTree = editedOldTree, .. } <-
+      CacheItem{itemRope = editedOldRope, itemTree = editedOldTree, ..} <-
         liftIO $ applyTextEditToCacheItem encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
@@ -115,8 +115,66 @@ documentChangePartial logger encoding uri newRope edits = do
         Just newTree -> do
           -- ... update the tree
           -- TODO: do not update tree if it contains errors?
-          modifyCache_ $ Cache.insert uri (CacheItem { itemRope = newRope, itemTree = newTree, ..})
+          modifyCache_ $ Cache.insert uri (CacheItem{itemRope = newRope, itemTree = newTree, ..})
+          -- TODO: remove logging of changed ranges
+          -- changedRanges <- liftIO $ TS.treeGetChangedRanges editedOldTree newTree
+          -- let message = T.pack . show $ changedRanges
+          -- logger <& WithSeverity message Info
+          rootNode <- liftIO (TS.treeRootNode newTree)
+          let skipM node =
+                liftIO $
+                  (&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node
+          let actionM node = do
+                isErrorOrMissing <-
+                  liftIO $
+                    (||) <$> TS.nodeIsError node <*> TS.nodeIsMissing node
+                when isErrorOrMissing $ do
+                  message <- liftIO (TS.showNode node)
+                  logger <& WithSeverity (T.decodeUtf8 message) Info
+          depthFirst rootNode skipM actionM
           pure True
+
+{- Note [Diagnostics]
+
+for each changed range:
+
+1. delete that range from the previous diagnostics
+2. use `nodeDescendantForByteRange` for the smallest node covering that range
+3. use `treeCursorNew` to walk the tree from that node by repeatedly using the
+   functions `treeCursorGotoFirstChild`, `treeCursorGotoParent`,
+   and `treeCursorGotoNextSibling` to traverse the tree in depth-first order
+4. use `treeCursorCurrentNode` and `nodeHasError` to determine whether or not
+   to traverse deeper into any particular subtree
+5. use `nodeIsError` and `nodeIsMissing` on each node to determine whether or
+   not to generate a diagnostic for that node
+
+-}
+
+depthFirst :: (MonadIO m) => TS.Node -> (TS.Node -> m Bool) -> (TS.Node -> m ()) -> m ()
+depthFirst node skipM actionM =
+  gotoFirstChild =<< liftIO (TS.treeCursorNew node)
+ where
+  gotoFirstChild treeCursor = do
+    currentNode <- liftIO (TS.treeCursorCurrentNode treeCursor)
+    skip <- skipM currentNode
+    if skip
+      then gotoNextSibling treeCursor
+      else do
+        actionM currentNode
+        success <- liftIO (TS.treeCursorGotoFirstChild treeCursor)
+        if success
+          then gotoFirstChild treeCursor
+          else gotoNextSibling treeCursor
+
+  gotoNextSibling treeCursor = do
+    success <- liftIO (TS.treeCursorGotoNextSibling treeCursor)
+    if success
+      then gotoFirstChild treeCursor
+      else gotoParent treeCursor
+
+  gotoParent treeCursor = do
+    success <- liftIO (TS.treeCursorGotoParent treeCursor)
+    when success $ gotoNextSibling treeCursor
 
 {-| Parse a document from 'Rope'. This function uses the UTF8 encoding,
   since that is the encoding used internally by both 'Text' and 'Rope'.

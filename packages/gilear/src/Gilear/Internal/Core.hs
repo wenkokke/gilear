@@ -9,6 +9,10 @@
 
 module Gilear.Internal.Core where
 
+import Colog.Core (LogAction, Severity (..), (<&))
+import Colog.Core.Severity (WithSeverity (..))
+import Control.Exception (assert)
+import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
@@ -17,19 +21,15 @@ import Data.Functor ((<&>))
 import Data.Hashable (Hashable)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.Kind (Constraint, Type)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Gilear.Internal.Core.Cache (Cache, CacheItem)
 import Gilear.Internal.Core.Cache qualified as Cache
-import TreeSitter (Parser)
-import qualified TreeSitter as TS
-import TreeSitter.Gilear (tree_sitter_gilear)
-import Control.Exception (assert)
-import Colog.Core (LogAction, (<&), Severity (..))
-import Colog.Core.Severity (WithSeverity (..))
-import Control.Monad (when)
-import Data.Maybe (isJust)
 import Text.Printf (printf)
+import TreeSitter (Parser)
+import TreeSitter qualified as TS
+import TreeSitter.Gilear (tree_sitter_gilear)
 
 --------------------------------------------------------------------------------
 -- Package Name
@@ -54,9 +54,10 @@ data TCEnv uri = TCEnv
   , cacheVar :: IORef (Cache uri)
   }
 
--- | Create a new tree-sitter parser.
---
---   NOTE: This function is not defined in 'Gilear.Parser' to avoid cyclic dependencies.
+{-| Create a new tree-sitter parser.
+
+  NOTE: This function is not defined in 'Gilear.Parser' to avoid cyclic dependencies.
+-}
 newParser :: IO Parser
 newParser = do
   parser <- TS.parserNew

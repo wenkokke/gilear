@@ -15,9 +15,9 @@ import Data.HashMap.Strict qualified as M
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
 import Data.Text.Mixed.Rope (Rope)
+import Gilear.Internal.Core.Diagnostics (Diagnostics)
 import TreeSitter (Tree)
 import Prelude hiding (lookup)
-import Gilear.Internal.Core.Diagnostics (Diagnostics)
 
 type CacheItem :: Type
 data CacheItem = CacheItem
