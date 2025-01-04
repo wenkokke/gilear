@@ -9,27 +9,54 @@
 
 module Gilear.Internal.Core where
 
+import Colog.Core (LogAction, Severity (..), (<&))
+import Colog.Core.Severity (WithSeverity (..))
+import Control.Monad (unless, when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import Data.Functor ((<&>))
 import Data.Hashable (Hashable)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.Kind (Constraint, Type)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Gilear.Internal.Parser.Cache (Cache, CacheItem)
-import Gilear.Internal.Parser.Cache qualified as Cache
-import Gilear.Internal.Parser.Core (Parser)
-import Gilear.Internal.Parser.Core qualified as Parser
+import Gilear.Internal.Core.Cache (Cache, CacheItem)
+import Gilear.Internal.Core.Cache qualified as Cache
+import Text.Printf (printf)
+import TreeSitter (Parser)
+import TreeSitter qualified as TS
+import TreeSitter.Gilear (tree_sitter_gilear)
 
 --------------------------------------------------------------------------------
--- Executable Name
+-- Package Name
 --------------------------------------------------------------------------------
 
 packageName :: Text
 packageName = T.pack "gilear"
+
+--------------------------------------------------------------------------------
+-- Parser
+--
+-- NOTE: These functions are not defined in `Gilear.Internal.Parser` in order to
+--       avoid a cyclic dependency.
+--------------------------------------------------------------------------------
+
+-- | Create a new tree-sitter parser environment.
+newParser :: IO Parser
+newParser = do
+  -- Initialise a new tree-sitter parser
+  parser <- TS.parserNew
+  -- Initialise the tree-sitter-gilear language
+  language <- TS.unsafeToLanguage =<< tree_sitter_gilear
+  -- Configure the parser
+  success <- TS.parserSetLanguage parser language
+  unless success $
+    -- TODO: report an error rather than dying
+    fail "gilear: failed to set parser language"
+  -- Return the parser environment
+  pure parser
 
 --------------------------------------------------------------------------------
 -- Type-Checker Environments
@@ -41,6 +68,8 @@ packageName = T.pack "gilear"
   used with the reader monad, rather than the state monad. However, it is
   intended to hold references to mutable state.
 -}
+
+-- TODO: use `MVar` or `TMVar` for the parser to avoid concurrent use
 type TCEnv :: Type -> Type
 data TCEnv uri = TCEnv
   { parser :: Parser
@@ -50,7 +79,7 @@ data TCEnv uri = TCEnv
 -- | Create an empty type-checker environment.
 newTCEnv :: IO (TCEnv uri)
 newTCEnv = do
-  parser <- Parser.new
+  parser <- newParser
   cacheVar <- newIORef Cache.empty
   pure $ TCEnv{..}
 
@@ -73,8 +102,7 @@ askParser = (.parser) <$> askTCEnv
 
 -- | Run a type-checking action with the `Parser`.
 withParser :: (MonadTC uri m) => (Parser -> m a) -> m a
-withParser action =
-  askParser >>= action
+withParser action = askParser >>= action
 
 -- * Cache
 
@@ -94,6 +122,18 @@ modifyCache f = askTCEnv >>= liftIO . (`atomicModifyIORef'` f) . (.cacheVar)
 modifyCache_ :: (MonadTC uri m) => (Cache uri -> Cache uri) -> m ()
 modifyCache_ f = modifyCache ((,()) . f)
 
+-- | Assert that there is cache item associated with the given @uri@.
+assertNoCacheItem ::
+  (Show uri, Hashable uri, MonadTC uri m) =>
+  LogAction m (WithSeverity Text) ->
+  uri ->
+  m ()
+assertNoCacheItem logger uri = do
+  maybeCacheItem <- lookupCache uri
+  when (isJust maybeCacheItem) $ do
+    let message = T.pack $ printf "found cache item for %s" (show uri)
+    logger <& WithSeverity message Warning
+
 --------------------------------------------------------------------------------
 -- Type-Checker Monad Stack
 --------------------------------------------------------------------------------
@@ -109,12 +149,12 @@ modifyCache_ f = modifyCache ((,()) . f)
      state being threaded through sequentially.
 -}
 type TCIO :: Type -> Type
-newtype TCIO a = TCIO {unTCIO :: ResourceT IO a}
+newtype TCIO a = TCIO {unTCIO :: IO a}
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO)
 
 -- | Run the type-checker IO monad.
 runTCIO :: TCIO a -> IO a
-runTCIO action = runResourceT (unTCIO action)
+runTCIO = unTCIO
 
 type TCT :: Type -> (Type -> Type) -> Type -> Type
 newtype TCT uri m a = TCT {unTCT :: ReaderT (TCEnv uri) m a}

@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Gilear.Internal.Parser (
-  TextEdit (..),
-  Position (..),
   InputEncoding (..),
   documentOpen,
   documentChangeWholeDocument,
@@ -17,25 +17,21 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Lazy qualified as BSL
 import Data.Hashable (Hashable)
-import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
-import Data.Text.Lines (Position (..))
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
-import Gilear.Internal.Core (MonadTC, lookupCache, modifyCache_, withParser)
-import Gilear.Internal.Parser.Cache (CacheItem (CacheItem))
-import Gilear.Internal.Parser.Cache qualified as Cache
+import Data.Text.Mixed.Rope.Extra (charAt)
+import Gilear.Internal.Core (MonadTC, assertNoCacheItem, lookupCache, modifyCache_, withParser)
+import Gilear.Internal.Core.Cache (CacheItem (..))
+import Gilear.Internal.Core.Cache qualified as Cache
+import Gilear.Internal.Core.Diagnostics qualified as Diagnostics
+import Gilear.Internal.Core.Location (pointToPosition)
+import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToCacheItem)
 import Text.Printf (printf)
 import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
-
-data TextEdit = TextEdit
-  { textEditStartPosition :: Position
-  , textEditOldEndPosition :: Position
-  , textEditNewText :: Text
-  }
 
 -- | Open a text document.
 documentOpen ::
@@ -76,7 +72,7 @@ documentChangeWholeDocument logger encoding uri rope = do
     Just tree -> do
       -- ... update the tree
       -- TODO: do not update tree if it contains errors?
-      modifyCache_ $ Cache.insert uri (CacheItem rope tree)
+      modifyCache_ $ Cache.insert uri (CacheItem rope tree Diagnostics.empty)
       pure True
 
 -- | Change the part of the content of the text document.
@@ -101,8 +97,8 @@ documentChangePartial logger encoding uri newRope edits = do
     -- If an old tree is found...
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
-      CacheItem editedOldRope editedOldTree <-
-        liftIO $ editCacheItem encoding edits cacheItem
+      CacheItem{itemRope = editedOldRope, itemTree = editedOldTree, ..} <-
+        liftIO $ applyTextEditToCacheItem encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
         let message = T.pack $ printf "edited rope out of sync with new rope for %s" (show uri)
@@ -121,50 +117,96 @@ documentChangePartial logger encoding uri newRope edits = do
         Just newTree -> do
           -- ... update the tree
           -- TODO: do not update tree if it contains errors?
-          modifyCache_ $ Cache.insert uri (CacheItem newRope newTree)
+          modifyCache_ $ Cache.insert uri (CacheItem{itemRope = newRope, itemTree = newTree, ..})
+          -- Traverse the syntax tree searching for errors:
+          rootNode <- liftIO (TS.treeRootNode newTree)
+          let gotoChildIfNewError node =
+                liftIO $ not <$> ((&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node)
+          depthFirst rootNode gotoChildIfNewError $ \node -> do
+            nodeIsMissing <- liftIO (TS.nodeIsMissing node)
+            if nodeIsMissing
+              then do
+                symbolMissing <- liftIO (T.pack . show <$> TS.nodeSymbol node)
+                nodeString <- liftIO (T.decodeUtf8 <$> TS.showNode node)
+                logger <& ("MISSING(" <> symbolMissing <> "): " <> nodeString) `WithSeverity` Debug
+              else do
+                nodeIsError <- liftIO (TS.nodeIsError node)
+                nodeChildCount <- liftIO (TS.nodeChildCount node)
+                nodeStartPoint <- liftIO (TS.nodeStartPoint node)
+                nodeEndPoint <- liftIO (TS.nodeEndPoint node)
+                when (nodeIsError && nodeChildCount == 0 && nodeStartPoint < nodeEndPoint) $ do
+                  previousLeaf <- gotoPreviousLeaf node
+                  previousStateId <- liftIO (TS.nodeParseState previousLeaf)
+                  expectedSymbols <- expectedSymbolsFor previousStateId
+                  let expectedSymbolsMsg =
+                        T.intercalate
+                          ", "
+                          [ if symbolType == TS.SymbolTypeAnonymous
+                              then "'" <> symbolName <> "'"
+                              else symbolName
+                          | (symbolName, symbolType) <- expectedSymbols
+                          ]
+                  let unexpectedChar = charAt (pointToPosition nodeStartPoint) newRope
+                  logger <& ("UNEXPECTED '" <> unexpectedChar <> "' EXPECTED ONE OF " <> expectedSymbolsMsg) `WithSeverity` Debug
           pure True
 
-editCacheItem :: TS.InputEncoding -> [TextEdit] -> CacheItem -> IO CacheItem
-editCacheItem encoding = go
+gotoPreviousLeaf :: (MonadTC uri m) => TS.Node -> m TS.Node
+gotoPreviousLeaf node = do
+  treeCursor <- liftIO (TS.treeCursorNew node)
+  let gotoPreviousSibling = do
+        success <- liftIO (TS.treeCursorGotoPreviousSibling treeCursor)
+        if success then gotoLastChild else gotoParent
+      gotoLastChild = do
+        success <- liftIO (TS.treeCursorGotoLastChild treeCursor)
+        if success then gotoLastChild else currentNode
+      gotoParent = do
+        success <- liftIO (TS.treeCursorGotoParent treeCursor)
+        if success then gotoPreviousSibling else pure node
+      currentNode = liftIO (TS.treeCursorCurrentNode treeCursor)
+  gotoPreviousSibling
+
+expectedSymbolsFor :: (MonadTC uri m) => TS.StateId -> m [(Text, TS.SymbolType)]
+expectedSymbolsFor stateId = do
+  language <- withParser (liftIO . TS.parserLanguage)
+  stateCount <- liftIO (TS.languageStateCount language)
+  if fromIntegral stateId >= stateCount
+    then pure []
+    else do
+      lookaheadIterator <- liftIO (TS.lookaheadIteratorNew language stateId)
+      let loop continue
+            | continue = do
+                symbol <- liftIO (TS.lookaheadIteratorCurrentSymbol lookaheadIterator)
+                symbolType <- liftIO (TS.languageSymbolType language symbol)
+                symbolName <- liftIO (T.decodeUtf8 <$> TS.languageSymbolName language symbol)
+                success <- liftIO (TS.lookaheadIteratorNext lookaheadIterator)
+                fmap ((symbolName, symbolType) :) (loop success)
+            | otherwise = do
+                pure []
+      loop =<< liftIO (TS.lookaheadIteratorNext lookaheadIterator)
+
+depthFirst :: (MonadIO m) => TS.Node -> (TS.Node -> m Bool) -> (TS.Node -> m ()) -> m ()
+depthFirst node predGotoChild action =
+  gotoFirstChild =<< liftIO (TS.treeCursorNew node)
  where
-  go :: [TextEdit] -> CacheItem -> IO CacheItem
-  go [] cacheItem = pure cacheItem
-  go (edit : edits) (CacheItem oldRope mutTree) = do
-    let (newRope, inputEdit) = editRope oldRope edit
-    TS.treeEdit mutTree inputEdit
-    go edits (CacheItem newRope mutTree)
+  gotoFirstChild treeCursor = do
+    currentNode <- liftIO (TS.treeCursorCurrentNode treeCursor)
+    action currentNode
+    shouldGotoChild <- predGotoChild currentNode
+    if shouldGotoChild
+      then do
+        success <- liftIO (TS.treeCursorGotoFirstChild treeCursor)
+        if success then gotoFirstChild treeCursor else gotoNextSibling treeCursor
+      else gotoNextSibling treeCursor
 
-  lengthInBytes :: Rope -> Word
-  lengthInBytes = case encoding of
-    TS.InputEncodingUTF8 -> Rope.utf8Length
-    TS.InputEncodingUTF16 -> Rope.utf16Length
+  gotoNextSibling treeCursor = do
+    success <- liftIO (TS.treeCursorGotoNextSibling treeCursor)
+    if success
+      then gotoFirstChild treeCursor
+      else gotoParent treeCursor
 
-  editRope :: Rope -> TextEdit -> (Rope, TS.InputEdit)
-  editRope oldRope edit = (newRope, inputEdit)
-   where
-    (TextEdit startPosition oldEndPosition newText) = edit
-    -- Compute 'startByte' as the length before 'startPosition'
-    (oldRopeBeforeStart, _oldRopeAfterStart) = Rope.charSplitAtPosition startPosition oldRope
-    startByte = lengthInBytes oldRopeBeforeStart
-    -- Compute 'oldEndByte' as the length before 'oldEndPosition'
-    (oldRopeBeforeOldEnd, oldRopeAfterOldEnd) = Rope.charSplitAtPosition oldEndPosition oldRope
-    oldEndByte = lengthInBytes oldRopeBeforeOldEnd
-    -- Compute 'newEndPosition/Byte' as 'startPosition/Byte' and 'newText' length
-    insertedRope = Rope.fromText newText
-    newEndByte = startByte + fromIntegral (lengthInBytes insertedRope)
-    newEndPosition = startPosition <> Rope.charLengthAsPosition insertedRope
-    -- Edit Rope
-    newRope = oldRopeBeforeStart <> Rope.fromText newText <> oldRopeAfterOldEnd
-    -- Make InputEdit
-    inputEdit =
-      TS.InputEdit
-        { TS.inputEditStartByte = fromIntegral startByte
-        , TS.inputEditOldEndByte = fromIntegral oldEndByte
-        , TS.inputEditNewEndByte = fromIntegral newEndByte
-        , TS.inputEditStartPoint = positionToPoint startPosition
-        , TS.inputEditOldEndPoint = positionToPoint oldEndPosition
-        , TS.inputEditNewEndPoint = positionToPoint newEndPosition
-        }
+  gotoParent treeCursor = do
+    success <- liftIO (TS.treeCursorGotoParent treeCursor)
+    when success $ gotoNextSibling treeCursor
 
 {-| Parse a document from 'Rope'. This function uses the UTF8 encoding,
   since that is the encoding used internally by both 'Text' and 'Rope'.
@@ -182,74 +224,53 @@ parseDocumentFromRope encoding oldTree rope = do
 
 -- | Create a `TS.Input` function from a `Rope` with a desired encoding.
 inputFromRope :: TS.InputEncoding -> Int -> Rope -> TS.Input
-inputFromRope InputEncodingUTF8 = inputFromRopeUTF8
-inputFromRope InputEncodingUTF16 = inputFromRopeUTF16
-
--- | Create a `TS.Input` function from a `Rope` with UTF8 encoding.
-inputFromRopeUTF8 :: Int -> Rope -> TS.Input
-inputFromRopeUTF8 bufferSize rope _byteIndex point = do
-  let afterPosition = snd $ Rope.charSplitAtPosition (pointToPosition point) rope
-  let buffer = fillBuffer (Rope.lines afterPosition) bufferSize mempty
-  pure . BSL.toStrict . BSB.toLazyByteString $ buffer
+inputFromRope = \case
+  InputEncodingUTF8 -> inputFromRopeUTF8
+  InputEncodingUTF16 -> inputFromRopeUTF16
  where
-  fillBuffer :: [Text] -> Int -> BSB.Builder -> BSB.Builder
-  fillBuffer [] _bytesLeft buffer = buffer
-  fillBuffer (line : rest) bytesLeft buffer = do
-    let lineWithLF = if null rest then line else line <> T.singleton '\n'
-    let lineBytes = T.encodeUtf8 lineWithLF
-    if bytesLeft >= BS.length lineBytes
-      then fillBuffer rest (bytesLeft - BS.length lineBytes) (buffer <> BSB.byteString lineBytes)
-      else do
-        let maxPrefixLineBytes = BS.take bytesLeft lineBytes
-        let (validPrefixLen, _maybeUTF8State) = T.validateUtf8Chunk maxPrefixLineBytes
-        let validPrefixLineBytes = BS.take validPrefixLen maxPrefixLineBytes
-        buffer <> BSB.byteString validPrefixLineBytes
+  -- Create a `TS.Input` function from a `Rope` with UTF8 encoding.
+  inputFromRopeUTF8 :: Int -> Rope -> TS.Input
+  inputFromRopeUTF8 bufferSize rope _byteIndex point = do
+    let afterPosition = snd $ Rope.charSplitAtPosition (pointToPosition point) rope
+    let buffer = fillBuffer (Rope.lines afterPosition) bufferSize mempty
+    pure . BSL.toStrict . BSB.toLazyByteString $ buffer
+   where
+    fillBuffer :: [Text] -> Int -> BSB.Builder -> BSB.Builder
+    fillBuffer [] _bytesLeft buffer = buffer
+    fillBuffer (line : rest) bytesLeft buffer = do
+      let lineWithLF = if null rest then line else line <> T.singleton '\n'
+      let lineBytes = T.encodeUtf8 lineWithLF
+      if bytesLeft >= BS.length lineBytes
+        then fillBuffer rest (bytesLeft - BS.length lineBytes) (buffer <> BSB.byteString lineBytes)
+        else do
+          let maxPrefixLineBytes = BS.take bytesLeft lineBytes
+          let (validPrefixLen, _maybeUTF8State) = T.validateUtf8Chunk maxPrefixLineBytes
+          let validPrefixLineBytes = BS.take validPrefixLen maxPrefixLineBytes
+          buffer <> BSB.byteString validPrefixLineBytes
 
--- | Create a `TS.Input` function from a `Rope` with UTF16 encoding.
-inputFromRopeUTF16 :: Int -> Rope -> TS.Input
-inputFromRopeUTF16 bufferSize rope _byteIndex point = do
-  let afterPosition = snd $ Rope.charSplitAtPosition (pointToPosition point) rope
-  let buffer = fillBuffer (Rope.lines afterPosition) bufferSize mempty
-  pure . BSL.toStrict . BSB.toLazyByteString $ buffer
- where
-  fillBuffer :: [Text] -> Int -> BSB.Builder -> BSB.Builder
-  fillBuffer [] _bytesLeft buffer = buffer
-  fillBuffer (line : rest) bytesLeft buffer = do
-    let lineWithLF = if null rest then line else line <> T.singleton '\n'
-    -- NOTE:
-    -- UTF16 documents without a byte-order-mark (BOM) should be interpreted
-    -- as UTF16BE... and since we don't have a BOM, let's encode as UTF16BE!
-    let lineBytes = T.encodeUtf16BE lineWithLF
-    if bytesLeft >= BS.length lineBytes
-      then fillBuffer rest (bytesLeft - BS.length lineBytes) (buffer <> BSB.byteString lineBytes)
-      else fillBufferSlow (T.unpack lineWithLF) bytesLeft buffer
+  -- Create a `TS.Input` function from a `Rope` with UTF16 encoding.
+  inputFromRopeUTF16 :: Int -> Rope -> TS.Input
+  inputFromRopeUTF16 bufferSize rope _byteIndex point = do
+    let afterPosition = snd $ Rope.charSplitAtPosition (pointToPosition point) rope
+    let buffer = fillBufferFast (Rope.lines afterPosition) bufferSize mempty
+    pure . BSL.toStrict . BSB.toLazyByteString $ buffer
+   where
+    fillBufferFast :: [Text] -> Int -> BSB.Builder -> BSB.Builder
+    fillBufferFast [] _bytesLeft buffer = buffer
+    fillBufferFast (line : rest) bytesLeft buffer = do
+      let lineWithLF = if null rest then line else line <> T.singleton '\n'
+      -- NOTE:
+      -- UTF16 documents without a byte-order-mark (BOM) should be interpreted
+      -- as UTF16BE... and since we don't have a BOM, let's encode as UTF16BE!
+      let lineBytes = T.encodeUtf16BE lineWithLF
+      if bytesLeft >= BS.length lineBytes
+        then fillBufferFast rest (bytesLeft - BS.length lineBytes) (buffer <> BSB.byteString lineBytes)
+        else fillBufferSlow (T.unpack lineWithLF) bytesLeft buffer
 
-  fillBufferSlow :: String -> Int -> BSB.Builder -> BSB.Builder
-  fillBufferSlow [] _bytesLeft buffer = buffer
-  fillBufferSlow (char : line) bytesLeft buffer = do
-    let charBytes = T.encodeUtf16BE (T.singleton char)
-    if bytesLeft >= BS.length charBytes
-      then fillBufferSlow line (bytesLeft - BS.length charBytes) (buffer <> BSB.byteString charBytes)
-      else buffer
-
--- | Assert that there is cache item associated with the given @uri@.
-assertNoCacheItem ::
-  (Show uri, Hashable uri, MonadTC uri m) =>
-  LogAction m (WithSeverity Text) ->
-  uri ->
-  m ()
-assertNoCacheItem logger uri = do
-  maybeCacheItem <- lookupCache uri
-  when (isJust maybeCacheItem) $ do
-    let message = T.pack $ printf "found cache item for %s" (show uri)
-    logger <& WithSeverity message Warning
-
--- | Convert a 'Position' to a 'TS.Point'.
-positionToPoint :: Position -> TS.Point
-positionToPoint (Position row column) =
-  TS.Point (fromIntegral row) (fromIntegral column)
-
--- | Convert a 'TS.Point' to a 'Position'.
-pointToPosition :: TS.Point -> Position
-pointToPosition (TS.Point row column) =
-  Position (fromIntegral row) (fromIntegral column)
+    fillBufferSlow :: String -> Int -> BSB.Builder -> BSB.Builder
+    fillBufferSlow [] _bytesLeft buffer = buffer
+    fillBufferSlow (char : line) bytesLeft buffer = do
+      let charBytes = T.encodeUtf16BE (T.singleton char)
+      if bytesLeft >= BS.length charBytes
+        then fillBufferSlow line (bytesLeft - BS.length charBytes) (buffer <> BSB.byteString charBytes)
+        else buffer

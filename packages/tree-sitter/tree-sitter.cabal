@@ -26,6 +26,7 @@ library
   exposed-modules:
     TreeSitter
     TreeSitter.Internal
+    TreeSitter.Internal.ST
 
   hs-source-dirs:  src
   build-depends:

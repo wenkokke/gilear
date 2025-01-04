@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
-module Gilear.Internal.Parser.Cache (
+module Gilear.Internal.Core.Cache (
   Cache,
   CacheItem (..),
   empty,
@@ -15,6 +15,7 @@ import Data.HashMap.Strict qualified as M
 import Data.Hashable (Hashable)
 import Data.Kind (Type)
 import Data.Text.Mixed.Rope (Rope)
+import Gilear.Internal.Core.Diagnostics (Diagnostics)
 import TreeSitter (Tree)
 import Prelude hiding (lookup)
 
@@ -22,6 +23,7 @@ type CacheItem :: Type
 data CacheItem = CacheItem
   { itemRope :: !Rope
   , itemTree :: !Tree
+  , itemDiagnostics :: !Diagnostics
   }
 
 -- | Collection of ASTs for all open files.
