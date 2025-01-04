@@ -326,7 +326,8 @@ instance Show SymbolType where
   show SymbolTypeAuxiliary = "SymbolTypeAuxiliary"
 
 newtype Point = WrapTSPoint {unWrapTSPoint :: C.TSPoint}
-  deriving stock (Eq, Show)
+  deriving newtype (Ord, Eq)
+  deriving stock (Show)
 
 pattern Point :: Word32 -> Word32 -> Point
 pattern Point
