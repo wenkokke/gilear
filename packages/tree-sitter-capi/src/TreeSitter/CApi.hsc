@@ -407,7 +407,7 @@ data
   { row    :: {-# UNPACK #-} !( #{type uint32_t} )
   , column :: {-# UNPACK #-} !( #{type uint32_t} )
   }
-  deriving (Eq, Show)
+  deriving (Ord, Eq, Show)
 
 instance Storable TSPoint where
   alignment _ = #{alignment TSPoint}
