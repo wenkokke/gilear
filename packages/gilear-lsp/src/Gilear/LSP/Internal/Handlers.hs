@@ -2,23 +2,16 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Gilear.LSP.Internal.Handlers where
 
-import Colog (Severity (..))
-import Colog.Core (LogAction, WithSeverity (WithSeverity), (<&))
+import Colog.Core (LogAction, WithSeverity)
 import Control.Lens ((^.))
 import Control.Monad (void)
-import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Monoid (Any (..))
 import Data.Text (Text)
-import Data.Text qualified as T
-import Data.Text.Encoding qualified as T
-import Gilear.Internal.Core (lookupCache)
-import Gilear.Internal.Core.Cache (CacheItem (..))
 import Gilear.Internal.Core.Location (Point (..))
 import Gilear.Internal.Core.TextEdit (TextEdit (..))
 import Gilear.Internal.Parser (InputEncoding (..))
@@ -30,13 +23,12 @@ import Language.LSP.Protocol.Types (ClientCapabilities, TextDocumentContentChang
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
 import Language.LSP.VFS (file_text)
-import TreeSitter qualified as TS
 
 handlers ::
   LogAction LSPTC (WithSeverity Text) ->
   ClientCapabilities ->
   LSP.Handlers LSPTC
-handlers logger clientCapabilities =
+handlers logger _clientCapabilities =
   mconcat
     [ initializedHandler
     , textDocumentDidOpenHandler
@@ -49,7 +41,7 @@ handlers logger clientCapabilities =
   initializedHandler :: LSP.Handlers LSPTC
   initializedHandler =
     LSP.notificationHandler SMethod_Initialized $ \_notification -> do
-      logger <& WithSeverity (T.pack . show $ clientCapabilities) Debug
+      -- logger <& WithSeverity (T.pack . show $ clientCapabilities) Debug
       pure ()
 
   textDocumentDidOpenHandler :: LSP.Handlers LSPTC
@@ -96,14 +88,6 @@ handlers logger clientCapabilities =
             then void $ TC.documentChangeWholeDocument logger InputEncodingUTF8 docUri docRope
             -- Otherwise, parse the document incrementally...
             else void $ TC.documentChangePartial logger InputEncodingUTF8 docUri docRope docTextEdits
-      -- Log the tree for debugging purposes
-      lookupCache docUri >>= \case
-        Nothing -> pure ()
-        Just CacheItem{..} -> do
-          docRootNode <- liftIO $ TS.treeRootNode itemTree
-          docTreeString <- liftIO $ TS.showNode docRootNode
-          let message = T.decodeUtf8 docTreeString
-          logger <& WithSeverity message Debug
 
   textDocumentDidCloseHandler :: LSP.Handlers LSPTC
   textDocumentDidCloseHandler =
