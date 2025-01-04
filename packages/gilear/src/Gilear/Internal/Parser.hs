@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Gilear.Internal.Parser (
@@ -21,6 +22,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
+import Data.Text.Mixed.Rope.Extra (charAt)
 import Gilear.Internal.Core (MonadTC, assertNoCacheItem, lookupCache, modifyCache_, withParser)
 import Gilear.Internal.Core.Cache (CacheItem (..))
 import Gilear.Internal.Core.Cache qualified as Cache
@@ -28,7 +30,7 @@ import Gilear.Internal.Core.Diagnostics qualified as Diagnostics
 import Gilear.Internal.Core.Location (pointToPosition)
 import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToCacheItem)
 import Text.Printf (printf)
-import TreeSitter (InputEncoding (..), unWrapTSNodeId)
+import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
 
 -- | Open a text document.
@@ -116,55 +118,85 @@ documentChangePartial logger encoding uri newRope edits = do
           -- ... update the tree
           -- TODO: do not update tree if it contains errors?
           modifyCache_ $ Cache.insert uri (CacheItem{itemRope = newRope, itemTree = newTree, ..})
-          -- TODO: remove logging of changed ranges
-          -- changedRanges <- liftIO $ TS.treeGetChangedRanges editedOldTree newTree
-          -- let message = T.pack . show $ changedRanges
-          -- logger <& WithSeverity message Info
+          -- Traverse the syntax tree searching for errors:
           rootNode <- liftIO (TS.treeRootNode newTree)
-          let skipM node =
-                liftIO $
-                  (&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node
-          let actionM node = do
-                isErrorOrMissing <-
-                  liftIO $
-                    (||) <$> TS.nodeIsError node <*> TS.nodeIsMissing node
-                when isErrorOrMissing $ do
-                  message <- liftIO (TS.showNode node)
-                  logger <& WithSeverity (T.decodeUtf8 message) Info
-          depthFirst rootNode skipM actionM
+          let gotoChildIfNewError node =
+                liftIO $ not <$> ((&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node)
+          depthFirst rootNode gotoChildIfNewError $ \node -> do
+            nodeIsMissing <- liftIO (TS.nodeIsMissing node)
+            if nodeIsMissing
+              then do
+                symbolMissing <- liftIO (T.pack . show <$> TS.nodeSymbol node)
+                nodeString <- liftIO (T.decodeUtf8 <$> TS.showNode node)
+                logger <& ("MISSING(" <> symbolMissing <> "): " <> nodeString) `WithSeverity` Debug
+              else do
+                nodeIsError <- liftIO (TS.nodeIsError node)
+                nodeChildCount <- liftIO (TS.nodeChildCount node)
+                nodeStartPoint <- liftIO (TS.nodeStartPoint node)
+                nodeEndPoint <- liftIO (TS.nodeEndPoint node)
+                when (nodeIsError && nodeChildCount == 0 && nodeStartPoint < nodeEndPoint) $ do
+                  previousLeaf <- gotoPreviousLeaf node
+                  previousStateId <- liftIO (TS.nodeParseState previousLeaf)
+                  expectedSymbols <- expectedSymbolsFor previousStateId
+                  let expectedSymbolsMsg =
+                        T.intercalate
+                          ", "
+                          [ if symbolType == TS.SymbolTypeAnonymous
+                              then "'" <> symbolName <> "'"
+                              else symbolName
+                          | (symbolName, symbolType) <- expectedSymbols
+                          ]
+                  let unexpectedChar = charAt (pointToPosition nodeStartPoint) newRope
+                  logger <& ("UNEXPECTED '" <> unexpectedChar <> "' EXPECTED ONE OF " <> expectedSymbolsMsg) `WithSeverity` Debug
           pure True
 
-{- Note [Diagnostics]
+gotoPreviousLeaf :: (MonadTC uri m) => TS.Node -> m TS.Node
+gotoPreviousLeaf node = do
+  treeCursor <- liftIO (TS.treeCursorNew node)
+  let gotoPreviousSibling = do
+        success <- liftIO (TS.treeCursorGotoPreviousSibling treeCursor)
+        if success then gotoLastChild else gotoParent
+      gotoLastChild = do
+        success <- liftIO (TS.treeCursorGotoLastChild treeCursor)
+        if success then gotoLastChild else currentNode
+      gotoParent = do
+        success <- liftIO (TS.treeCursorGotoParent treeCursor)
+        if success then gotoPreviousSibling else pure node
+      currentNode = liftIO (TS.treeCursorCurrentNode treeCursor)
+  gotoPreviousSibling
 
-for each changed range:
-
-1. delete that range from the previous diagnostics
-2. use `nodeDescendantForByteRange` for the smallest node covering that range
-3. use `treeCursorNew` to walk the tree from that node by repeatedly using the
-   functions `treeCursorGotoFirstChild`, `treeCursorGotoParent`,
-   and `treeCursorGotoNextSibling` to traverse the tree in depth-first order
-4. use `treeCursorCurrentNode` and `nodeHasError` to determine whether or not
-   to traverse deeper into any particular subtree
-5. use `nodeIsError` and `nodeIsMissing` on each node to determine whether or
-   not to generate a diagnostic for that node
-
--}
+expectedSymbolsFor :: (MonadTC uri m) => TS.StateId -> m [(Text, TS.SymbolType)]
+expectedSymbolsFor stateId = do
+  language <- withParser (liftIO . TS.parserLanguage)
+  stateCount <- liftIO (TS.languageStateCount language)
+  if fromIntegral stateId >= stateCount
+    then pure []
+    else do
+      lookaheadIterator <- liftIO (TS.lookaheadIteratorNew language stateId)
+      let loop continue
+            | continue = do
+                symbol <- liftIO (TS.lookaheadIteratorCurrentSymbol lookaheadIterator)
+                symbolType <- liftIO (TS.languageSymbolType language symbol)
+                symbolName <- liftIO (T.decodeUtf8 <$> TS.languageSymbolName language symbol)
+                success <- liftIO (TS.lookaheadIteratorNext lookaheadIterator)
+                fmap ((symbolName, symbolType) :) (loop success)
+            | otherwise = do
+                pure []
+      loop =<< liftIO (TS.lookaheadIteratorNext lookaheadIterator)
 
 depthFirst :: (MonadIO m) => TS.Node -> (TS.Node -> m Bool) -> (TS.Node -> m ()) -> m ()
-depthFirst node skipM actionM =
+depthFirst node predGotoChild action =
   gotoFirstChild =<< liftIO (TS.treeCursorNew node)
  where
   gotoFirstChild treeCursor = do
     currentNode <- liftIO (TS.treeCursorCurrentNode treeCursor)
-    skip <- skipM currentNode
-    if skip
-      then gotoNextSibling treeCursor
-      else do
-        actionM currentNode
+    action currentNode
+    shouldGotoChild <- predGotoChild currentNode
+    if shouldGotoChild
+      then do
         success <- liftIO (TS.treeCursorGotoFirstChild treeCursor)
-        if success
-          then gotoFirstChild treeCursor
-          else gotoNextSibling treeCursor
+        if success then gotoFirstChild treeCursor else gotoNextSibling treeCursor
+      else gotoNextSibling treeCursor
 
   gotoNextSibling treeCursor = do
     success <- liftIO (TS.treeCursorGotoNextSibling treeCursor)
@@ -220,19 +252,19 @@ inputFromRope = \case
   inputFromRopeUTF16 :: Int -> Rope -> TS.Input
   inputFromRopeUTF16 bufferSize rope _byteIndex point = do
     let afterPosition = snd $ Rope.charSplitAtPosition (pointToPosition point) rope
-    let buffer = fillBuffer (Rope.lines afterPosition) bufferSize mempty
+    let buffer = fillBufferFast (Rope.lines afterPosition) bufferSize mempty
     pure . BSL.toStrict . BSB.toLazyByteString $ buffer
    where
-    fillBuffer :: [Text] -> Int -> BSB.Builder -> BSB.Builder
-    fillBuffer [] _bytesLeft buffer = buffer
-    fillBuffer (line : rest) bytesLeft buffer = do
+    fillBufferFast :: [Text] -> Int -> BSB.Builder -> BSB.Builder
+    fillBufferFast [] _bytesLeft buffer = buffer
+    fillBufferFast (line : rest) bytesLeft buffer = do
       let lineWithLF = if null rest then line else line <> T.singleton '\n'
       -- NOTE:
       -- UTF16 documents without a byte-order-mark (BOM) should be interpreted
       -- as UTF16BE... and since we don't have a BOM, let's encode as UTF16BE!
       let lineBytes = T.encodeUtf16BE lineWithLF
       if bytesLeft >= BS.length lineBytes
-        then fillBuffer rest (bytesLeft - BS.length lineBytes) (buffer <> BSB.byteString lineBytes)
+        then fillBufferFast rest (bytesLeft - BS.length lineBytes) (buffer <> BSB.byteString lineBytes)
         else fillBufferSlow (T.unpack lineWithLF) bytesLeft buffer
 
     fillBufferSlow :: String -> Int -> BSB.Builder -> BSB.Builder

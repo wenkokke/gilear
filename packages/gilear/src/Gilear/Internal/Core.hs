@@ -11,12 +11,10 @@ module Gilear.Internal.Core where
 
 import Colog.Core (LogAction, Severity (..), (<&))
 import Colog.Core.Severity (WithSeverity (..))
-import Control.Exception (assert)
-import Control.Monad (when)
+import Control.Monad (unless, when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import Data.Functor ((<&>))
 import Data.Hashable (Hashable)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
@@ -39,6 +37,28 @@ packageName :: Text
 packageName = T.pack "gilear"
 
 --------------------------------------------------------------------------------
+-- Parser
+--
+-- NOTE: These functions are not defined in `Gilear.Internal.Parser` in order to
+--       avoid a cyclic dependency.
+--------------------------------------------------------------------------------
+
+-- | Create a new tree-sitter parser environment.
+newParser :: IO Parser
+newParser = do
+  -- Initialise a new tree-sitter parser
+  parser <- TS.parserNew
+  -- Initialise the tree-sitter-gilear language
+  language <- TS.unsafeToLanguage =<< tree_sitter_gilear
+  -- Configure the parser
+  success <- TS.parserSetLanguage parser language
+  unless success $
+    -- TODO: report an error rather than dying
+    fail "gilear: failed to set parser language"
+  -- Return the parser environment
+  pure parser
+
+--------------------------------------------------------------------------------
 -- Type-Checker Environments
 --------------------------------------------------------------------------------
 
@@ -48,23 +68,13 @@ packageName = T.pack "gilear"
   used with the reader monad, rather than the state monad. However, it is
   intended to hold references to mutable state.
 -}
+
+-- TODO: use `MVar` or `TMVar` for the parser to avoid concurrent use
 type TCEnv :: Type -> Type
 data TCEnv uri = TCEnv
   { parser :: Parser
   , cacheVar :: IORef (Cache uri)
   }
-
-{-| Create a new tree-sitter parser.
-
-  NOTE: This function is not defined in 'Gilear.Parser' to avoid cyclic dependencies.
--}
-newParser :: IO Parser
-newParser = do
-  parser <- TS.parserNew
-  language <- TS.unsafeToLanguage =<< tree_sitter_gilear
-  success <- TS.parserSetLanguage parser language
-  -- TODO: report an error rather than dying
-  assert success $ pure parser
 
 -- | Create an empty type-checker environment.
 newTCEnv :: IO (TCEnv uri)
@@ -92,8 +102,7 @@ askParser = (.parser) <$> askTCEnv
 
 -- | Run a type-checking action with the `Parser`.
 withParser :: (MonadTC uri m) => (Parser -> m a) -> m a
-withParser action =
-  askParser >>= action
+withParser action = askParser >>= action
 
 -- * Cache
 
@@ -140,12 +149,12 @@ assertNoCacheItem logger uri = do
      state being threaded through sequentially.
 -}
 type TCIO :: Type -> Type
-newtype TCIO a = TCIO {unTCIO :: ResourceT IO a}
+newtype TCIO a = TCIO {unTCIO :: IO a}
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO)
 
 -- | Run the type-checker IO monad.
 runTCIO :: TCIO a -> IO a
-runTCIO action = runResourceT (unTCIO action)
+runTCIO = unTCIO
 
 type TCT :: Type -> (Type -> Type) -> Type -> Type
 newtype TCT uri m a = TCT {unTCT :: ReaderT (TCEnv uri) m a}
