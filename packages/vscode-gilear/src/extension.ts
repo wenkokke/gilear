@@ -82,7 +82,7 @@ function findDebugExecutable(
   if (context.extensionMode == vscode.ExtensionMode.Development) {
     // Notify the developer that the extension has started in Development Mode.
     const extensionName = context.extension.packageJSON.displayName;
-    log(
+    logMessage(
       logChannel,
       vscode.LogLevel.Info,
       `${extensionName} started in Development Mode`,
@@ -118,7 +118,7 @@ function findDebugExecutable(
           path.relative(projectRoot, executable),
         );
         const message = `Found gilear-lsp in '${executableRelative}'`;
-        log(logChannel, vscode.LogLevel.Debug, message);
+        logMessage(logChannel, vscode.LogLevel.Debug, message);
         return { command: executable };
       }
       // Found multiple executables for `gilear-lsp`.
@@ -126,7 +126,7 @@ function findDebugExecutable(
         const candidatesRelative = candidates.map((candidate) =>
           path.dirname(path.relative(projectRoot, candidate)),
         );
-        log(
+        logMessage(
           logChannel,
           vscode.LogLevel.Warning,
           [
@@ -143,7 +143,7 @@ function findDebugExecutable(
       }
       // Could not find `gilear-lsp`.
       if (candidates.length == 0) {
-        log(
+        logMessage(
           logChannel,
           vscode.LogLevel.Warning,
           [
@@ -158,7 +158,7 @@ function findDebugExecutable(
         );
       }
       // Default to starting gilear-lsp using Cabal.
-      log(
+      logMessage(
         logChannel,
         vscode.LogLevel.Warning,
         [
@@ -176,7 +176,7 @@ function findDebugExecutable(
     // Try and find `gilear-lsp` on the PATH.
     const executable = which.sync("gilear-lsp", { nothrow: true });
     if (executable !== null) {
-      log(
+      logMessage(
         logChannel,
         vscode.LogLevel.Debug,
         [
@@ -188,7 +188,7 @@ function findDebugExecutable(
       return { command: executable };
     }
     // Raise an error:
-    log(
+    logMessage(
       logChannel,
       vscode.LogLevel.Error,
       [
@@ -239,15 +239,14 @@ function isDevelopmentEnvironment(context: vscode.ExtensionContext): boolean {
   return true;
 }
 
-function log(
+function logMessage(
   logChannel: vscode.OutputChannel,
   logLevel: vscode.LogLevel,
   message: string,
   userMessage?: string,
 ) {
   // Append message to the log channel:
-  const logMessage = logFormatMessage(logLevel, message);
-  logChannel.appendLine(logMessage);
+  logChannel.appendLine(logFormatMessage(logLevel, message));
   // Show message to the user:
   userMessage = userMessage ?? message;
   switch (logLevel) {
@@ -271,13 +270,10 @@ function logFormatMessage(
   switch (logLevel) {
     case vscode.LogLevel.Info:
       return `[Info  - ${currentTime}] ${logMessage}`;
-      break;
     case vscode.LogLevel.Warning:
       return `[Warn  - ${currentTime}] ${logMessage}`;
-      break;
     case vscode.LogLevel.Error:
       return `[Error - ${currentTime}] ${logMessage}`;
-      break;
     case vscode.LogLevel.Debug:
       return `[Debug - ${currentTime}] ${logMessage}`;
     case vscode.LogLevel.Trace:
