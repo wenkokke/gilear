@@ -8,6 +8,7 @@
     "tree-sitter-cli": "^0.24.3"
   },
   "scripts": {
-    "compile": "npm run compile --workspaces --if-present"
+    "compile": "npm run compile --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   }
 }
