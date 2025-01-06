@@ -35,3 +35,6 @@ devenv.local.nix
 # packages/vscode-gilear
 /packages/vscode-gilear/out/
 /packages/vscode-gilear/tsconfig.tsbuildinfo
+
+# vscode-test
+.vscode-test/
