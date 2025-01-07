@@ -4,6 +4,7 @@
   "description": "VSCode Extension for Gilear",
   "version": "0.0.0",
   "author": "Wen Kokke",
+  "publisher": "wenkokke",
   "license": "AGPL-3.0-only",
   "engines": {
     "vscode": "^1.75.0"
@@ -17,7 +18,7 @@
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "pretest": "npm run compile",
-    "test": "node ./out/test/runTests.js"
+    "test": "vscode-test"
   },
   "dependencies": {
     "glob": "^11.0.0",
@@ -27,6 +28,7 @@
     "@types/mocha": "^10.0.6",
     "@types/node": "^20",
     "@types/vscode": "^1.75.1",
+    "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.3.9",
     "mocha": "^10.3.0",
     "typescript": "^5.6.2",
