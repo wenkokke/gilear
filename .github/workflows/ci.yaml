@@ -135,11 +135,19 @@ jobs:
       - name: 🏗️ Generate tree-sitter grammars
         run: npm run generate --workspaces --if-present
 
-      - name: 🏗️ Build
+      - name: 🏗️ Build Haskell Packages
         run: cabal build all --project-file=${{ matrix.haskell.cabal.project-file }}
 
-      - name: 🧪 Test
+      - name: 🧪 Test Haskell Packages
         run: cabal test all --project-file=${{ matrix.haskell.cabal.project-file }}
+
+      - name: 🧪 Test VS Code Extension (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm test -w vscode-gilear
+
+      - name: 🧪 Test VS Code Extension (macOS & Windows)
+        if: runner.os != 'Linux'
+        run: npm test -w vscode-gilear
 
   #############################################################################
   # Lint with actionlint
