@@ -70,13 +70,33 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.javascript.node.version || steps.dev-dependencies.outputs.node }}
-          cache: "npm"
-          cache-dependency-path: "package-lock.json"
         id: setup-node
 
+      - name: 💾 Restore NPM dependencies
+        uses: actions/cache/restore@v4
+        if: ${{ !env.ACT }}
+        id: cache-node
+        env:
+          key: ${{ matrix.os.name }}-ghc-${{ steps.setup-node.outputs.node-version }}
+        with:
+          path: |
+            node_modules/
+            packages/vscode-gilear/node_modules/
+          key: ${{ env.key }}-package-lock-${{ hashFiles('package-lock.json') }}-${{ hashFiles('packages/vscode-gilear/package-lock.json') }}
+          restore-keys: ${{ env.key }}-
+
       - name: 🛠️ Install Node dependencies
-        if: ${{ !env.ACT && steps.setup-node.outputs.cache-hit != 'true' }}
+        if: ${{ env.ACT || steps.cache-node.outputs.cache-hit != 'true' }}
         run: npm ci
+
+      - name: 💾 Save Node dependencies
+        uses: actions/cache/save@v4
+        if: ${{ !env.ACT && steps.cache-node.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            node_modules/
+            packages/vscode-gilear/node_modules/
+          key: ${{ steps.cache-node.outputs.cache-primary-key }}
 
       - name: 🛠️ Install Haskell
         uses: haskell-actions/setup@v2
