@@ -1,9 +1,9 @@
 file: "id.gilear"
 edits:
   - action: "replace"
-    location: [[1, 10], [1, 11]]
+    location: [[2, 11], [2, 12]]
     text: ""
 diagnostics:
   - severity: "error"
-    range: [[1, 10], [1, 10]]
+    range: [[2, 11], [2, 11]]
     message: "Syntax Error: Missing '';''"
