@@ -2,6 +2,7 @@ import { globSync } from "glob";
 import * as assert from "assert";
 import * as path from "path";
 import * as fs from "fs";
+import * as yaml from "js-yaml";
 // import * as Mocha from "mocha";
 
 // You can import and use all API from the 'vscode' module
@@ -14,7 +15,7 @@ import { Extension } from "vscode";
 const testDir = path.join(__dirname, "..", "..", "src", "test");
 const testDataDir = path.join(testDir, "data");
 const testSpecDir = path.join(testDir, "spec");
-const testSpecFilePattern = path.join(testSpecDir, "*.test.json");
+const testSpecFilePattern = path.join(testSpecDir, "*.test.yaml");
 const testSpecFileOptions = { windowsPathsNoEscape: true };
 
 async function activatedExtension(): Promise<Extension<Gilear.ExtensionAPI>> {
@@ -57,7 +58,7 @@ suite("Extension Test Suite", () => {
       const testSpecContent = fs.readFileSync(testSpecFile, {
         encoding: "utf-8",
       });
-      const testSpec = JSON.parse(testSpecContent);
+      const testSpec = yaml.load(testSpecContent, { filename: testSpecFile });
       assert(util.isTestSpec(testSpec));
       await activatedExtension();
       const docFile = path.join(testDataDir, testSpec.file);

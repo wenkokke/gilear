@@ -31,8 +31,10 @@ export type EditSpec =
       text: string;
     };
 
+export type DiagnosticSeverity = "error" | "warning" | "information" | "hint";
+
 export interface DiagnosticSpec {
-  severity: vscode.DiagnosticSeverity;
+  severity: DiagnosticSeverity;
   range: [[number, number], [number, number]];
   message: string;
 }
@@ -99,14 +101,22 @@ export function isDiagnosticSpecs(
   return true;
 }
 
+export function isDiagnosticSeverity(
+  diagnosticSeverity: any,
+): diagnosticSeverity is DiagnosticSeverity {
+  assert(typeof diagnosticSeverity === "string");
+  assert(
+    ["error", "warning", "information", "hint"].includes(diagnosticSeverity),
+  );
+  return true;
+}
+
 export function isDiagnosticSpec(
   diagnostic: any,
 ): diagnostic is DiagnosticSpec {
   assert(typeof diagnostic === "object");
   assert("severity" in diagnostic);
-  assert(typeof diagnostic.severity === "number");
-  assert(diagnostic.severity >= 0);
-  assert(diagnostic.severity <= 3);
+  isDiagnosticSeverity(diagnostic.severity);
   assert("range" in diagnostic);
   isRange(diagnostic.range);
   assert("message" in diagnostic);
@@ -130,9 +140,24 @@ export function isPosition(position: any): position is Position {
   return true;
 }
 
+export function fromDiagnosticSeverity(
+  diagnosticSeverity: vscode.DiagnosticSeverity,
+): DiagnosticSeverity {
+  switch (diagnosticSeverity) {
+    case vscode.DiagnosticSeverity.Error:
+      return "error";
+    case vscode.DiagnosticSeverity.Warning:
+      return "warning";
+    case vscode.DiagnosticSeverity.Information:
+      return "information";
+    case vscode.DiagnosticSeverity.Hint:
+      return "hint";
+  }
+}
+
 export function fromDiagnostic(diagnostic: vscode.Diagnostic): DiagnosticSpec {
   return {
-    severity: diagnostic.severity,
+    severity: fromDiagnosticSeverity(diagnostic.severity),
     range: fromRange(diagnostic.range),
     message: diagnostic.message,
   };
