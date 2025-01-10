@@ -8,7 +8,8 @@ import * as fs from "fs";
 // as well as import your extension to test it
 import * as vscode from "vscode";
 import * as util from "./util";
-import { GilearExtensionAPI } from "../extension";
+import * as Gilear from "../extension";
+import { Extension } from "vscode";
 
 const testDir = path.join(__dirname, "..", "..", "src", "test");
 const testDataDir = path.join(testDir, "data");
@@ -16,12 +17,9 @@ const testSpecDir = path.join(testDir, "spec");
 const testSpecFilePattern = path.join(testSpecDir, "*.test.json");
 const testSpecFileOptions = { windowsPathsNoEscape: true };
 
-async function activatedExtension(): Promise<
-  vscode.Extension<GilearExtensionAPI>
-> {
-  const ext = vscode.extensions.getExtension<GilearExtensionAPI>(
-    "wenkokke.vscode-gilear",
-  );
+async function activatedExtension(): Promise<Extension<Gilear.ExtensionAPI>> {
+  const extId = "wenkokke.vscode-gilear";
+  const ext = vscode.extensions.getExtension<Gilear.ExtensionAPI>(extId);
   if (!ext.isActive) await ext.activate();
   return ext;
 }
