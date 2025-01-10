@@ -5,11 +5,15 @@ import { ArrayLogger } from "./extension/logger/ArrayLogger";
 import { VSCodeOutputChannelLoggerAdapter } from "./extension/logger/VSCodeOutputChannelLoggerAdapter";
 import { VSCodeWindowLogger } from "./extension/logger/VSCodeWindowLogger";
 
-export type GilearExtensionAPI = {};
+export type GilearExtensionAPI = {
+  client: lsp.LanguageClient;
+};
 
 let client: lsp.LanguageClient;
 
-export function activate(context: vscode.ExtensionContext): GilearExtensionAPI {
+export function activate(
+  context: vscode.ExtensionContext,
+): Thenable<GilearExtensionAPI> {
   // Create output channels.
   const traceOutputChannel = vscode.window.createOutputChannel(
     "Gilear Trace",
@@ -50,11 +54,17 @@ export function activate(context: vscode.ExtensionContext): GilearExtensionAPI {
   // Create a Language Server Client.
   client = new lsp.LanguageClient("Gilear", serverOptions, clientOptions);
 
-  // Start the client and launch the server.
-  client.start();
-
   // Return the API provided by the Gilear extension.
-  return {};
+  return client.start().then(
+    (value: void) => {
+      return {
+        client,
+      };
+    },
+    (reason: any) => {
+      throw reason;
+    },
+  );
 }
 
 export function deactivate(): Thenable<void> | undefined {
