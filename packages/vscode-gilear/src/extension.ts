@@ -5,7 +5,7 @@ import { ArrayLogger } from "./extension/logger/ArrayLogger";
 import { VSCodeOutputChannelLoggerAdapter } from "./extension/logger/VSCodeOutputChannelLoggerAdapter";
 import { VSCodeWindowLogger } from "./extension/logger/VSCodeWindowLogger";
 
-export type GilearExtensionAPI = {
+export type ExtensionAPI = {
   client: lsp.LanguageClient;
 };
 
@@ -13,7 +13,7 @@ let client: lsp.LanguageClient;
 
 export function activate(
   context: vscode.ExtensionContext,
-): Thenable<GilearExtensionAPI> {
+): Thenable<ExtensionAPI> {
   // Create output channels.
   const traceOutputChannel = vscode.window.createOutputChannel(
     "Gilear Trace",
