@@ -123,11 +123,11 @@ assertNoCacheItem logger uri = do
 -- * Diagnostics
 
 askDiagnostics :: (MonadTC uri m) => uri -> m (Maybe Diagnostics)
-askDiagnostics = fmap (fmap (.itemDiagnostics)) . lookupCache
+askDiagnostics = fmap (fmap (.itemDiag)) . lookupCache
 
 insertDiagnostics :: (MonadTC uri m) => uri -> Diagnostics -> m ()
-insertDiagnostics uri newDiagnostics = modifyCache_ . flip Cache.adjust uri $ \Cache.ParserCacheItem{..} ->
-  Cache.ParserCacheItem{itemDiagnostics = itemDiagnostics <> newDiagnostics, ..}
+insertDiagnostics uri newDiag = modifyCache_ . flip Cache.adjust uri $ \Cache.ParserCacheItem{itemDiag = oldDiag, ..} ->
+  Cache.ParserCacheItem{itemDiag = oldDiag <> newDiag, ..}
 
 --------------------------------------------------------------------------------
 -- Type-Checker Monad Stack

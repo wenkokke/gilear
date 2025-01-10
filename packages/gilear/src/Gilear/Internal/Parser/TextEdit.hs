@@ -30,7 +30,7 @@ applyTextEditToItem encoding = go
  where
   -- go :: [TextEdit] -> CacheItem -> m CacheItem
   go [] item = pure item
-  go (edit : edits) (ParserCacheItem{itemRope = oldRope, itemTree = mutTree, itemDiagnostics = oldDiagnostics}) = do
+  go (edit : edits) (ParserCacheItem{itemRope = oldRope, itemTree = mutTree, itemDiag = oldDiagnostics}) = do
     let (newRope, inputEdit) = applyTextEditToRope encoding edit oldRope
     liftIO (TS.treeEdit mutTree inputEdit)
     -- Delete any diagnostics past the end of the file
@@ -40,7 +40,7 @@ applyTextEditToItem encoding = go
     let oldByteRange = ByteRange (TS.inputEditStartByte inputEdit) (TS.inputEditOldEndByte inputEdit)
     let deleteOldDiagnostics = D.deleteByRange oldByteRange
     let newDiagnostics = deleteOutOfBoundsDiagnostics . deleteOldDiagnostics $ oldDiagnostics
-    go edits (ParserCacheItem{itemRope = newRope, itemTree = mutTree, itemDiagnostics = newDiagnostics})
+    go edits (ParserCacheItem{itemRope = newRope, itemTree = mutTree, itemDiag = newDiagnostics})
 
 oldEndByteToNewEndByteRange :: InputEncoding -> Rope -> Rope -> Maybe ByteRange
 oldEndByteToNewEndByteRange encoding oldRope newRope

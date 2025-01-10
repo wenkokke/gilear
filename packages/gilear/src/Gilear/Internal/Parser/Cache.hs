@@ -24,7 +24,7 @@ type ParserCacheItem :: Type
 data ParserCacheItem = ParserCacheItem
   { itemRope :: !Rope
   , itemTree :: !Tree
-  , itemDiagnostics :: !Diagnostics
+  , itemDiag :: !Diagnostics
   }
 
 -- | Collection of ASTs for all open files.

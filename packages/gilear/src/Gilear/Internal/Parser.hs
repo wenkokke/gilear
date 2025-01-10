@@ -100,7 +100,7 @@ documentChangePartial logger encoding uri newRope edits = do
     -- If an old tree is found...
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
-      ParserCacheItem{itemRope = editedOldRope, itemTree = editedOldTree, itemDiagnostics = oldDiagnostics} <-
+      ParserCacheItem{itemRope = editedOldRope, itemTree = editedOldTree, itemDiag = oldDiag} <-
         applyTextEditToItem encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
@@ -120,7 +120,7 @@ documentChangePartial logger encoding uri newRope edits = do
         Just newTree -> do
           -- Traverse the syntax tree searching for parse errors...
           rootNode <- liftIO (TS.treeRootNode newTree)
-          newDiagnostics <-
+          newDiag <-
             execWriterT . depthFirst rootNode nodeHasChangeAndError $ \node -> do
               -- check if the current node is a "missing" node
               nodeIsMissing <- tellIfMissingSymbol node
@@ -134,7 +134,7 @@ documentChangePartial logger encoding uri newRope edits = do
             ParserCacheItem
               { itemRope = newRope
               , itemTree = newTree
-              , itemDiagnostics = oldDiagnostics <> newDiagnostics
+              , itemDiag = oldDiag <> newDiag
               }
           pure True
 
