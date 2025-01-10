@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Gilear.Internal.Core.TextEdit where
+module Gilear.Internal.Parser.TextEdit where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
@@ -8,9 +8,9 @@ import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
 import Data.Word (Word32)
 import Gilear.Internal.Core (MonadTC)
-import Gilear.Internal.Core.Cache (CacheItem (..))
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (ByteRange (..), Point, pointToPosition, positionToPoint)
+import Gilear.Internal.Parser.Cache (ParserCacheItem (..))
 import TreeSitter (InputEncoding)
 import TreeSitter qualified as TS
 
@@ -20,17 +20,17 @@ data TextEdit = TextEdit
   , editNewText :: Text
   }
 
-applyTextEditToCacheItem ::
+applyTextEditToItem ::
   (MonadTC uri m) =>
   InputEncoding ->
   [TextEdit] ->
-  CacheItem ->
-  m CacheItem
-applyTextEditToCacheItem encoding = go
+  ParserCacheItem ->
+  m ParserCacheItem
+applyTextEditToItem encoding = go
  where
   -- go :: [TextEdit] -> CacheItem -> m CacheItem
-  go [] cacheItem = pure cacheItem
-  go (edit : edits) (CacheItem{itemRope = oldRope, itemTree = mutTree, itemDiagnostics = oldDiagnostics}) = do
+  go [] item = pure item
+  go (edit : edits) (ParserCacheItem{itemRope = oldRope, itemTree = mutTree, itemDiagnostics = oldDiagnostics}) = do
     let (newRope, inputEdit) = applyTextEditToRope encoding edit oldRope
     liftIO (TS.treeEdit mutTree inputEdit)
     -- Delete any diagnostics past the end of the file
@@ -40,7 +40,7 @@ applyTextEditToCacheItem encoding = go
     let oldByteRange = ByteRange (TS.inputEditStartByte inputEdit) (TS.inputEditOldEndByte inputEdit)
     let deleteOldDiagnostics = D.deleteByRange oldByteRange
     let newDiagnostics = deleteOutOfBoundsDiagnostics . deleteOldDiagnostics $ oldDiagnostics
-    go edits (CacheItem{itemRope = newRope, itemTree = mutTree, itemDiagnostics = newDiagnostics})
+    go edits (ParserCacheItem{itemRope = newRope, itemTree = mutTree, itemDiagnostics = newDiagnostics})
 
 oldEndByteToNewEndByteRange :: InputEncoding -> Rope -> Rope -> Maybe ByteRange
 oldEndByteToNewEndByteRange encoding oldRope newRope

@@ -21,16 +21,16 @@ import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
+import Data.Text.Lines (Position)
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
-import Data.Text.Mixed.Rope.Extra (charAt)
 import Gilear.Internal.Core (MonadTC, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser)
-import Gilear.Internal.Core.Cache (CacheItem (..))
-import Gilear.Internal.Core.Cache qualified as Cache
 import Gilear.Internal.Core.Diagnostics (Diagnostic (..), Diagnostics)
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (pointToPosition)
-import Gilear.Internal.Core.TextEdit (TextEdit (..), applyTextEditToCacheItem)
+import Gilear.Internal.Parser.Cache (ParserCacheItem (..))
+import Gilear.Internal.Parser.Cache qualified as Cache
+import Gilear.Internal.Parser.TextEdit (TextEdit (..), applyTextEditToItem)
 import Text.Printf (printf)
 import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
@@ -75,7 +75,7 @@ documentChangeWholeDocument logger encoding uri rope = do
     Just tree -> do
       -- ... update the tree
       -- TODO: do not update tree if it contains errors?
-      modifyCache_ $ Cache.insert uri (CacheItem rope tree D.empty)
+      modifyCache_ $ Cache.insert uri (ParserCacheItem rope tree D.empty)
       pure True
 
 -- | Change part of the content of the text document.
@@ -100,8 +100,8 @@ documentChangePartial logger encoding uri newRope edits = do
     -- If an old tree is found...
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
-      CacheItem{itemRope = editedOldRope, itemTree = editedOldTree, itemDiagnostics = oldDiagnostics} <-
-        applyTextEditToCacheItem encoding edits cacheItem
+      ParserCacheItem{itemRope = editedOldRope, itemTree = editedOldTree, itemDiagnostics = oldDiagnostics} <-
+        applyTextEditToItem encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
         let message = T.pack $ printf "edited rope out of sync with new rope for %s" (show uri)
@@ -131,7 +131,7 @@ documentChangePartial logger encoding uri newRope edits = do
                   void $ tellIfError node
           -- ... update the cache item
           modifyCache_ . Cache.insert uri $
-            CacheItem
+            ParserCacheItem
               { itemRope = newRope
               , itemTree = newTree
               , itemDiagnostics = oldDiagnostics <> newDiagnostics
@@ -332,3 +332,7 @@ inputFromRope = \case
       if bytesLeft >= BS.length charBytes
         then fillBufferSlow line (bytesLeft - BS.length charBytes) (buffer <> BSB.byteString charBytes)
         else buffer
+
+-- | Internal helper: Get the character at a given `Position` in a `Rope`.
+charAt :: Position -> Rope -> Text
+charAt = ((Rope.toText . fst . Rope.charSplitAt 1 . snd) .) . Rope.charSplitAtPosition

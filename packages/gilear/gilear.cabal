@@ -21,13 +21,13 @@ library
   exposed-modules:
     Gilear
     Gilear.Internal.Core
-    Gilear.Internal.Core.Cache
     Gilear.Internal.Core.Diagnostics
     Gilear.Internal.Core.Location
-    Gilear.Internal.Core.TextEdit
     Gilear.Internal.Parser
+    Gilear.Internal.Parser.Cache
+    Gilear.Internal.Parser.Core
+    Gilear.Internal.Parser.TextEdit
 
-  other-modules:   Data.Text.Mixed.Rope.Extra
   build-depends:
     , base                  >=4.13 && <5
     , bytestring            >=0.12 && <0.13
