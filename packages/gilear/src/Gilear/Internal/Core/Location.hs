@@ -18,7 +18,15 @@ import Data.Text.Lines (Position (Position))
 import Data.Word (Word32)
 import TreeSitter (Point (..), Range (..))
 
+--------------------------------------------------------------------------------
+-- ByteIndex
+--------------------------------------------------------------------------------
+
 type ByteIndex = Word32
+
+--------------------------------------------------------------------------------
+-- ByteRange
+--------------------------------------------------------------------------------
 
 data ByteRange = UnsafeByteRange !ByteIndex !ByteIndex
 
@@ -41,6 +49,17 @@ instance Show ByteRange where
 byteIndexToByteRange :: ByteIndex -> ByteRange
 byteIndexToByteRange byteIndex = ByteRange byteIndex byteIndex
 
+--------------------------------------------------------------------------------
+-- Bridge for package "tree-sitter"
+--------------------------------------------------------------------------------
+
+rangeToByteRange :: Range -> ByteRange
+rangeToByteRange Range{rangeStartByte, rangeEndByte} = ByteRange rangeStartByte rangeEndByte
+
+--------------------------------------------------------------------------------
+-- Bridge for package "IntervalMap"
+--------------------------------------------------------------------------------
+
 byteRangeToInterval :: ByteRange -> Interval ByteIndex
 byteRangeToInterval (ByteRange start end) = ClosedInterval start end
 
@@ -50,8 +69,9 @@ intervalToByteRange (ClosedInterval start end) = ByteRange (start + 1) (end - 1)
 intervalToByteRange (OpenInterval start end) = ByteRange start end
 intervalToByteRange (IntervalOC start end) = ByteRange (start + 1) end
 
-rangeToByteRange :: Range -> ByteRange
-rangeToByteRange Range{rangeStartByte, rangeEndByte} = ByteRange rangeStartByte rangeEndByte
+--------------------------------------------------------------------------------
+-- Bridge for package "text-rope"
+--------------------------------------------------------------------------------
 
 {-| Convert a `Position` to a `Point`.
 

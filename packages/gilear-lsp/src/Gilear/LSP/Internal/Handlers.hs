@@ -18,10 +18,10 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Lazy qualified as TL
 import Gilear.Internal.Core qualified as TC
-import Gilear.Internal.Core.Cache qualified as TC
-import Gilear.Internal.Core.TextEdit (TextEdit (..))
 import Gilear.Internal.Parser (InputEncoding (..))
 import Gilear.Internal.Parser qualified as TC
+import Gilear.Internal.Parser.Cache qualified as TC
+import Gilear.Internal.Parser.TextEdit (TextEdit (..))
 import Gilear.LSP.Internal.Compat.Gilear qualified as Gilear
 import Gilear.LSP.Internal.Core (LSPTC)
 import Language.LSP.Protocol.Lens (HasContentChanges (..), HasEnd (..), HasParams (..), HasRange (..), HasStart (..), HasText (..), HasTextDocument (..), HasUri (..))

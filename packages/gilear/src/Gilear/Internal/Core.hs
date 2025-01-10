@@ -11,24 +11,23 @@ module Gilear.Internal.Core where
 
 import Colog.Core (LogAction, Severity (..), (<&))
 import Colog.Core.Severity (WithSeverity (..))
-import Control.Monad (unless, when)
+import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Reader (MonadReader (..), ReaderT (..))
-import Data.Functor ((<&>))
 import Data.Hashable (Hashable)
-import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
+import Data.IORef (atomicModifyIORef', readIORef)
 import Data.Kind (Constraint, Type)
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Gilear.Internal.Core.Cache (Cache, CacheItem)
-import Gilear.Internal.Core.Cache qualified as Cache
 import Gilear.Internal.Core.Diagnostics (Diagnostics)
+import Gilear.Internal.Parser.Cache (ParserCache, ParserCacheItem)
+import Gilear.Internal.Parser.Cache qualified as Cache
+import Gilear.Internal.Parser.Core (ParserEnv (..), newParserEnv)
 import Text.Printf (printf)
 import TreeSitter (Language, Parser)
 import TreeSitter qualified as TS
-import TreeSitter.Gilear (tree_sitter_gilear)
 
 --------------------------------------------------------------------------------
 -- Package Name
@@ -36,28 +35,6 @@ import TreeSitter.Gilear (tree_sitter_gilear)
 
 packageName :: Text
 packageName = T.pack "gilear"
-
---------------------------------------------------------------------------------
--- Parser
---
--- NOTE: These functions are not defined in `Gilear.Internal.Parser` in order to
---       avoid a cyclic dependency.
---------------------------------------------------------------------------------
-
--- | Create a new tree-sitter parser environment.
-newParser :: IO Parser
-newParser = do
-  -- Initialise a new tree-sitter parser
-  parser <- TS.parserNew
-  -- Initialise the tree-sitter-gilear language
-  language <- TS.unsafeToLanguage =<< tree_sitter_gilear
-  -- Configure the parser
-  success <- TS.parserSetLanguage parser language
-  unless success $
-    -- TODO: report an error rather than dying
-    fail "gilear: failed to set parser language"
-  -- Return the parser environment
-  pure parser
 
 --------------------------------------------------------------------------------
 -- Type-Checker Environments
@@ -72,16 +49,14 @@ newParser = do
 
 -- TODO: use `MVar` or `TMVar` for the parser to avoid concurrent use
 type TCEnv :: Type -> Type
-data TCEnv uri = TCEnv
-  { parser :: Parser
-  , cacheVar :: IORef (Cache uri)
+newtype TCEnv uri = TCEnv
+  { parserEnv :: ParserEnv uri
   }
 
 -- | Create an empty type-checker environment.
 newTCEnv :: IO (TCEnv uri)
 newTCEnv = do
-  parser <- newParser
-  cacheVar <- newIORef Cache.empty
+  parserEnv <- newParserEnv
   pure $ TCEnv{..}
 
 --------------------------------------------------------------------------------
@@ -95,40 +70,42 @@ type MonadTC uri m = (Show uri, Hashable uri, MonadIO m, MonadReader (TCEnv uri)
 askTCEnv :: (MonadTC uri m) => m (TCEnv uri)
 askTCEnv = ask
 
--- * Parser
+-- | Get the type-checker environment.
+askParserEnv :: (MonadTC uri m) => m (ParserEnv uri)
+askParserEnv = (.parserEnv) <$> askTCEnv
 
 -- | Get the `Parser`.
 askParser :: (MonadTC uri m) => m Parser
-askParser = (.parser) <$> askTCEnv
+askParser = liftIO . readIORef . (.parserVar) =<< askParserEnv
 
 -- | Run a type-checking action with the `Parser`.
 withParser :: (MonadTC uri m) => (Parser -> m a) -> m a
-withParser action = askParser >>= action
+withParser action = action =<< askParser
 
 -- | Get the `Language`.
 askLanguage :: (MonadTC uri m) => m Language
-askLanguage = askParser >>= liftIO . TS.parserLanguage
+askLanguage = liftIO . TS.parserLanguage =<< askParser
 
 -- | Run a type-checking action with the `Language`.
 withLanguage :: (MonadTC uri m) => (Language -> m a) -> m a
-withLanguage action = askLanguage >>= action
+withLanguage action = action =<< askLanguage
 
--- * Cache
+-- -- * Cache
 
--- | Get the `Cache`.
-askCache :: (MonadTC uri m) => m (Cache uri)
-askCache = askTCEnv >>= liftIO . readIORef . (.cacheVar)
+-- | Get the `ParserCache`.
+askParserCache :: (MonadTC uri m) => m (ParserCache uri)
+askParserCache = liftIO . readIORef . (.parserCacheVar) =<< askParserEnv
 
 -- | Get the parse for a file.
-lookupCache :: (Hashable uri, MonadTC uri m) => uri -> m (Maybe CacheItem)
-lookupCache uri = askCache <&> Cache.lookup uri
+lookupCache :: (Hashable uri, MonadTC uri m) => uri -> m (Maybe ParserCacheItem)
+lookupCache uri = Cache.lookup uri <$> askParserCache
 
 -- | Modify the `Cache`.
-modifyCache :: (MonadTC uri m) => (Cache uri -> (Cache uri, b)) -> m b
-modifyCache f = askTCEnv >>= liftIO . (`atomicModifyIORef'` f) . (.cacheVar)
+modifyCache :: (MonadTC uri m) => (ParserCache uri -> (ParserCache uri, b)) -> m b
+modifyCache f = liftIO . (`atomicModifyIORef'` f) . (.parserCacheVar) =<< askParserEnv
 
 -- | Variant of `modifyCache` that does not return a result.
-modifyCache_ :: (MonadTC uri m) => (Cache uri -> Cache uri) -> m ()
+modifyCache_ :: (MonadTC uri m) => (ParserCache uri -> ParserCache uri) -> m ()
 modifyCache_ f = modifyCache ((,()) . f)
 
 -- | Assert that there is cache item associated with the given @uri@.
@@ -146,11 +123,11 @@ assertNoCacheItem logger uri = do
 -- * Diagnostics
 
 askDiagnostics :: (MonadTC uri m) => uri -> m (Maybe Diagnostics)
-askDiagnostics = fmap (fmap (.itemDiagnostics)) . lookupCache
+askDiagnostics = fmap (fmap (.itemDiag)) . lookupCache
 
-addDiagnostics :: (MonadTC uri m) => uri -> Diagnostics -> m ()
-addDiagnostics uri newDiagnostics = modifyCache_ . flip Cache.adjust uri $ \Cache.CacheItem{..} ->
-  Cache.CacheItem{itemDiagnostics = itemDiagnostics <> newDiagnostics, ..}
+insertDiagnostics :: (MonadTC uri m) => uri -> Diagnostics -> m ()
+insertDiagnostics uri newDiag = modifyCache_ . flip Cache.adjust uri $ \Cache.ParserCacheItem{itemDiag = oldDiag, ..} ->
+  Cache.ParserCacheItem{itemDiag = oldDiag <> newDiag, ..}
 
 --------------------------------------------------------------------------------
 -- Type-Checker Monad Stack
