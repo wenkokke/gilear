@@ -8,6 +8,7 @@ assert(typeof GILEAR_LSP_PATH === "string");
 
 module.exports = defineConfig({
   files: "out/test/**/*.test.js",
+  launchArgs: ["--disable-extensions"],
   mocha: {
     ui: "tdd",
     timeout: 20_000,
