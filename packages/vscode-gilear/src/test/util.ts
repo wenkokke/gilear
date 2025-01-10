@@ -168,7 +168,7 @@ export function fromRange(range: vscode.Range): Range {
 }
 
 export function fromPosition(position: vscode.Position): Position {
-  return [position.line, position.character];
+  return [position.line + 1, position.character + 1];
 }
 
 export function toRange(range: Range): vscode.Range {
@@ -176,7 +176,7 @@ export function toRange(range: Range): vscode.Range {
 }
 
 export function toPosition(position: Position): vscode.Position {
-  return new vscode.Position(position[0], position[1]);
+  return new vscode.Position(position[0] - 1, position[1] - 1);
 }
 
 export function applyEdits(
