@@ -4,6 +4,7 @@ import { findExecutable } from "./extension/findExecutable";
 import { ArrayLogger } from "./extension/logger/ArrayLogger";
 import { VSCodeOutputChannelLoggerAdapter } from "./extension/logger/VSCodeOutputChannelLoggerAdapter";
 import { VSCodeWindowLogger } from "./extension/logger/VSCodeWindowLogger";
+import { createTestCaseRecorder } from "./test/TestCaseRecorder";
 
 export type ExtensionAPI = {
   client: lsp.LanguageClient;
@@ -41,6 +42,7 @@ export function activate(
     traceOutputChannel,
     // Add an output channel for client output.
     outputChannel: outputChannel,
+    middleware: createTestCaseRecorder(context, outputChannel),
   };
 
   // Find the gilear-lsp executable:

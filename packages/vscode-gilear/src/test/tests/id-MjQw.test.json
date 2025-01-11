@@ -1,0 +1,41 @@
+{
+  "name": "id-MjQw",
+  "file": "id-MjQw.gilear",
+  "test": [
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 10, "line": 1 },
+            "end": { "character": 11, "line": 1 }
+          },
+          "text": ""
+        }
+      ]
+    },
+    {
+      "diagnostics": [
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 10, "line": 1 },
+            "end": { "character": 10, "line": 1 }
+          },
+          "message": "Syntax Error: Missing '';''"
+        }
+      ]
+    },
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 10, "line": 1 },
+            "end": { "character": 10, "line": 1 }
+          },
+          "text": ";"
+        }
+      ]
+    },
+    { "diagnostics": [] }
+  ]
+}
