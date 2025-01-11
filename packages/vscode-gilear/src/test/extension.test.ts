@@ -1,28 +1,30 @@
 import { globSync } from "glob";
 import * as assert from "assert";
 import * as path from "path";
-import * as fs from "fs";
-import * as yaml from "js-yaml";
 // import * as Mocha from "mocha";
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from "vscode";
-import * as util from "./util";
 import * as Gilear from "../extension";
 import { Extension } from "vscode";
+import { fromRange, TestCase, toDiagnostic } from "./TestCase";
 
 const testDir = path.join(__dirname, "..", "..", "src", "test");
-const testDataDir = path.join(testDir, "data");
-const testSpecDir = path.join(testDir, "spec");
-const testSpecFilePattern = path.join(testSpecDir, "*.test.yaml");
-const testSpecFileOptions = { windowsPathsNoEscape: true };
+const testCasesDir = path.join(testDir, "tests");
+const testFilesDir = path.join(testCasesDir, "files");
+const testCasePattern = path.join(testCasesDir, `*${TestCase.fileExt}`);
+const testCaseOptions = { windowsPathsNoEscape: true };
 
 async function activatedExtension(): Promise<Extension<Gilear.ExtensionAPI>> {
   const extId = "wenkokke.vscode-gilear";
   const ext = vscode.extensions.getExtension<Gilear.ExtensionAPI>(extId);
   if (!ext.isActive) await ext.activate();
   return ext;
+}
+
+async function sleep(ms: number): Promise<void> {
+  return await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // TODO: run cabal build gilear-lsp before starting tests
@@ -43,36 +45,47 @@ suite("Extension Test Suite", () => {
     );
   });
 
-  const testSpecFiles = globSync(testSpecFilePattern, testSpecFileOptions);
+  const testCaseFiles = globSync(testCasePattern, testCaseOptions);
 
   test("Are there any tests?", () => {
     assert(
-      testSpecFiles.length > 0,
-      `The glob pattern ${testSpecFilePattern} found no tests`,
+      testCaseFiles.length > 0,
+      `The glob pattern ${testCasePattern} found no tests`,
     );
   });
 
-  testSpecFiles.forEach((testSpecFile) => {
-    const title = `Diagnostic: ${path.basename(testSpecFile, ".test.json")}`;
+  testCaseFiles.forEach((testCaseFile) => {
+    const name = path.basename(testCaseFile, TestCase.fileExt);
+    const title = `Test: ${name}`;
     test(title, async () => {
-      const testSpecContent = fs.readFileSync(testSpecFile, {
-        encoding: "utf-8",
-      });
-      const testSpec = yaml.load(testSpecContent, { filename: testSpecFile });
-      assert(util.isTestSpec(testSpec));
+      const testCase = TestCase.fromFile(testCaseFile);
+      assert.ok(testCase);
       await activatedExtension();
-      const docFile = path.join(testDataDir, testSpec.file);
+      const docFile = path.join(testFilesDir, testCase.file);
       const doc = await vscode.workspace.openTextDocument(docFile);
       const editor = await vscode.window.showTextDocument(doc);
-      await util.sleep(50);
-      await editor.edit((edit) => util.applyEdits(testSpec.edits, edit));
-      await util.sleep(50);
-      const diagnostics = vscode.languages.getDiagnostics(editor.document.uri);
-      for (var index = 0; index < testSpec.diagnostics.length; index += 1) {
-        assert(index < diagnostics.length);
-        const actual = util.fromDiagnostic(diagnostics[index]);
-        const expected = testSpec.diagnostics[index];
-        assert.deepStrictEqual(actual, expected);
+      for (const step of testCase.test) {
+        // Sleep to allow the LSP to process...
+        await sleep(100);
+        if ("edits" in step) {
+          // If the step is an edit, apply it:
+          await editor.edit((editorEdit) => {
+            for (const edit of step.edits) {
+              editorEdit.replace(fromRange(edit.range), edit.text);
+            }
+          });
+        } else {
+          // If the step is a diagnostic, verify it:
+          const expected = step.diagnostics;
+          const actual = vscode.languages.getDiagnostics(editor.document.uri);
+          assert.equal(actual.length, expected.length);
+          for (let index = 0; index < expected.length; index += 1) {
+            assert.deepStrictEqual(
+              toDiagnostic(actual[index]),
+              expected[index],
+            );
+          }
+        }
       }
     });
   });
