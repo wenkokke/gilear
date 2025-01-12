@@ -1,25 +1,10 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import * as fs from "fs";
+import * as path from "path";
 
 export class TestCase {
   static fileExt = ".test.json";
-
-  static fromFile(testCasePath: string): TestCase {
-    const testCaseContent = fs.readFileSync(testCasePath, {
-      encoding: "utf-8",
-    });
-    const testCaseInfo = JSON.parse(testCaseContent);
-    assert(typeof testCaseInfo?.name === "string");
-    assert(typeof testCaseInfo?.file === "string");
-    assert(Array.isArray(testCaseInfo?.test));
-    const testCase = new TestCase(testCaseInfo.name, testCaseInfo.file);
-    for (const testCaseStep of testCaseInfo.test) {
-      assert(assertIsStep(testCaseStep));
-      testCase.test.push(testCaseStep);
-    }
-    return testCase;
-  }
 
   readonly name: string;
   readonly file: string;
@@ -30,6 +15,100 @@ export class TestCase {
     this.file = file;
     this.test = [];
   }
+
+  static fromFile(testCaseFile: string): TestCase {
+    const name = path.basename(testCaseFile, TestCase.fileExt);
+    const testCaseContent = fs.readFileSync(testCaseFile, {
+      encoding: "utf-8",
+    });
+    const testCaseInfo = JSON.parse(testCaseContent);
+    assert(typeof testCaseInfo?.file === "string");
+    assert(Array.isArray(testCaseInfo?.test));
+    const testCase = new TestCase(name, testCaseInfo.file);
+    for (const testCaseStep of testCaseInfo.test) {
+      assert(assertIsStep(testCaseStep));
+      testCase.test.push(testCaseStep);
+    }
+    return testCase;
+  }
+
+  toFile(testCaseDir: string): void {
+    const testCaseFile = path.join(
+      testCaseDir,
+      `${this.name}${TestCase.fileExt}`,
+    );
+    const testCaseContents = JSON.stringify({
+      file: this.file,
+      test: this.test,
+    });
+    fs.writeFileSync(testCaseFile, testCaseContents);
+  }
+
+  async assertSuccess(
+    testCasesDir: string,
+    testFilesDir: string,
+  ): Promise<void> {
+    // Track whether or not the test case is being updated
+    const shouldUpdate = this.shouldUpdateGolden();
+    // Track whether or not the test case has any changes:
+    let hasChanges = false;
+    const docFile = path.join(testFilesDir, this.file);
+    const doc = await vscode.workspace.openTextDocument(docFile);
+    const editor = await vscode.window.showTextDocument(doc);
+    // Maintain an updated test case
+    const updatedTestCase = new TestCase(this.name, this.file);
+    for (const step of this.test) {
+      // Sleep to allow the LSP to process...
+      await sleep(150);
+      if ("edits" in step) {
+        // If the step is an edit...
+        // .. copy over the edit to the updated test case unchanged
+        updatedTestCase.test.push(step);
+        // ...apply it
+        await editor.edit((editorEdit) => {
+          for (const edit of step.edits) {
+            editorEdit.replace(fromRange(edit.range), edit.text);
+          }
+        });
+      } else {
+        // If the step is a diagnostic...
+        const expected = step.diagnostics;
+        const actual = vscode.languages.getDiagnostics(editor.document.uri);
+        // ...update the diagnostics to the updated test case unchanged
+        updatedTestCase.test.push({ diagnostics: actual.map(toDiagnostic) });
+        try {
+          // TODO: more user friendly error reporting on diagnostics
+          //       1. check if only the order differs (i.e. compare as sets)
+          //       2. remove the diagnostics that are in both sets
+          //       3. visualise the diagnostics that are in one set but not the other
+          // ...validate the received diagnostics
+          assert.equal(actual.length, expected.length);
+          for (let index = 0; index < expected.length; index += 1) {
+            assert.deepStrictEqual(
+              toDiagnostic(actual[index]),
+              expected[index],
+            );
+          }
+        } catch (e) {
+          hasChanges = true;
+          if (!shouldUpdate) throw e;
+        }
+      }
+    }
+    // If we should update golden tests, do so...
+    if (shouldUpdate && hasChanges) updatedTestCase.toFile(testCasesDir);
+  }
+
+  shouldUpdateGolden(): boolean {
+    return (
+      process.env.TEST_UPDATE === "true" ||
+      process.env.npm_config_test_update === "true"
+    );
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  return await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export type Step = Edits | Diagnostics;
