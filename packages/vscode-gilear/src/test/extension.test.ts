@@ -62,7 +62,7 @@ suite("Extension Test Suite", () => {
       const editor = await vscode.window.showTextDocument(doc);
       for (const step of testCase.test) {
         // Sleep to allow the LSP to process...
-        await sleep(100);
+        await sleep(150);
         if ("edits" in step) {
           // If the step is an edit, apply it:
           await editor.edit((editorEdit) => {
