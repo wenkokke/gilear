@@ -1,0 +1,49 @@
+{
+  "name": "id-MjQw-1",
+  "file": "id-MjQw.gilear",
+  "test": [
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 7, "line": 1 },
+            "end": { "character": 8, "line": 1 }
+          },
+          "text": "!"
+        }
+      ]
+    },
+    {
+      "diagnostics": [
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 0, "line": 0 },
+            "end": { "character": 11, "line": 1 }
+          },
+          "message": "Syntax Error: Expected end, ':', ';', '=', '(', ')', '->', '\\', variable_name, constructor_name"
+        },
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 7, "line": 1 },
+            "end": { "character": 8, "line": 1 }
+          },
+          "message": "Syntax Error: Expected '=', '(', ')', '->', variable_name, constructor_name, found '!'"
+        }
+      ]
+    },
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 7, "line": 1 },
+            "end": { "character": 8, "line": 1 }
+          },
+          "text": "="
+        }
+      ]
+    },
+    { "diagnostics": [] }
+  ]
+}
