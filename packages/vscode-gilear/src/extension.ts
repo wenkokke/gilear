@@ -6,6 +6,8 @@ import { VSCodeOutputChannelLoggerAdapter } from "./extension/logger/VSCodeOutpu
 import { VSCodeWindowLogger } from "./extension/logger/VSCodeWindowLogger";
 import { createTestCaseRecorder } from "./test/TestCaseRecorder";
 
+export const extensionId = "wenkokke.vscode-gilear";
+
 export type ExtensionAPI = {
   client: lsp.LanguageClient;
 };

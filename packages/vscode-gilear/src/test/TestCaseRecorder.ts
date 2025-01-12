@@ -35,13 +35,9 @@ export class TestCaseRecorder implements lsp.Middleware {
     context: vscode.ExtensionContext,
     outputChannel: vscode.OutputChannel,
   ) {
-    // NOTE(testPath): this code depends on the directory that contains the test data
-    this.testCasesDir = path.join(
-      context.extensionPath,
-      "src",
-      "test",
-      "tests",
-    );
+    // NOTE(directory-structure): this code depends on the directory that contains the test data
+    const testDir = path.join(context.extensionPath, "src", "test");
+    this.testCasesDir = path.join(testDir, "golden");
     this.testFilesDir = path.join(this.testCasesDir, "files");
     this.outputChannel = outputChannel;
     // Register Gilear: Start Recording Test Case
@@ -270,13 +266,7 @@ export class TestCaseRecorder implements lsp.Middleware {
 
   writeTestCaseFile(): void {
     if (this && this.ongoing) {
-      const { name } = this.ongoing.test;
-      const testCaseFile = path.join(
-        this.testCasesDir,
-        `${name}${TestCase.fileExt}`,
-      );
-      const testCaseContents = JSON.stringify(this.ongoing.test);
-      fs.writeFileSync(testCaseFile, testCaseContents);
+      this.ongoing.test.toFile(this.testCasesDir);
       this.ongoing = null;
     }
   }
