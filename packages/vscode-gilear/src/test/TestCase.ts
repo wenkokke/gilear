@@ -57,9 +57,34 @@ export class TestCase {
     const editor = await vscode.window.showTextDocument(doc);
     // Maintain an updated test case
     const updatedTestCase = new TestCase(this.name, this.file);
+
+    return new Promise((resolve, reject) => {
+      vscode.languages.onDidChangeDiagnostics((event: vscode.DiagnosticChangeEvent) => {
+        if (event.uris.includes(editor.document.uri)) {
+          vscode.languages.getDiagnostics(editor.document.uri); // do the thing
+
+          { value, done } = await steps.next();
+          if (done) {
+            resolve();
+          }
+        }
+      });
+
+      const steps = this.test.map(async (step) => {
+        updatedTestCase.test.push(step);
+        await editor.edit((editorEdit) => {
+          for (const edit of step.edits) {
+            editorEdit.replace(fromRange(edit.range), edit.text);
+          }
+        });
+        yield step;
+      });
+    });
+
     for (const step of this.test) {
       // Sleep to allow the LSP to process...
       await sleep(150);
+      // vscode.languages.onDidChangeDiagnostics(() => {});
       if ("edits" in step) {
         // If the step is an edit...
         // .. copy over the edit to the updated test case unchanged
