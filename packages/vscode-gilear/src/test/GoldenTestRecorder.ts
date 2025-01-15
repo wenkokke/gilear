@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as vscode from "vscode";
 import * as lsp from "vscode-languageclient";
-import { GoldenTest, Step, toDiagnostic, toEdit } from "./GoldenTest";
+import { Edit, GoldenTest, Step, toDiagnostic, toEdit } from "./GoldenTest";
 import * as path from "path";
 import * as fs from "fs";
 import { globSync } from "glob";
@@ -26,6 +26,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
     name: string;
     file: string;
     fileIsNew: boolean;
+    edits: Edit[] | null;
     steps: Step[];
   };
 
@@ -63,9 +64,11 @@ export class GoldenTestRecorder implements lsp.Middleware {
     next: (data: vscode.TextDocumentChangeEvent) => Promise<void>,
   ): Promise<void> {
     if (this && this.isOngoing(data.document.uri)) {
-      this.ongoing.steps.push({
-        edits: data.contentChanges.map(toEdit),
-      });
+      assert.equal(this.ongoing.edits, null);
+      this.ongoing.edits = data.contentChanges.map(toEdit);
+      await vscode.commands.executeCommand(
+        "workbench.action.files.setActiveEditorReadonlyInSession",
+      );
     }
     return next(data);
   }
@@ -76,9 +79,15 @@ export class GoldenTestRecorder implements lsp.Middleware {
     next: lsp.HandleDiagnosticsSignature,
   ): void {
     if (this && this.isOngoing(uri)) {
+      vscode.commands.executeCommand(
+        "workbench.action.files.setActiveEditorWriteableInSession",
+      );
+      assert.notEqual(this.ongoing.edits, null);
       this.ongoing.steps.push({
+        edits: this.ongoing.edits,
         diagnostics: diagnostics.map(toDiagnostic),
       });
+      this.ongoing.edits = null;
     }
     return next(uri, diagnostics);
   }
@@ -115,7 +124,14 @@ export class GoldenTestRecorder implements lsp.Middleware {
       if (nameUserInput === undefined) return; // The user cancelled the recording.
       const name = nameUserInput !== "" ? nameUserInput : namePlaceHolder;
       // Create an empty test case:
-      this.ongoing = { uri: document.uri, name, file, fileIsNew, steps: [] };
+      this.ongoing = {
+        uri: document.uri,
+        name,
+        file,
+        fileIsNew,
+        edits: null,
+        steps: [],
+      };
       // Notify the user:
       const baseName = path.basename(document.fileName);
       vscode.window.showInformationMessage(`Recording test for ${baseName}`);
