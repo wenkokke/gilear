@@ -8,12 +8,12 @@ export class GoldenTest {
 
   readonly name: string;
   readonly file: string;
-  readonly test: Step[];
+  readonly steps: Step[];
 
-  constructor(name: string, file: string) {
+  constructor(name: string, file: string, steps: Step[]) {
     this.name = name;
     this.file = file;
-    this.test = [];
+    this.steps = steps;
   }
 
   static fromFile(goldenTestFile: string): GoldenTest {
@@ -23,13 +23,8 @@ export class GoldenTest {
     });
     const goldenTestInfo = JSON.parse(goldenTestContent);
     assert(typeof goldenTestInfo?.file === "string");
-    assert(Array.isArray(goldenTestInfo?.test));
-    const goldenTest = new GoldenTest(name, goldenTestInfo.file);
-    for (const goldenTestStep of goldenTestInfo.test) {
-      assert(assertIsStep(goldenTestStep));
-      goldenTest.test.push(goldenTestStep);
-    }
-    return goldenTest;
+    assert(Array.isArray(goldenTestInfo?.steps));
+    return new GoldenTest(name, goldenTestInfo.file, goldenTestInfo.steps);
   }
 
   toFile(goldenTestDir: string): void {
@@ -39,7 +34,7 @@ export class GoldenTest {
     );
     const goldenTestContents = JSON.stringify({
       file: this.file,
-      test: this.test,
+      steps: this.steps,
     });
     fs.writeFileSync(goldenTestFile, goldenTestContents);
   }
@@ -48,22 +43,24 @@ export class GoldenTest {
     goldenTestCasesDir: string,
     goldenTestFilesDir: string,
   ): Promise<void> {
-    // Track whether or not the test case is being updated
+    // Validate the golden test...
+    // Track whether or not the test case is being updated...
     const shouldUpdate = this.shouldUpdateGolden();
-    // Track whether or not the test case has any changes:
+    // Track whether or not the test case has any changes...
     let hasChanges = false;
+    // Maintain an updated golden test...
+    const updatedGoldenTest = new GoldenTest(this.name, this.file, []);
+    // Open the golden test's associated file...
     const docFile = path.join(goldenTestFilesDir, this.file);
     const doc = await vscode.workspace.openTextDocument(docFile);
     const editor = await vscode.window.showTextDocument(doc);
-    // Maintain an updated test case
-    const updatedTestCase = new GoldenTest(this.name, this.file);
-    for (const step of this.test) {
+    for (const step of this.steps) {
       // Sleep to allow the LSP to process...
       await sleep(150);
       if ("edits" in step) {
         // If the step is an edit...
         // .. copy over the edit to the updated test case unchanged
-        updatedTestCase.test.push(step);
+        updatedGoldenTest.steps.push(step);
         // ...apply it
         await editor.edit((editorEdit) => {
           for (const edit of step.edits) {
@@ -75,7 +72,7 @@ export class GoldenTest {
         const expected = step.diagnostics;
         const actual = vscode.languages.getDiagnostics(editor.document.uri);
         // ...update the diagnostics to the updated test case unchanged
-        updatedTestCase.test.push({ diagnostics: actual.map(toDiagnostic) });
+        updatedGoldenTest.steps.push({ diagnostics: actual.map(toDiagnostic) });
         try {
           // TODO: more user friendly error reporting on diagnostics
           //       1. check if only the order differs (i.e. compare as sets)
@@ -96,7 +93,8 @@ export class GoldenTest {
       }
     }
     // If we should update golden tests, do so...
-    if (shouldUpdate && hasChanges) updatedTestCase.toFile(goldenTestCasesDir);
+    if (shouldUpdate && hasChanges)
+      updatedGoldenTest.toFile(goldenTestCasesDir);
   }
 
   shouldUpdateGolden(): boolean {
