@@ -98,12 +98,27 @@ jobs:
             packages/vscode-gilear/node_modules/
           key: ${{ steps.cache-node.outputs.cache-primary-key }}
 
+      - name: 💾 Restore Haskell
+        uses: actions/cache/restore@v4
+        if: ${{ !env.ACT }}
+        id: cache-setup-haskell
+        with:
+          path: $HOME/.ghcup
+          key: ${{ matrix.os.name }}-ghc-${{ matrix.haskell.ghc.version || steps.dev-dependencies.outputs.ghc }}-cabal-${{ matrix.haskell.cabal.version || steps.dev-dependencies.outputs.cabal }}
+
       - name: 🛠️ Install Haskell
         uses: haskell-actions/setup@v2
         id: setup-haskell
         with:
           ghc-version: ${{ matrix.haskell.ghc.version || steps.dev-dependencies.outputs.ghc }}
           cabal-version: ${{ matrix.haskell.cabal.version || steps.dev-dependencies.outputs.cabal }}
+
+      - name: 💾 Save Haskell
+        uses: actions/cache/save@v4
+        if: ${{ !env.ACT && steps.cache-setup-haskell.outputs.cache-hit != 'true' }}
+        with:
+          path: $HOME/.ghcup
+          key: ${{ steps.cache-setup-haskell.outputs.cache-primary-key }}
 
       - name: 🛠️ Configure
         run: |
