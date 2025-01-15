@@ -10,9 +10,7 @@
           },
           "text": "!"
         }
-      ]
-    },
-    {
+      ],
       "diagnostics": [
         {
           "severity": "error",
@@ -41,8 +39,8 @@
           },
           "text": "="
         }
-      ]
-    },
-    { "diagnostics": [] }
+      ],
+      "diagnostics": []
+    }
   ]
 }
