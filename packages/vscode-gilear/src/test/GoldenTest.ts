@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 
-export class TestCase {
+export class GoldenTest {
   static fileExt = ".test.json";
 
   readonly name: string;
@@ -16,47 +16,47 @@ export class TestCase {
     this.test = [];
   }
 
-  static fromFile(testCaseFile: string): TestCase {
-    const name = path.basename(testCaseFile, TestCase.fileExt);
-    const testCaseContent = fs.readFileSync(testCaseFile, {
+  static fromFile(goldenTestFile: string): GoldenTest {
+    const name = path.basename(goldenTestFile, GoldenTest.fileExt);
+    const goldenTestContent = fs.readFileSync(goldenTestFile, {
       encoding: "utf-8",
     });
-    const testCaseInfo = JSON.parse(testCaseContent);
-    assert(typeof testCaseInfo?.file === "string");
-    assert(Array.isArray(testCaseInfo?.test));
-    const testCase = new TestCase(name, testCaseInfo.file);
-    for (const testCaseStep of testCaseInfo.test) {
-      assert(assertIsStep(testCaseStep));
-      testCase.test.push(testCaseStep);
+    const goldenTestInfo = JSON.parse(goldenTestContent);
+    assert(typeof goldenTestInfo?.file === "string");
+    assert(Array.isArray(goldenTestInfo?.test));
+    const goldenTest = new GoldenTest(name, goldenTestInfo.file);
+    for (const goldenTestStep of goldenTestInfo.test) {
+      assert(assertIsStep(goldenTestStep));
+      goldenTest.test.push(goldenTestStep);
     }
-    return testCase;
+    return goldenTest;
   }
 
-  toFile(testCaseDir: string): void {
-    const testCaseFile = path.join(
-      testCaseDir,
-      `${this.name}${TestCase.fileExt}`,
+  toFile(goldenTestDir: string): void {
+    const goldenTestFile = path.join(
+      goldenTestDir,
+      `${this.name}${GoldenTest.fileExt}`,
     );
-    const testCaseContents = JSON.stringify({
+    const goldenTestContents = JSON.stringify({
       file: this.file,
       test: this.test,
     });
-    fs.writeFileSync(testCaseFile, testCaseContents);
+    fs.writeFileSync(goldenTestFile, goldenTestContents);
   }
 
   async assertSuccess(
-    testCasesDir: string,
-    testFilesDir: string,
+    goldenTestCasesDir: string,
+    goldenTestFilesDir: string,
   ): Promise<void> {
     // Track whether or not the test case is being updated
     const shouldUpdate = this.shouldUpdateGolden();
     // Track whether or not the test case has any changes:
     let hasChanges = false;
-    const docFile = path.join(testFilesDir, this.file);
+    const docFile = path.join(goldenTestFilesDir, this.file);
     const doc = await vscode.workspace.openTextDocument(docFile);
     const editor = await vscode.window.showTextDocument(doc);
     // Maintain an updated test case
-    const updatedTestCase = new TestCase(this.name, this.file);
+    const updatedTestCase = new GoldenTest(this.name, this.file);
     for (const step of this.test) {
       // Sleep to allow the LSP to process...
       await sleep(150);
@@ -96,7 +96,7 @@ export class TestCase {
       }
     }
     // If we should update golden tests, do so...
-    if (shouldUpdate && hasChanges) updatedTestCase.toFile(testCasesDir);
+    if (shouldUpdate && hasChanges) updatedTestCase.toFile(goldenTestCasesDir);
   }
 
   shouldUpdateGolden(): boolean {

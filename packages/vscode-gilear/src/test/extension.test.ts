@@ -4,14 +4,14 @@ import * as path from "path";
 import * as vscode from "vscode";
 import * as Gilear from "../extension";
 import { Extension } from "vscode";
-import { TestCase } from "./TestCase";
+import { GoldenTest } from "./GoldenTest";
 
 // NOTE(directory-structure): this code depends on the directory that contains the test data
 const testDir = path.join(__dirname, "..", "..", "src", "test");
-const testCasesDir = path.join(testDir, "golden");
-const testFilesDir = path.join(testCasesDir, "files");
-const testCasePattern = path.join(testCasesDir, `*${TestCase.fileExt}`);
-const testCaseOptions = { windowsPathsNoEscape: true };
+const goldenTestCasesDir = path.join(testDir, "golden");
+const goldenTestFilesDir = path.join(goldenTestCasesDir, "files");
+const goldenTestCasePattern = path.join(goldenTestCasesDir, `*${GoldenTest.fileExt}`);
+const goldenTestCaseOptions = { windowsPathsNoEscape: true };
 
 // TODO: run cabal build gilear-lsp before starting tests
 suite("Extension Test Suite", () => {
@@ -32,25 +32,25 @@ suite("Extension Test Suite", () => {
   });
 
   // Run golden file tests:
-  const testCaseFiles = globSync(testCasePattern, testCaseOptions);
+  const goldenTestCaseFiles = globSync(goldenTestCasePattern, goldenTestCaseOptions);
 
   test("Are there any golden tests?", () => {
     assert(
-      testCaseFiles.length > 0,
-      `The glob pattern ${testCasePattern} found no tests`,
+      goldenTestCaseFiles.length > 0,
+      `The glob pattern ${goldenTestCasePattern} found no tests`,
     );
   });
 
-  testCaseFiles.sort().forEach((testCaseFile) => {
-    const name = path.basename(testCaseFile, TestCase.fileExt);
+  goldenTestCaseFiles.sort().forEach((testCaseFile) => {
+    const name = path.basename(testCaseFile, GoldenTest.fileExt);
     const title = `Test: ${name}`;
     test(title, async () => {
       // Track whether or not the test case has change
-      const testCase = TestCase.fromFile(testCaseFile);
+      const testCase = GoldenTest.fromFile(testCaseFile);
       assert.ok(testCase);
       await activatedExtension();
       // Run the test case:
-      await testCase.assertSuccess(testCasesDir, testFilesDir);
+      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
     });
   });
 });

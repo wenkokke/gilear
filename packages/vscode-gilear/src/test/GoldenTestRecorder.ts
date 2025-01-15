@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as vscode from "vscode";
 import * as lsp from "vscode-languageclient";
-import { TestCase, toDiagnostic, toEdit } from "./TestCase";
+import { GoldenTest, toDiagnostic, toEdit } from "./GoldenTest";
 import * as path from "path";
 import * as fs from "fs";
 import { globSync } from "glob";
@@ -11,24 +11,24 @@ export const commandIdStartRecordingTestCase = "gilear.startTestCaseRecorder";
 
 export const commandIdStopRecordingTestCase = "gilear.stopTestCaseRecorder";
 
-export function createTestCaseRecorder(
+export function createGoldenTestRecorder(
   context: vscode.ExtensionContext,
   outputChannel: vscode.OutputChannel,
-): TestCaseRecorder | undefined {
+): GoldenTestRecorder | undefined {
   if (context.extensionMode == vscode.ExtensionMode.Development) {
-    return new TestCaseRecorder(context, outputChannel);
+    return new GoldenTestRecorder(context, outputChannel);
   }
 }
 
-export class TestCaseRecorder implements lsp.Middleware {
+export class GoldenTestRecorder implements lsp.Middleware {
   ongoing?: {
     uri: vscode.Uri;
     fileIsNew: boolean;
-    test: TestCase;
+    test: GoldenTest;
   };
 
-  readonly testCasesDir: string;
-  readonly testFilesDir: string;
+  readonly goldenTestCasesDir: string;
+  readonly goldenTestFilesDir: string;
   readonly outputChannel: vscode.OutputChannel;
 
   constructor(
@@ -37,8 +37,8 @@ export class TestCaseRecorder implements lsp.Middleware {
   ) {
     // NOTE(directory-structure): this code depends on the directory that contains the test data
     const testDir = path.join(context.extensionPath, "src", "test");
-    this.testCasesDir = path.join(testDir, "golden");
-    this.testFilesDir = path.join(this.testCasesDir, "files");
+    this.goldenTestCasesDir = path.join(testDir, "golden");
+    this.goldenTestFilesDir = path.join(this.goldenTestCasesDir, "files");
     this.outputChannel = outputChannel;
     // Register Gilear: Start Recording Test Case
     context.subscriptions.push(
@@ -100,12 +100,12 @@ export class TestCaseRecorder implements lsp.Middleware {
       // Get the active document:
       const document = vscode.window.activeTextEditor.document;
       // Copy the active document to the test files directory:
-      const { file, fileIsNew } = this.writeTestFile(
+      const { file, fileIsNew } = this.copyGoldenTestFile(
         document.fileName,
         document.getText(),
       );
       // Get the test case name:
-      const namePlaceHolder = this.suggestTestName(file);
+      const namePlaceHolder = this.suggestGoldenTestName(file);
       const nameUserInput = await vscode.window.showInputBox({
         title: "Test Name",
         placeHolder: namePlaceHolder,
@@ -116,7 +116,7 @@ export class TestCaseRecorder implements lsp.Middleware {
       this.ongoing = {
         uri: document.uri,
         fileIsNew,
-        test: new TestCase(name, file),
+        test: new GoldenTest(name, file),
       };
       // Notify the user:
       const baseName = path.basename(document.fileName);
@@ -132,7 +132,7 @@ export class TestCaseRecorder implements lsp.Middleware {
     if (this && this.ongoing && this.ongoing.test && this.ongoing.test.name) {
       vscode.window
         .showInformationMessage(
-          `Save test to '${this.ongoing.test.name}${TestCase.fileExt}'?`,
+          `Save test to '${this.ongoing.test.name}${GoldenTest.fileExt}'?`,
           "OK",
           "Cancel",
         )
@@ -140,7 +140,7 @@ export class TestCaseRecorder implements lsp.Middleware {
           (value: "OK" | "Cancel") => {
             switch (value) {
               case "OK":
-                return this.writeTestCaseFile();
+                return this.saveOngoing();
               case "Cancel":
                 return this.abortOngoing();
             }
@@ -153,46 +153,25 @@ export class TestCaseRecorder implements lsp.Middleware {
     }
   }
 
-  abortOngoing(): void {
-    if (this && this.ongoing) {
-      const { test: testCase, fileIsNew } = this.ongoing;
-      const { file } = testCase;
-      const filePath = path.join(this.testFilesDir, file);
-      if (fileIsNew === true && fs.existsSync(filePath)) {
-        return fs.rmSync(filePath);
-      }
-      this.ongoing = null;
-    }
-  }
-
-  isOngoing(uri: vscode.Uri): boolean {
-    return (
-      this &&
-      this.ongoing &&
-      this.ongoing.uri &&
-      this.ongoing.uri.toString() === uri.toString()
-    );
-  }
-
   /**
    * Suggests a name for the test case, based on the file name of the active document.
    *
    * @returns A suggested name.
    */
-  suggestTestName(fileName: string): string {
+  suggestGoldenTestName(fileName: string): string {
     // If there is no test case named $basename, suggest $basename:
     const baseName = path.basename(fileName, ".gilear");
     const basePath = path.join(
-      this.testCasesDir,
-      `${baseName}${TestCase.fileExt}`,
+      this.goldenTestCasesDir,
+      `${baseName}${GoldenTest.fileExt}`,
     );
     if (!fs.existsSync(basePath)) {
       return baseName;
     }
     // Otherwise, find the next available index $nextIndex and suggest $basename-$nextIndex:
     const indexedNamePattern = path.join(
-      this.testCasesDir,
-      `${baseName}-*${TestCase.fileExt}`,
+      this.goldenTestCasesDir,
+      `${baseName}-*${GoldenTest.fileExt}`,
     );
     const indexedNamesInUse = globSync(indexedNamePattern, {
       windowsPathsNoEscape: true,
@@ -201,7 +180,7 @@ export class TestCaseRecorder implements lsp.Middleware {
       .flatMap((indexedName) => {
         const index = parseInt(
           path
-            .basename(indexedName, TestCase.fileExt)
+            .basename(indexedName, GoldenTest.fileExt)
             .substring(baseName.length + 1),
         );
         return isFinite(index) ? [index] : [];
@@ -224,7 +203,7 @@ export class TestCaseRecorder implements lsp.Middleware {
    * @param fileContent The file contents.
    * @returns The path to the copy of the file.
    */
-  writeTestFile(
+  copyGoldenTestFile(
     fileName: string,
     fileContent: string,
   ): { file: string; fileIsNew: boolean } {
@@ -235,7 +214,7 @@ export class TestCaseRecorder implements lsp.Middleware {
     // Find the shortest prefix of the hash (>=4) that does not result in a hash collision.
     for (let n = 4; n < hash.length; n += 1) {
       const file = `${name}-${hash.substring(0, n)}.gilear`;
-      const filePath = path.join(this.testFilesDir, file);
+      const filePath = path.join(this.goldenTestFilesDir, file);
       if (!fs.existsSync(filePath)) {
         fs.writeFileSync(filePath, fileContent);
         return { file: file, fileIsNew: true };
@@ -264,9 +243,33 @@ export class TestCaseRecorder implements lsp.Middleware {
     );
   }
 
-  writeTestCaseFile(): void {
+  /** 
+   * Save the golden test that is currently being recorded and stop recording.
+   */
+  saveOngoing(): void {
     if (this && this.ongoing) {
-      this.ongoing.test.toFile(this.testCasesDir);
+      this.ongoing.test.toFile(this.goldenTestCasesDir);
+      this.ongoing = null;
+    }
+  }
+
+  isOngoing(uri: vscode.Uri): boolean {
+    return (
+      this &&
+      this.ongoing &&
+      this.ongoing.uri &&
+      this.ongoing.uri.toString() === uri.toString()
+    );
+  }
+
+  abortOngoing(): void {
+    if (this && this.ongoing) {
+      const { test: testCase, fileIsNew } = this.ongoing;
+      const { file } = testCase;
+      const filePath = path.join(this.goldenTestFilesDir, file);
+      if (fileIsNew === true && fs.existsSync(filePath)) {
+        return fs.rmSync(filePath);
+      }
       this.ongoing = null;
     }
   }
