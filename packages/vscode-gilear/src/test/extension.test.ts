@@ -10,7 +10,10 @@ import { GoldenTest } from "./GoldenTest";
 const testDir = path.join(__dirname, "..", "..", "src", "test");
 const goldenTestCasesDir = path.join(testDir, "golden");
 const goldenTestFilesDir = path.join(goldenTestCasesDir, "files");
-const goldenTestCasePattern = path.join(goldenTestCasesDir, `*${GoldenTest.fileExt}`);
+const goldenTestCasePattern = path.join(
+  goldenTestCasesDir,
+  `*${GoldenTest.fileExt}`,
+);
 const goldenTestCaseOptions = { windowsPathsNoEscape: true };
 
 // TODO: run cabal build gilear-lsp before starting tests
@@ -32,7 +35,10 @@ suite("Extension Test Suite", () => {
   });
 
   // Run golden file tests:
-  const goldenTestCaseFiles = globSync(goldenTestCasePattern, goldenTestCaseOptions);
+  const goldenTestCaseFiles = globSync(
+    goldenTestCasePattern,
+    goldenTestCaseOptions,
+  );
 
   test("Are there any golden tests?", () => {
     assert(

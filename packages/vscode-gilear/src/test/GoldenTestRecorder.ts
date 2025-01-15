@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as vscode from "vscode";
 import * as lsp from "vscode-languageclient";
-import { GoldenTest, toDiagnostic, toEdit } from "./GoldenTest";
+import { GoldenTest, Step, toDiagnostic, toEdit } from "./GoldenTest";
 import * as path from "path";
 import * as fs from "fs";
 import { globSync } from "glob";
@@ -23,8 +23,10 @@ export function createGoldenTestRecorder(
 export class GoldenTestRecorder implements lsp.Middleware {
   ongoing?: {
     uri: vscode.Uri;
+    name: string;
+    file: string;
     fileIsNew: boolean;
-    test: GoldenTest;
+    steps: Step[];
   };
 
   readonly goldenTestCasesDir: string;
@@ -61,7 +63,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
     next: (data: vscode.TextDocumentChangeEvent) => Promise<void>,
   ): Promise<void> {
     if (this && this.isOngoing(data.document.uri)) {
-      this.ongoing.test.test.push({
+      this.ongoing.steps.push({
         edits: data.contentChanges.map(toEdit),
       });
     }
@@ -74,7 +76,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
     next: lsp.HandleDiagnosticsSignature,
   ): void {
     if (this && this.isOngoing(uri)) {
-      this.ongoing.test.test.push({
+      this.ongoing.steps.push({
         diagnostics: diagnostics.map(toDiagnostic),
       });
     }
@@ -95,7 +97,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
       return;
     }
     // If there is an ongoing test recording, stop it:
-    if (this.ongoing !== null) this.stopRecording();
+    if (this && this.ongoing) this.stopRecording();
     try {
       // Get the active document:
       const document = vscode.window.activeTextEditor.document;
@@ -113,11 +115,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
       if (nameUserInput === undefined) return; // The user cancelled the recording.
       const name = nameUserInput !== "" ? nameUserInput : namePlaceHolder;
       // Create an empty test case:
-      this.ongoing = {
-        uri: document.uri,
-        fileIsNew,
-        test: new GoldenTest(name, file),
-      };
+      this.ongoing = { uri: document.uri, name, file, fileIsNew, steps: [] };
       // Notify the user:
       const baseName = path.basename(document.fileName);
       vscode.window.showInformationMessage(`Recording test for ${baseName}`);
@@ -129,11 +127,11 @@ export class GoldenTestRecorder implements lsp.Middleware {
   }
 
   async stopRecording(): Promise<void> {
-    if (this && this.ongoing && this.ongoing.test && this.ongoing.test.name) {
+    if (this && this.ongoing) {
       // TODO: This does not stop recording until the user responds to the message.
       vscode.window
         .showInformationMessage(
-          `Save test to '${this.ongoing.test.name}${GoldenTest.fileExt}'?`,
+          `Save test to '${this.ongoing.name}${GoldenTest.fileExt}'?`,
           "OK",
           "Cancel",
         )
@@ -244,12 +242,14 @@ export class GoldenTestRecorder implements lsp.Middleware {
     );
   }
 
-  /** 
+  /**
    * Save the golden test that is currently being recorded and stop recording.
    */
   saveOngoing(): void {
     if (this && this.ongoing) {
-      this.ongoing.test.toFile(this.goldenTestCasesDir);
+      const { name, file, fileIsNew, steps } = this.ongoing;
+      const goldenTest = new GoldenTest(name, file, steps);
+      goldenTest.toFile(this.goldenTestCasesDir);
       this.ongoing = null;
     }
   }
@@ -265,8 +265,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
 
   abortOngoing(): void {
     if (this && this.ongoing) {
-      const { test: testCase, fileIsNew } = this.ongoing;
-      const { file } = testCase;
+      const { file, fileIsNew } = this.ongoing;
       const filePath = path.join(this.goldenTestFilesDir, file);
       if (fileIsNew === true && fs.existsSync(filePath)) {
         return fs.rmSync(filePath);
