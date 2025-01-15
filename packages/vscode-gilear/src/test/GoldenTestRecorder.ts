@@ -130,6 +130,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
 
   async stopRecording(): Promise<void> {
     if (this && this.ongoing && this.ongoing.test && this.ongoing.test.name) {
+      // TODO: This does not stop recording until the user responds to the message.
       vscode.window
         .showInformationMessage(
           `Save test to '${this.ongoing.test.name}${GoldenTest.fileExt}'?`,
