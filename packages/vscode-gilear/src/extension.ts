@@ -8,6 +8,11 @@ import { createGoldenTestRecorder } from "./test/GoldenTestRecorder";
 
 export const extensionId = "wenkokke.vscode-gilear";
 
+export async function extensionAPI(): Promise<ExtensionAPI> {
+  const ext = vscode.extensions.getExtension(extensionId);
+  return ext.isActive ? ext.exports : await ext.activate();
+}
+
 export type ExtensionAPI = {
   client: lsp.LanguageClient;
 };
