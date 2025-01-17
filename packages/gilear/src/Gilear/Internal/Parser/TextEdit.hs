@@ -7,7 +7,7 @@ import Data.Text (Text)
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
 import Data.Word (Word32)
-import Gilear.Internal.Core (MonadTC)
+import Gilear.Internal.Core (MonadTc)
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (ByteRange (..), Point, pointToPosition, positionToPoint)
 import Gilear.Internal.Parser.Cache (ParserCacheItem (..))
@@ -21,7 +21,7 @@ data TextEdit = TextEdit
   }
 
 applyTextEditToItem ::
-  (MonadTC uri m) =>
+  (MonadTc uri m) =>
   InputEncoding ->
   [TextEdit] ->
   ParserCacheItem ->

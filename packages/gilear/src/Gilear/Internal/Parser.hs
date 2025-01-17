@@ -13,7 +13,7 @@ module Gilear.Internal.Parser (
 import Colog.Core (LogAction, Severity (..), WithSeverity (WithSeverity), (<&))
 import Control.Monad (unless, void, when)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.Writer (MonadWriter (..), WriterT, execWriterT)
+import Control.Monad.Writer (MonadTrans (..), MonadWriter (..), WriterT, execWriterT)
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Lazy qualified as BSL
@@ -24,7 +24,7 @@ import Data.Text.Encoding qualified as T
 import Data.Text.Lines (Position)
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
-import Gilear.Internal.Core (MonadTC, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser)
+import Gilear.Internal.Core (MonadTc, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser)
 import Gilear.Internal.Core.Diagnostics (Diagnostic (..), Diagnostics)
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (pointToPosition)
@@ -37,7 +37,7 @@ import TreeSitter qualified as TS
 
 -- | Open a text document.
 documentOpen ::
-  (Show uri, Hashable uri, MonadTC uri m) =>
+  (Show uri, Hashable uri, MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   InputEncoding ->
   uri ->
@@ -51,10 +51,11 @@ documentOpen logger encoding uri rope = do
   -- When receiving a whole-document text, there is no way to safely reuse
   -- any old tree, so we parse the file from scratch.
   documentChangeWholeDocument logger encoding uri rope
+{-# INLINEABLE documentOpen #-}
 
 -- | Change the whole content of the text document.
 documentChangeWholeDocument ::
-  (Show uri, Hashable uri, MonadTC uri m) =>
+  (Show uri, Hashable uri, MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   InputEncoding ->
   uri ->
@@ -77,10 +78,11 @@ documentChangeWholeDocument logger encoding uri rope = do
       -- TODO: do not update tree if it contains errors?
       modifyCache_ $ Cache.insert uri (ParserCacheItem rope tree D.empty)
       pure True
+{-# INLINEABLE documentChangeWholeDocument #-}
 
 -- | Change part of the content of the text document.
 documentChangePartial ::
-  (Show uri, Hashable uri, MonadTC uri m) =>
+  (Show uri, Hashable uri, MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   InputEncoding ->
   uri ->
@@ -121,7 +123,7 @@ documentChangePartial logger encoding uri newRope edits = do
           -- Traverse the syntax tree searching for parse errors...
           rootNode <- liftIO (TS.treeRootNode newTree)
           newDiag <-
-            execWriterT . depthFirst rootNode nodeHasChangeAndError $ \node -> do
+            execWriterT . depthFirst rootNode (lift . nodeHasChangeAndError) $ \node -> do
               -- check if the current node is a "missing" node
               nodeIsMissing <- tellIfMissingSymbol node
               unless nodeIsMissing $ do
@@ -137,9 +139,10 @@ documentChangePartial logger encoding uri newRope edits = do
               , itemDiag = oldDiag <> newDiag
               }
           pure True
+{-# INLINEABLE documentChangePartial #-}
 
 tellIfMissingSymbol ::
-  (MonadTC uri m) =>
+  (MonadTc uri m) =>
   TS.Node ->
   WriterT Diagnostics m Bool
 tellIfMissingSymbol node = do
@@ -147,15 +150,16 @@ tellIfMissingSymbol node = do
   if nodeIsMissing
     then do
       nodeSymbol <- liftIO (TS.nodeSymbol node)
-      nodeString <- showSymbol nodeSymbol
+      nodeString <- lift (showSymbol nodeSymbol)
       diagnosticRange <- liftIO (TS.nodeRange node)
       let diagnosticMessage = "Syntax Error: Missing '" <> nodeString <> "'"
       tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
       pure True
     else pure False
+{-# INLINEABLE tellIfMissingSymbol #-}
 
 tellIfUnexpectedChar ::
-  (MonadTC uri m) =>
+  (MonadTc uri m) =>
   Rope ->
   TS.Node ->
   WriterT Diagnostics m Bool
@@ -171,15 +175,16 @@ tellIfUnexpectedChar rope node = do
       -- ... find the unexpected character
       let unexpectedChar = charAt (pointToPosition rangeStartPoint) rope
       -- ... find the expected symbols
-      expectedSymbols <- T.intercalate ", " <$> (traverse showSymbol =<< nodeExpectedSymbols node)
+      expectedSymbols <- T.intercalate ", " <$> (traverse (lift . showSymbol) =<< lift (nodeExpectedSymbols node))
       -- ... format the diagnostic message
       let diagnosticMessage = "Syntax Error: Expected " <> expectedSymbols <> ", found '" <> unexpectedChar <> "'"
       tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
       pure True
     else pure False
+{-# INLINEABLE tellIfUnexpectedChar #-}
 
 tellIfError ::
-  (MonadTC uri m) =>
+  (MonadTc uri m) =>
   TS.Node ->
   WriterT Diagnostics m Bool
 tellIfError node = do
@@ -192,32 +197,37 @@ tellIfError node = do
       -- ... find the error range
       diagnosticRange <- liftIO (TS.nodeRange node)
       -- ... find the expected symbols
-      expectedSymbols <- T.intercalate ", " <$> (traverse showSymbol =<< nodeExpectedSymbols node)
+      expectedSymbols <- T.intercalate ", " <$> (traverse (lift . showSymbol) =<< lift (nodeExpectedSymbols node))
       -- ... format the diagnostic message
       let diagnosticMessage = T.pack "Syntax Error: Expected " <> expectedSymbols
       tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
       pure True
     else pure False
+{-# INLINEABLE tellIfError #-}
 
-nodeHasChangeAndError :: (MonadTC uri m) => TS.Node -> m Bool
+nodeHasChangeAndError :: (MonadTc uri m) => TS.Node -> m Bool
 nodeHasChangeAndError node =
   liftIO $ not <$> ((&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node)
+{-# INLINEABLE nodeHasChangeAndError #-}
 
-showSymbol :: (MonadTC uri m) => TS.Symbol -> m Text
+showSymbol :: (MonadTc uri m) => TS.Symbol -> m Text
 showSymbol symbol =
   withLanguage $ \language -> liftIO (languageShowSymbol language symbol)
+{-# INLINEABLE showSymbol #-}
 
 languageShowSymbol :: TS.Language -> TS.Symbol -> IO Text
 languageShowSymbol language symbol = do
   symbolName <- T.decodeUtf8 <$> TS.languageSymbolName language symbol
   symbolType <- TS.languageSymbolType language symbol
   pure $ if symbolType == TS.SymbolTypeAnonymous then "'" <> symbolName <> "'" else symbolName
+{-# INLINEABLE languageShowSymbol #-}
 
-nodeExpectedSymbols :: (MonadTC uri m) => TS.Node -> m [TS.Symbol]
+nodeExpectedSymbols :: (MonadTc uri m) => TS.Node -> m [TS.Symbol]
 nodeExpectedSymbols node = do
   stateId <- liftIO (TS.nodeParseState node)
   withLanguage $ \language ->
     liftIO (languageExpectedSymbols language stateId)
+{-# INLINEABLE nodeExpectedSymbols #-}
 
 {-| @`languageExpectedSymbols` stateId@ returns the list of expected symbol names
   and types from a certain parse state.
@@ -237,6 +247,7 @@ languageExpectedSymbols language stateId = do
                 fmap (symbol :) (iter success)
               else pure []
       iter =<< TS.lookaheadIteratorNext lookaheadIterator
+{-# INLINEABLE languageExpectedSymbols #-}
 
 {-| @`depthFirst` node predGotoChild action@ performs a depth-first traversal
   of the tree, starting from @node@, skipping any subtree for which the
@@ -265,12 +276,13 @@ depthFirst node predGotoChild action = do
         success <- liftIO (TS.treeCursorGotoParent treeCursor)
         when success gotoNextSibling
   gotoFirstChild
+{-# INLINEABLE depthFirst #-}
 
 {-| Parse a document from 'Rope'. This function uses the UTF8 encoding,
   since that is the encoding used internally by both 'Text' and 'Rope'.
 -}
 parseDocumentFromRope ::
-  (MonadTC uri m) =>
+  (MonadTc uri m) =>
   InputEncoding ->
   Maybe TS.Tree ->
   Rope ->
@@ -332,6 +344,7 @@ inputFromRope = \case
       if bytesLeft >= BS.length charBytes
         then fillBufferSlow line (bytesLeft - BS.length charBytes) (buffer <> BSB.byteString charBytes)
         else buffer
+{-# INLINEABLE inputFromRope #-}
 
 -- | Internal helper: Get the character at a given `Position` in a `Rope`.
 charAt :: Position -> Rope -> Text
