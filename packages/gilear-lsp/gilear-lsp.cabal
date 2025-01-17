@@ -38,8 +38,8 @@ library
     , text-rope             >=0.3     && <0.4
     , transformers          >=0.6     && <0.7
     , tree-sitter           >=0.13    && <0.14
+    , unliftio-core         >=0.2     && <0.3
 
-  -- , containers            >=0.6     && <0.8
   exposed-modules: Gilear.LSP
   other-modules:
     Gilear.LSP.Internal.Compat.Gilear
