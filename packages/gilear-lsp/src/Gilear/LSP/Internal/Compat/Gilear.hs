@@ -12,22 +12,22 @@ import Gilear.Internal.Core qualified as TC
 import Gilear.Internal.Core.Diagnostics qualified as Gilear
 import Gilear.Internal.Core.Location (Point (..))
 import Gilear.Internal.Core.Location qualified as Gilear
-import Gilear.LSP.Internal.Core (DiagnosticSource, LSPTC)
+import Gilear.LSP.Internal.Core (DiagnosticSource, LspTc)
 import Gilear.LSP.Internal.Core qualified as Config
 import Language.LSP.Diagnostics qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
 
 publishParserDiagnostics ::
-  LogAction LSPTC (WithSeverity Text) ->
+  LogAction LspTc (WithSeverity Text) ->
   LSP.NormalizedUri ->
   Maybe Int32 ->
-  LSPTC ()
+  LspTc ()
 publishParserDiagnostics logger docUri docVersion = do
   -- Set the diagnostics source to "gilear"
   let source = Just . T.pack $ "gilear[parser]"
   -- Import the diagnostics from gilear
-  gilearDiagnostics <- TC.askDiagnostics docUri
+  gilearDiagnostics <- TC.getDiagnostics docUri
   -- Report the diagnostics for debugging purposes
   logger <& T.pack (show gilearDiagnostics) `WithSeverity` Debug
   -- Get the configuration parameters

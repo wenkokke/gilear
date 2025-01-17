@@ -29,8 +29,8 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Version (showVersion)
-import Gilear.Internal.Core (TCEnv, newTCEnv)
-import Gilear.LSP.Internal.Core (Config, LSPTC, packageName, runLSPTC)
+import Gilear.Internal.Core (TcEnv, newTcEnv)
+import Gilear.LSP.Internal.Core (Config, LspTc, packageName, runLspTc)
 import Gilear.LSP.Internal.Core qualified as Core
 import Gilear.LSP.Internal.Handlers (handlers)
 import Language.LSP.Logging (defaultClientLogger)
@@ -89,12 +89,12 @@ run = do
       dualLogger :: (MonadLsp Config m, Pretty a) => LogAction m (WithSeverity a)
       dualLogger = clientLogger <> Colog.hoistLogAction liftIO handleLogger
     -- Setup global variable holding the TC environment:
-    tcEnv <- newTCEnv
+    tcEnv <- newTcEnv
     -- Setup global queue with LSP message reactions:
     reactorInputChan <- newTChanIO
     -- Start the LSP server:
     runServerWithHandles handleLogger (dualLogger @(LspM Config)) stdin stdout $
-      lspDefinition handleLogger (dualLogger @LSPTC) reactorInputChan tcEnv
+      lspDefinition handleLogger (dualLogger @LspTc) reactorInputChan tcEnv
 
 --------------------------------------------------------------------------------
 -- Logger Helpers
@@ -166,9 +166,9 @@ newtype ReactorInput
 
 lspDefinition ::
   LogAction IO (WithSeverity Text) ->
-  LogAction LSPTC (WithSeverity Text) ->
+  LogAction LspTc (WithSeverity Text) ->
   TChan ReactorInput ->
-  TCEnv NormalizedUri ->
+  TcEnv NormalizedUri ->
   ServerDefinition Config
 lspDefinition handleLogger dualLogger reactorInputChan tcEnv =
   ServerDefinition
@@ -205,32 +205,32 @@ lspInitialise logger reactorInputChan languageContextEnv _request = do
   pure $ Right languageContextEnv
 
 lspHandlers ::
-  LogAction LSPTC (WithSeverity Text) ->
+  LogAction LspTc (WithSeverity Text) ->
   TChan ReactorInput ->
-  TCEnv NormalizedUri ->
+  TcEnv NormalizedUri ->
   ClientCapabilities ->
-  Handlers LSPTC
+  Handlers LspTc
 lspHandlers logger reactorInputChan tcEnv =
   mapHandlers pushRequest pushNotification . handlers logger
  where
-  pushRequest :: forall (a :: Method 'ClientToServer 'Request). Handler LSPTC a -> Handler LSPTC a
+  pushRequest :: forall (a :: Method 'ClientToServer 'Request). Handler LspTc a -> Handler LspTc a
   pushRequest handler = \message responder -> do
     lspEnv <- getLspEnv
-    let !action = runLSPTC lspEnv tcEnv (handler message responder)
+    let !action = runLspTc lspEnv tcEnv (handler message responder)
     liftIO . atomically . writeTChan reactorInputChan $ ReactorAction action
 
-  pushNotification :: forall (a :: Method 'ClientToServer 'Notification). Handler LSPTC a -> Handler LSPTC a
+  pushNotification :: forall (a :: Method 'ClientToServer 'Notification). Handler LspTc a -> Handler LspTc a
   pushNotification handler = \message -> do
     lspEnv <- getLspEnv
-    let !action = runLSPTC lspEnv tcEnv (handler message)
+    let !action = runLspTc lspEnv tcEnv (handler message)
     liftIO . atomically . writeTChan reactorInputChan $ ReactorAction action
 
 lspInterpretHandler ::
-  TCEnv NormalizedUri ->
+  TcEnv NormalizedUri ->
   LanguageContextEnv Config ->
-  LSPTC <~> IO
+  LspTc <~> IO
 lspInterpretHandler tcEnv languageContextEnv =
-  Iso (runLSPTC languageContextEnv tcEnv) liftIO
+  Iso (runLspTc languageContextEnv tcEnv) liftIO
 
 lspOptions :: Options
 lspOptions =
