@@ -1,10 +1,9 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
 module Gilear.Internal.Core where
@@ -14,7 +13,6 @@ import Colog.Core.Severity (WithSeverity (..))
 import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Reader (MonadReader (..), ReaderT (..))
 import Data.Hashable (Hashable)
 import Data.IORef (atomicModifyIORef', readIORef)
 import Data.Kind (Constraint, Type)
@@ -48,69 +46,76 @@ packageName = T.pack "gilear"
 -}
 
 -- TODO: use `MVar` or `TMVar` for the parser to avoid concurrent use
-type TCEnv :: Type -> Type
-newtype TCEnv uri = TCEnv
+type TcEnv :: Type -> Type
+newtype TcEnv uri = TcEnv
   { parserEnv :: ParserEnv uri
   }
 
 -- | Create an empty type-checker environment.
-newTCEnv :: IO (TCEnv uri)
-newTCEnv = do
+newTcEnv :: IO (TcEnv uri)
+newTcEnv = do
   parserEnv <- newParserEnv
-  pure $ TCEnv{..}
+  pure $ TcEnv{..}
 
 --------------------------------------------------------------------------------
 -- Type-Checker Monad Class
 --------------------------------------------------------------------------------
 
-type MonadTC :: Type -> (Type -> Type) -> Constraint
-type MonadTC uri m = (Show uri, Hashable uri, MonadIO m, MonadReader (TCEnv uri) m)
+type MonadTc :: Type -> (Type -> Type) -> Constraint
+class (Show uri, Hashable uri, MonadUnliftIO m) => MonadTc uri m | m -> uri where
+  -- | Get the type-checker environment.
+  getTcEnv :: (MonadTc uri m) => m (TcEnv uri)
 
 -- | Get the type-checker environment.
-askTCEnv :: (MonadTC uri m) => m (TCEnv uri)
-askTCEnv = ask
-
--- | Get the type-checker environment.
-askParserEnv :: (MonadTC uri m) => m (ParserEnv uri)
-askParserEnv = (.parserEnv) <$> askTCEnv
+getParserEnv :: (MonadTc uri m) => m (ParserEnv uri)
+getParserEnv = (.parserEnv) <$> getTcEnv
+{-# INLINEABLE getParserEnv #-}
 
 -- | Get the `Parser`.
-askParser :: (MonadTC uri m) => m Parser
-askParser = liftIO . readIORef . (.parserVar) =<< askParserEnv
+getParser :: (MonadTc uri m) => m Parser
+getParser = liftIO . readIORef . (.parserVar) =<< getParserEnv
+{-# INLINEABLE getParser #-}
 
 -- | Run a type-checking action with the `Parser`.
-withParser :: (MonadTC uri m) => (Parser -> m a) -> m a
-withParser action = action =<< askParser
+withParser :: (MonadTc uri m) => (Parser -> m a) -> m a
+withParser action = action =<< getParser
+{-# INLINEABLE withParser #-}
 
 -- | Get the `Language`.
-askLanguage :: (MonadTC uri m) => m Language
-askLanguage = liftIO . TS.parserLanguage =<< askParser
+getLanguage :: (MonadTc uri m) => m Language
+getLanguage = liftIO . TS.parserLanguage =<< getParser
+{-# INLINEABLE getLanguage #-}
 
 -- | Run a type-checking action with the `Language`.
-withLanguage :: (MonadTC uri m) => (Language -> m a) -> m a
-withLanguage action = action =<< askLanguage
+withLanguage :: (MonadTc uri m) => (Language -> m a) -> m a
+withLanguage action = action =<< getLanguage
+{-# INLINEABLE withLanguage #-}
 
 -- -- * Cache
 
 -- | Get the `ParserCache`.
-askParserCache :: (MonadTC uri m) => m (ParserCache uri)
-askParserCache = liftIO . readIORef . (.parserCacheVar) =<< askParserEnv
+getParserCache :: (MonadTc uri m) => m (ParserCache uri)
+getParserCache = liftIO . readIORef . (.parserCacheVar) =<< getParserEnv
+{-# INLINEABLE getParserCache #-}
 
 -- | Get the parse for a file.
-lookupCache :: (Hashable uri, MonadTC uri m) => uri -> m (Maybe ParserCacheItem)
-lookupCache uri = Cache.lookup uri <$> askParserCache
+lookupCache :: (Hashable uri, MonadTc uri m) => uri -> m (Maybe ParserCacheItem)
+lookupCache uri = Cache.lookup uri <$> getParserCache
+{-# INLINEABLE lookupCache #-}
 
 -- | Modify the `Cache`.
-modifyCache :: (MonadTC uri m) => (ParserCache uri -> (ParserCache uri, b)) -> m b
-modifyCache f = liftIO . (`atomicModifyIORef'` f) . (.parserCacheVar) =<< askParserEnv
+modifyCache :: (MonadTc uri m) => (ParserCache uri -> (ParserCache uri, b)) -> m b
+modifyCache f = liftIO . (`atomicModifyIORef'` f) . (.parserCacheVar) =<< getParserEnv
+{-# INLINEABLE modifyCache #-}
 
 -- | Variant of `modifyCache` that does not return a result.
-modifyCache_ :: (MonadTC uri m) => (ParserCache uri -> ParserCache uri) -> m ()
+modifyCache_ :: (MonadTc uri m) => (ParserCache uri -> ParserCache uri) -> m ()
 modifyCache_ f = modifyCache ((,()) . f)
+{-# INLINEABLE modifyCache_ #-}
 
 -- | Assert that there is cache item associated with the given @uri@.
 assertNoCacheItem ::
-  (MonadTC uri m) =>
+  (MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   uri ->
   m ()
@@ -119,50 +124,15 @@ assertNoCacheItem logger uri = do
   when (isJust maybeCacheItem) $ do
     let message = T.pack $ printf "found cache item for %s" (show uri)
     logger <& WithSeverity message Warning
+{-# INLINEABLE assertNoCacheItem #-}
 
 -- * Diagnostics
 
-askDiagnostics :: (MonadTC uri m) => uri -> m (Maybe Diagnostics)
-askDiagnostics = fmap (fmap (.itemDiag)) . lookupCache
+getDiagnostics :: (MonadTc uri m) => uri -> m (Maybe Diagnostics)
+getDiagnostics = fmap (fmap (.itemDiag)) . lookupCache
+{-# INLINEABLE getDiagnostics #-}
 
-insertDiagnostics :: (MonadTC uri m) => uri -> Diagnostics -> m ()
+insertDiagnostics :: (MonadTc uri m) => uri -> Diagnostics -> m ()
 insertDiagnostics uri newDiag = modifyCache_ . flip Cache.adjust uri $ \Cache.ParserCacheItem{itemDiag = oldDiag, ..} ->
   Cache.ParserCacheItem{itemDiag = oldDiag <> newDiag, ..}
-
---------------------------------------------------------------------------------
--- Type-Checker Monad Stack
---------------------------------------------------------------------------------
-
-{-| Type-Checker IO Monad.
-
-  The base of the type-checker monad stack is 'IO'. This is for two reasons:
-
-  1. The tree-sitter parser---particularly its error correction---is not
-     guaranteed to be deterministic and cannot be used from a pure function.
-  2. The type-checker environment, which contains mutable shared state, is
-     threaded through the type-checker concurrently rather than immutable
-     state being threaded through sequentially.
--}
-type TCIO :: Type -> Type
-newtype TCIO a = TCIO {unTCIO :: IO a}
-  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO)
-
--- | Run the type-checker IO monad.
-runTCIO :: TCIO a -> IO a
-runTCIO = unTCIO
-
-type TCT :: Type -> (Type -> Type) -> Type -> Type
-newtype TCT uri m a = TCT {unTCT :: ReaderT (TCEnv uri) m a}
-  deriving newtype (Functor, Applicative, Monad, MonadReader (TCEnv uri))
-
-deriving newtype instance (MonadIO m) => MonadIO (TCT uri m)
-
-deriving newtype instance (MonadUnliftIO m) => MonadUnliftIO (TCT uri m)
-
-type TC :: Type -> Type -> Type
-newtype TC uri a = TC {unTC :: TCT uri TCIO a}
-  deriving newtype (Functor, Applicative, Monad, MonadReader (TCEnv uri))
-
--- | Run the type-checker monad.
-runTCT :: TCEnv uri -> TCT uri m a -> m a
-runTCT env action = runReaderT (unTCT action) env
+{-# INLINEABLE insertDiagnostics #-}
