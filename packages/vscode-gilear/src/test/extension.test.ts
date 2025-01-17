@@ -23,13 +23,13 @@ suite("Extension Test Suite", () => {
   });
 
   test(`Is '${Gilear.extensionId}' available?`, async () => {
-    const ext = await activatedExtension();
+    const extensionAPI = await Gilear.extensionAPI();
     assert.ok(
-      ext,
+      extensionAPI,
       `VS Code extension '${Gilear.extensionId}' is not available`,
     );
     assert(
-      ext.exports.client.isRunning(),
+      extensionAPI.client.isRunning(),
       `VS Code extension '${Gilear.extensionId}' is not running`,
     );
   });
@@ -54,17 +54,9 @@ suite("Extension Test Suite", () => {
       // Track whether or not the test case has change
       const testCase = GoldenTest.fromFile(testCaseFile);
       assert.ok(testCase);
-      await activatedExtension();
+      await Gilear.extensionAPI();
       // Run the test case:
       await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
     });
   });
 });
-
-async function activatedExtension(): Promise<Extension<Gilear.ExtensionAPI>> {
-  const ext = vscode.extensions.getExtension<Gilear.ExtensionAPI>(
-    Gilear.extensionId,
-  );
-  if (!ext.isActive) await ext.activate();
-  return ext;
-}
