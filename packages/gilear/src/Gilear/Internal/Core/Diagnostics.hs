@@ -1,11 +1,22 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module Gilear.Internal.Core.Diagnostics where
+module Gilear.Internal.Core.Diagnostics (
+  Severity (..),
+  Diagnostic (..),
+  Diagnostics (..),
+  empty,
+  singleton,
+  null,
+  insert,
+  deleteByRange,
+  toList,
+) where
 
 import Data.IntervalMap.Strict (IntervalMap)
 import Data.IntervalMap.Strict qualified as IM
 import Data.Text (Text)
 import Gilear.Internal.Core.Location (ByteIndex, ByteRange, Range, byteRangeToInterval, rangeToByteRange)
+import Prelude hiding (null)
 
 data Severity
   = Error

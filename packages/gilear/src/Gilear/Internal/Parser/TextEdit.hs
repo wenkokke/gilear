@@ -1,6 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Gilear.Internal.Parser.TextEdit where
+module Gilear.Internal.Parser.TextEdit (
+  TextEdit (..),
+  applyTextEditToItem,
+) where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Text (Text)

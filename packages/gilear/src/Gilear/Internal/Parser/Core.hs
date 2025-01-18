@@ -1,6 +1,11 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Gilear.Internal.Parser.Core where
+module Gilear.Internal.Parser.Core (
+  Parser,
+  newParser,
+  ParserEnv (..),
+  newParserEnv,
+) where
 
 import Control.Monad (unless)
 import Data.IORef (IORef, newIORef)
