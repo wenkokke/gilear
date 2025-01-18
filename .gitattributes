@@ -1,1 +1,4 @@
 * text=auto eol=lf
+
+# Exclude files from GitHub language statistics
+/packages/tree-sitter/test/data/jQuery.js linguist-vendored
