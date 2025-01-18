@@ -6,7 +6,24 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 
-module Gilear.Internal.Core where
+module Gilear.Internal.Core (
+  packageName,
+  TcEnv (..),
+  MonadTc (..),
+  newTcEnv,
+  getParserEnv,
+  getParser,
+  withParser,
+  getLanguage,
+  withLanguage,
+  getParserCache,
+  lookupCache,
+  modifyCache,
+  modifyCache_,
+  assertNoCacheItem,
+  getDiagnostics,
+  insertDiagnostics,
+) where
 
 import Colog.Core (LogAction, Severity (..), (<&))
 import Colog.Core.Severity (WithSeverity (..))
@@ -33,6 +50,7 @@ import TreeSitter qualified as TS
 
 packageName :: Text
 packageName = T.pack "gilear"
+{-# INLINE packageName #-}
 
 --------------------------------------------------------------------------------
 -- Type-Checker Environments
@@ -56,6 +74,7 @@ newTcEnv :: IO (TcEnv uri)
 newTcEnv = do
   parserEnv <- newParserEnv
   pure $ TcEnv{..}
+{-# INLINEABLE newTcEnv #-}
 
 --------------------------------------------------------------------------------
 -- Type-Checker Monad Class
