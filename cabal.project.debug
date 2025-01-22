@@ -1,9 +1,5 @@
 import: cabal.project.release
 
--- Debug
-package control-rc
-  flags: +debug
-
 -- Enable -fcheck-prim-bounds
 -- https://gitlab.haskell.org/ghc/ghc/-/issues/21054
 if impl(ghc >=9.4.6 && <9.5 || >=9.6.3)
