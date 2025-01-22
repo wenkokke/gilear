@@ -54,36 +54,48 @@ export class GoldenTest {
     const docFile = path.join(goldenTestFilesDir, this.file);
     const doc = await vscode.workspace.openTextDocument(docFile);
     const editor = await vscode.window.showTextDocument(doc);
-    for (const step of this.steps) {
-      // Apply the edits...
-      await editor.edit((editorEdit) => {
-        for (const edit of step.edits) {
-          editorEdit.replace(fromRange(edit.range), edit.text);
+    try {
+      for (const step of this.steps) {
+        // Apply the edits...
+        await editor.edit((editorEdit) => {
+          for (const edit of step.edits) {
+            editorEdit.replace(fromRange(edit.range), edit.text);
+          }
+        });
+        // Sleep to allow the LSP to process...
+        await sleep(150);
+        // Validate the diagnostics...
+        const expect = step.diagnostics;
+        const actual = vscode.languages
+          .getDiagnostics(editor.document.uri)
+          .map(toDiagnostic);
+        try {
+          // TODO: more user friendly error reporting on diagnostics
+          //       1. check if only the order differs (i.e. compare as sets)
+          //       2. remove the diagnostics that are in both sets
+          //       3. visualise the diagnostics that are in one set but not the other
+          assert.deepStrictEqual(actual, expect);
+        } catch (e) {
+          hasChanges = true;
+          if (!shouldUpdate) throw e;
         }
-      });
-      // Sleep to allow the LSP to process...
-      await sleep(150);
-      // Validate the diagnostics...
-      const expect = step.diagnostics;
-      const actual = vscode.languages
-        .getDiagnostics(editor.document.uri)
-        .map(toDiagnostic);
-      try {
-        // TODO: more user friendly error reporting on diagnostics
-        //       1. check if only the order differs (i.e. compare as sets)
-        //       2. remove the diagnostics that are in both sets
-        //       3. visualise the diagnostics that are in one set but not the other
-        assert.deepStrictEqual(actual, expect);
-      } catch (e) {
-        hasChanges = true;
-        if (!shouldUpdate) throw e;
+        // Update the step...
+        updatedGoldenTest.steps.push({
+          edits: step.edits,
+          diagnostics: actual,
+        });
       }
-      // Update the step...
-      updatedGoldenTest.steps.push({ edits: step.edits, diagnostics: actual });
-    }
-    // If we should update golden tests, do so...
-    if (shouldUpdate && hasChanges) {
-      updatedGoldenTest.toFile(goldenTestCasesDir);
+      // If we should update golden tests, do so...
+      if (shouldUpdate && hasChanges) {
+        updatedGoldenTest.toFile(goldenTestCasesDir);
+      }
+    } catch (e) {
+      // Close the file without saving...
+      await vscode.commands.executeCommand(
+        "workbench.action.revertAndCloseActiveEditor",
+      );
+      // Rethrow the error...
+      throw e;
     }
   }
 
