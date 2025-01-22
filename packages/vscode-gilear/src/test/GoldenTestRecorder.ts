@@ -174,16 +174,12 @@ export class GoldenTestRecorder implements lsp.Middleware {
    * @returns A suggested name.
    */
   suggestGoldenTestName(fileName: string): string {
-    // If there is no test case named $basename, suggest $basename:
+    // If there is no test case named $basename or $basename-N, suggest $basename:
     const baseName = path.basename(fileName, ".gilear");
     const basePath = path.join(
       this.goldenTestCasesDir,
       `${baseName}${GoldenTest.fileExt}`,
     );
-    if (!fs.existsSync(basePath)) {
-      return baseName;
-    }
-    // Otherwise, find the next available index $nextIndex and suggest $basename-$nextIndex:
     const indexedNamePattern = path.join(
       this.goldenTestCasesDir,
       `${baseName}-*${GoldenTest.fileExt}`,
@@ -191,6 +187,10 @@ export class GoldenTestRecorder implements lsp.Middleware {
     const indexedNamesInUse = globSync(indexedNamePattern, {
       windowsPathsNoEscape: true,
     });
+    if (!fs.existsSync(basePath) && indexedNamesInUse.length === 0) {
+      return baseName;
+    }
+    // Otherwise, find the next available index $nextIndex and suggest $basename-$nextIndex:
     const indexesInUse = indexedNamesInUse
       .flatMap((indexedName) => {
         const index = parseInt(
