@@ -17,7 +17,6 @@ import Control.Monad.Writer (MonadTrans (..), MonadWriter (..), WriterT, execWri
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Lazy qualified as BSL
-import Data.Hashable (Hashable)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
@@ -27,17 +26,17 @@ import Data.Text.Mixed.Rope qualified as Rope
 import Gilear.Internal.Core (MonadTc, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser)
 import Gilear.Internal.Core.Diagnostics (Diagnostic (..), Diagnostics)
 import Gilear.Internal.Core.Diagnostics qualified as D
-import Gilear.Internal.Core.Location (pointToPosition)
+import Gilear.Internal.Core.Location (pointToPosition, positionToPoint)
 import Gilear.Internal.Parser.Cache (ParserCacheItem (..))
 import Gilear.Internal.Parser.Cache qualified as Cache
-import Gilear.Internal.Parser.TextEdit (TextEdit (..), applyTextEditToItem)
+import Gilear.Internal.Parser.TextEdit (TextEdit (..), applyTextEditToItem, lengthInBytes)
 import Text.Printf (printf)
 import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
 
 -- | Open a text document.
 documentOpen ::
-  (Show uri, Hashable uri, MonadTc uri m) =>
+  (MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   InputEncoding ->
   uri ->
@@ -55,7 +54,7 @@ documentOpen logger encoding uri rope = do
 
 -- | Change the whole content of the text document.
 documentChangeWholeDocument ::
-  (Show uri, Hashable uri, MonadTc uri m) =>
+  (MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   InputEncoding ->
   uri ->
@@ -76,13 +75,14 @@ documentChangeWholeDocument logger encoding uri rope = do
     Just tree -> do
       -- ... update the tree
       -- TODO: do not update tree if it contains errors?
-      modifyCache_ $ Cache.insert uri (ParserCacheItem rope tree D.empty)
+      let newCacheItem = ParserCacheItem rope tree D.empty
+      modifyCache_ (Cache.insert uri newCacheItem)
       pure True
 {-# INLINEABLE documentChangeWholeDocument #-}
 
 -- | Change part of the content of the text document.
 documentChangePartial ::
-  (Show uri, Hashable uri, MonadTc uri m) =>
+  (MonadTc uri m) =>
   LogAction m (WithSeverity Text) ->
   InputEncoding ->
   uri ->
@@ -103,7 +103,7 @@ documentChangePartial logger encoding uri newRope edits = do
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
       ParserCacheItem{itemRope = editedOldRope, itemTree = editedOldTree, itemDiag = oldDiag} <-
-        applyTextEditToItem encoding edits cacheItem
+        applyTextEditToItem logger encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
         let message = T.pack $ printf "edited rope out of sync with new rope for %s" (show uri)
@@ -122,105 +122,108 @@ documentChangePartial logger encoding uri newRope edits = do
         Just newTree -> do
           -- Traverse the syntax tree searching for parse errors...
           rootNode <- liftIO (TS.treeRootNode newTree)
-          newDiag <-
-            execWriterT . depthFirst rootNode (lift . nodeHasChangeAndError) $ \node -> do
-              -- check if the current node is a "missing" node
-              nodeIsMissing <- tellIfMissingSymbol node
-              unless nodeIsMissing $ do
-                -- check if the current node is a non-empty error leaf
-                nodeIsUnexpectedChar <- tellIfUnexpectedChar newRope node
-                unless nodeIsUnexpectedChar $ do
-                  void $ tellIfError node
+          newDiag <- diagnose logger encoding newRope rootNode
           -- ... update the cache item
-          modifyCache_ . Cache.insert uri $
-            ParserCacheItem
-              { itemRope = newRope
-              , itemTree = newTree
-              , itemDiag = oldDiag <> newDiag
-              }
+          let newCacheItem = ParserCacheItem newRope newTree (oldDiag <> newDiag)
+          modifyCache_ (Cache.insert uri newCacheItem)
           pure True
 {-# INLINEABLE documentChangePartial #-}
 
-tellIfMissingSymbol ::
+diagnose ::
+  forall uri m.
   (MonadTc uri m) =>
-  TS.Node ->
-  WriterT Diagnostics m Bool
-tellIfMissingSymbol node = do
-  nodeIsMissing <- liftIO (TS.nodeIsMissing node)
-  if nodeIsMissing
-    then do
-      nodeSymbol <- liftIO (TS.nodeSymbol node)
-      nodeString <- lift (showSymbol nodeSymbol)
-      diagnosticRange <- liftIO (TS.nodeRange node)
-      let diagnosticMessage = "Syntax Error: Missing '" <> nodeString <> "'"
-      tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
-      pure True
-    else pure False
-{-# INLINEABLE tellIfMissingSymbol #-}
-
-tellIfUnexpectedChar ::
-  (MonadTc uri m) =>
+  LogAction m (WithSeverity Text) ->
+  InputEncoding ->
   Rope ->
   TS.Node ->
-  WriterT Diagnostics m Bool
-tellIfUnexpectedChar rope node = do
-  nodeIsError <- liftIO (TS.nodeIsError node)
-  nodeChildCount <- liftIO (TS.nodeChildCount node)
-  -- ... find the node range
-  diagnosticRange <- liftIO (TS.nodeRange node)
-  let TS.Range{..} = diagnosticRange
-  -- If node is a non-empty error leaf...
-  if nodeIsError && nodeChildCount == 0 && rangeStartPoint < rangeEndPoint
-    then do
-      -- ... find the unexpected character
-      let unexpectedChar = charAt (pointToPosition rangeStartPoint) rope
-      -- ... find the expected symbols
-      expectedSymbols <- T.intercalate ", " <$> (traverse (lift . showSymbol) =<< lift (nodeExpectedSymbols node))
-      -- ... format the diagnostic message
-      let diagnosticMessage = "Syntax Error: Expected " <> expectedSymbols <> ", found '" <> unexpectedChar <> "'"
-      tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
-      pure True
-    else pure False
-{-# INLINEABLE tellIfUnexpectedChar #-}
+  m Diagnostics
+diagnose logger encoding newRope rootNode =
+  execWriterT . depthFirst rootNode (lift . liftIO . fmap not . nodeHasChangeAndError) $ \node -> do
+    -- check if the current node is a "missing" node
+    nodeIsMissing <- tellIfMissingSymbol node
+    unless nodeIsMissing $ do
+      -- check if the current node is a non-empty error leaf
+      nodeIsUnexpectedChar <- tellIfUnexpectedChar node
+      unless nodeIsUnexpectedChar $ do
+        void $ tellIfError node
+ where
+  tellIfMissingSymbol ::
+    (MonadTc uri m) =>
+    TS.Node ->
+    WriterT Diagnostics m Bool
+  tellIfMissingSymbol node = do
+    nodeIsMissing <- liftIO (TS.nodeIsMissing node)
+    if nodeIsMissing
+      then do
+        nodeSymbol <- liftIO (TS.nodeSymbol node)
+        nodeString <- lift (showSymbol nodeSymbol)
+        nodeRange <- liftIO (TS.nodeRange node)
+        maybeNodeNext <- liftIO (nodeNext node)
+        let rangeStartByte = TS.rangeStartByte nodeRange
+        let rangeStartPoint = TS.rangeStartPoint nodeRange
+        let ropeEndByte = lengthInBytes encoding newRope
+        let ropeEndPoint = positionToPoint $ Rope.charLengthAsPosition newRope
+        rangeEndByte <- maybe (pure ropeEndByte) (fmap TS.rangeEndByte . liftIO . TS.nodeRange) maybeNodeNext
+        rangeEndPoint <- maybe (pure ropeEndPoint) (fmap TS.rangeEndPoint . liftIO . TS.nodeRange) maybeNodeNext
+        -- ... log the error range
+        lift (logger <& T.pack (printf "insert %d:%d" rangeStartByte rangeEndByte) `WithSeverity` Debug)
+        let diagnosticMessage = "Syntax Error: Missing '" <> nodeString <> "'"
+        tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, diagnosticRange = TS.Range{..}, ..}
+        pure True
+      else pure False
 
-tellIfError ::
-  (MonadTc uri m) =>
-  TS.Node ->
-  WriterT Diagnostics m Bool
-tellIfError node = do
-  -- TODO: the errors reported by this function are wonky,
-  --       but this is likely due to the grammar
-  nodeIsError <- liftIO (TS.nodeIsError node)
-  -- If node is an error node...
-  if nodeIsError
-    then do
-      -- ... find the error range
-      diagnosticRange <- liftIO (TS.nodeRange node)
-      -- ... find the expected symbols
-      expectedSymbols <- T.intercalate ", " <$> (traverse (lift . showSymbol) =<< lift (nodeExpectedSymbols node))
-      -- ... format the diagnostic message
-      let diagnosticMessage = T.pack "Syntax Error: Expected " <> expectedSymbols
-      tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
-      pure True
-    else pure False
-{-# INLINEABLE tellIfError #-}
+  tellIfUnexpectedChar ::
+    (MonadTc uri m) =>
+    TS.Node ->
+    WriterT Diagnostics m Bool
+  tellIfUnexpectedChar node = do
+    nodeIsError <- liftIO (TS.nodeIsError node)
+    nodeChildCount <- liftIO (TS.nodeChildCount node)
+    -- ... find the node range
+    diagnosticRange <- liftIO (TS.nodeRange node)
+    let TS.Range{..} = diagnosticRange
+    -- If node is a non-empty error leaf...
+    if nodeIsError && nodeChildCount == 0 && rangeStartPoint < rangeEndPoint
+      then do
+        -- ... log the error range
+        lift (logger <& T.pack (printf "insert %d:%d" (TS.rangeStartByte diagnosticRange) (TS.rangeEndByte diagnosticRange)) `WithSeverity` Debug)
+        -- ... find the unexpected character
+        let unexpectedChar = charAt (pointToPosition rangeStartPoint) newRope
+        -- ... find the expected symbols
+        expectedSymbols <- T.intercalate ", " <$> (traverse (lift . showSymbol) =<< lift (nodeExpectedSymbols node))
+        -- ... format the diagnostic message
+        let diagnosticMessage = "Syntax Error: Expected " <> expectedSymbols <> ", found '" <> unexpectedChar <> "'"
+        tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
+        pure True
+      else pure False
 
-nodeHasChangeAndError :: (MonadTc uri m) => TS.Node -> m Bool
-nodeHasChangeAndError node =
-  liftIO $ not <$> ((&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node)
-{-# INLINEABLE nodeHasChangeAndError #-}
+  tellIfError ::
+    (MonadTc uri m) =>
+    TS.Node ->
+    WriterT Diagnostics m Bool
+  tellIfError node = do
+    -- TODO: the errors reported by this function are wonky,
+    --       but this is likely due to the grammar
+    nodeIsError <- liftIO (TS.nodeIsError node)
+    -- If node is an error node...
+    if nodeIsError
+      then do
+        -- ... find the error range
+        diagnosticRange <- liftIO (TS.nodeRange node)
+        -- ... log the error range
+        lift (logger <& T.pack (printf "insert %d:%d" (TS.rangeStartByte diagnosticRange) (TS.rangeEndByte diagnosticRange)) `WithSeverity` Debug)
+        -- ... find the expected symbols
+        expectedSymbols <- T.intercalate ", " <$> (traverse (lift . showSymbol) =<< lift (nodeExpectedSymbols node))
+        -- ... format the diagnostic message
+        let diagnosticMessage = T.pack "Syntax Error: Expected " <> expectedSymbols
+        tell $ D.singleton Diagnostic{diagnosticSeverity = D.Error, ..}
+        pure True
+      else pure False
 
 showSymbol :: (MonadTc uri m) => TS.Symbol -> m Text
 showSymbol symbol =
   withLanguage $ \language -> liftIO (languageShowSymbol language symbol)
 {-# INLINEABLE showSymbol #-}
-
-languageShowSymbol :: TS.Language -> TS.Symbol -> IO Text
-languageShowSymbol language symbol = do
-  symbolName <- T.decodeUtf8 <$> TS.languageSymbolName language symbol
-  symbolType <- TS.languageSymbolType language symbol
-  pure $ if symbolType == TS.SymbolTypeAnonymous then "'" <> symbolName <> "'" else symbolName
-{-# INLINEABLE languageShowSymbol #-}
 
 nodeExpectedSymbols :: (MonadTc uri m) => TS.Node -> m [TS.Symbol]
 nodeExpectedSymbols node = do
@@ -228,6 +231,20 @@ nodeExpectedSymbols node = do
   withLanguage $ \language ->
     liftIO (languageExpectedSymbols language stateId)
 {-# INLINEABLE nodeExpectedSymbols #-}
+
+-- TODO: upstream to tree-sitter
+nodeHasChangeAndError :: TS.Node -> IO Bool
+nodeHasChangeAndError node = (&&) <$> TS.nodeHasChanges node <*> TS.nodeHasError node
+
+{-# INLINEABLE diagnose #-}
+
+-- TODO: upstream to tree-sitter
+languageShowSymbol :: TS.Language -> TS.Symbol -> IO Text
+languageShowSymbol language symbol = do
+  symbolName <- T.decodeUtf8 <$> TS.languageSymbolName language symbol
+  symbolType <- TS.languageSymbolType language symbol
+  pure $ if symbolType == TS.SymbolTypeAnonymous then "'" <> symbolName <> "'" else symbolName
+{-# INLINEABLE languageShowSymbol #-}
 
 {-| @`languageExpectedSymbols` stateId@ returns the list of expected symbol names
   and types from a certain parse state.
@@ -249,10 +266,31 @@ languageExpectedSymbols language stateId = do
       iter =<< TS.lookaheadIteratorNext lookaheadIterator
 {-# INLINEABLE languageExpectedSymbols #-}
 
+{-| @`nodeNext` node@ finds the next node in the tree, if any such node exists.
+    The returned node is the top-most node that is strictly to next to the
+    given node, and is not guaranteed to be a leaf node.
+|
+-}
+nodeNext :: TS.Node -> IO (Maybe TS.Node)
+nodeNext node = do
+  treeCursor <- TS.treeCursorNew node
+  let gotoNextSibling = do
+        success <- TS.treeCursorGotoNextSibling treeCursor
+        if success
+          then Just <$> TS.treeCursorCurrentNode treeCursor
+          else gotoParent
+      gotoParent = do
+        success <- TS.treeCursorGotoParent treeCursor
+        if success
+          then gotoNextSibling
+          else pure Nothing
+  gotoNextSibling
+
 {-| @`depthFirst` node predGotoChild action@ performs a depth-first traversal
   of the tree, starting from @node@, skipping any subtree for which the
   function @predGotoChild@ returns @False@, and performing @action@ for each
   node that it visits.
+|
 -}
 depthFirst :: (MonadIO m) => TS.Node -> (TS.Node -> m Bool) -> (TS.Node -> m ()) -> m ()
 depthFirst node predGotoChild action = do

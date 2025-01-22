@@ -2,11 +2,15 @@
 
 module Gilear.Internal.Parser.TextEdit (
   TextEdit (..),
+  lengthInBytes,
   applyTextEditToItem,
 ) where
 
+import Colog.Core (LogAction, Severity (..), WithSeverity (..), (<&))
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.Foldable (for_)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
 import Data.Word (Word32)
@@ -14,6 +18,7 @@ import Gilear.Internal.Core (MonadTc)
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (ByteRange (..), Point, pointToPosition, positionToPoint)
 import Gilear.Internal.Parser.Cache (ParserCacheItem (..))
+import Text.Printf (printf)
 import TreeSitter (InputEncoding)
 import TreeSitter qualified as TS
 
@@ -25,11 +30,12 @@ data TextEdit = TextEdit
 
 applyTextEditToItem ::
   (MonadTc uri m) =>
+  LogAction m (WithSeverity Text) ->
   InputEncoding ->
   [TextEdit] ->
   ParserCacheItem ->
   m ParserCacheItem
-applyTextEditToItem encoding = go
+applyTextEditToItem logger encoding = go
  where
   -- go :: [TextEdit] -> CacheItem -> m CacheItem
   go [] item = pure item
@@ -39,8 +45,12 @@ applyTextEditToItem encoding = go
     -- Delete any diagnostics out-of-bounds diagnostics
     let oldToNewEnd = oldEndByteToNewEndByteRange encoding oldRope newRope
     let deleteOoBDiag = maybe id D.deleteByRange oldToNewEnd
+    for_ oldToNewEnd $ \(ByteRange oldEnd newEnd) ->
+      logger <& T.pack (printf "delete %d:%d (%s)" oldEnd newEnd $ unwords [printf "%d:%d" (TS.rangeStartByte range) (TS.rangeEndByte range) | range <- D.diagnosticRange <$> D.toList oldDiag]) `WithSeverity` Debug
     -- Delete any diagnostics intersecting with the old range
     let oldByteRange = ByteRange (TS.inputEditStartByte inputEdit) (TS.inputEditOldEndByte inputEdit)
+    for_ [oldByteRange] $ \(ByteRange oldStart oldEnd) ->
+      logger <& T.pack (printf "delete %d:%d (%s)" oldStart oldEnd $ unwords [printf "%d:%d" (TS.rangeStartByte range) (TS.rangeEndByte range) | range <- D.diagnosticRange <$> D.toList oldDiag]) `WithSeverity` Debug
     let deleteOldDiag = D.deleteByRange oldByteRange
     -- Apply the above delete functions
     let newDiag = deleteOoBDiag . deleteOldDiag $ oldDiag

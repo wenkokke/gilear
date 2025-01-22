@@ -3,7 +3,7 @@
 
 module Gilear.LSP.Internal.Compat.Gilear where
 
-import Colog.Core (LogAction, Severity (..), WithSeverity (..), (<&))
+import Colog.Core (LogAction, WithSeverity (..))
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -23,13 +23,13 @@ publishParserDiagnostics ::
   LSP.NormalizedUri ->
   Maybe Int32 ->
   LspTc ()
-publishParserDiagnostics logger docUri docVersion = do
+publishParserDiagnostics _logger docUri docVersion = do
   -- Set the diagnostics source to "gilear"
   let source = Just . T.pack $ "gilear[parser]"
   -- Import the diagnostics from gilear
   gilearDiagnostics <- TC.getDiagnostics docUri
   -- Report the diagnostics for debugging purposes
-  logger <& T.pack (show gilearDiagnostics) `WithSeverity` Debug
+  -- logger <& T.pack (show gilearDiagnostics) `WithSeverity` Debug
   -- Get the configuration parameters
   maxNumberOfProblems <- Config.maxNumberOfProblems <$> LSP.getConfig
   let lspDiagnostics = importDiagnostics source $ fromMaybe mempty gilearDiagnostics
