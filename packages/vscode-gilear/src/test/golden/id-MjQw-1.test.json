@@ -16,7 +16,7 @@
           "severity": "error",
           "range": {
             "start": { "character": 10, "line": 1 },
-            "end": { "character": 10, "line": 1 }
+            "end": { "character": 0, "line": 2 }
           },
           "message": "Syntax Error: Missing '';''"
         }

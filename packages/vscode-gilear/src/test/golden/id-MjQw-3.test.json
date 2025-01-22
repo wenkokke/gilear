@@ -1,0 +1,101 @@
+{
+  "file": "id-MjQw.gilear",
+  "steps": [
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 6, "line": 1 },
+            "end": { "character": 10, "line": 1 }
+          },
+          "text": ""
+        }
+      ],
+      "diagnostics": [
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 0, "line": 1 },
+            "end": { "character": 7, "line": 1 }
+          },
+          "message": "Syntax Error: Expected end, ':', ';', '=', '(', ')', '->', '\\', variable_name, constructor_name"
+        }
+      ]
+    },
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 6, "line": 1 },
+            "end": { "character": 6, "line": 1 }
+          },
+          "text": " "
+        }
+      ],
+      "diagnostics": [
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 0, "line": 1 },
+            "end": { "character": 8, "line": 1 }
+          },
+          "message": "Syntax Error: Expected end, ':', ';', '=', '(', ')', '->', '\\', variable_name, constructor_name"
+        }
+      ]
+    },
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 7, "line": 1 },
+            "end": { "character": 7, "line": 1 }
+          },
+          "text": "="
+        }
+      ],
+      "diagnostics": [
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 8, "line": 1 },
+            "end": { "character": 0, "line": 2 }
+          },
+          "message": "Syntax Error: Missing 'variable_name'"
+        }
+      ]
+    },
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 8, "line": 1 },
+            "end": { "character": 8, "line": 1 }
+          },
+          "text": " "
+        }
+      ],
+      "diagnostics": [
+        {
+          "severity": "error",
+          "range": {
+            "start": { "character": 8, "line": 1 },
+            "end": { "character": 0, "line": 2 }
+          },
+          "message": "Syntax Error: Missing 'variable_name'"
+        }
+      ]
+    },
+    {
+      "edits": [
+        {
+          "range": {
+            "start": { "character": 9, "line": 1 },
+            "end": { "character": 9, "line": 1 }
+          },
+          "text": "x"
+        }
+      ],
+      "diagnostics": []
+    }
+  ]
+}
