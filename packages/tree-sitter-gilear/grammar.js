@@ -36,15 +36,15 @@ module.exports = grammar({
       seq(
         field("name", $.variable_name),
         reserved_symbols.has_type,
-        field("right", $.expression),
+        field("rhs", $.expression),
         reserved_symbols.end_of_declaration,
       ),
     declaration_function: ($) =>
       seq(
         field("name", $.variable_name),
-        field("left", optional($.pattern_list)),
+        field("lhs", optional($.pattern_list)),
         reserved_symbols.definitional_equality,
-        field("right", $.expression),
+        field("rhs", $.expression),
         reserved_symbols.end_of_declaration,
       ),
 
@@ -77,27 +77,35 @@ module.exports = grammar({
     expression_function_type: ($) =>
       prec.right(
         // precedence.expression_function_type,
-        seq($.expression, reserved_symbols.function_arrow, $.expression),
+        seq(
+          field("lhs", $.expression),
+          reserved_symbols.function_arrow,
+          field("rhs", $.expression),
+        ),
       ),
     expression_function_application: ($) =>
       prec.left(
         // precedence.expression_function_application,
-        seq(field("function", $.expression), field("argument", $.expression)),
+        seq(field("fun", $.expression), field("arg", $.expression)),
       ),
     expression_function_abstraction: ($) =>
       prec.right(
         // precedence.expression_function_abstraction,
         seq(
           reserved_symbols.function_abstraction,
-          repeat1($.pattern),
+          field("lhs", $.pattern_list),
           reserved_symbols.function_arrow,
-          $.expression,
+          field("rhs", $.expression),
         ),
       ),
     expression_annotation: ($) =>
       prec.right(
         // precedence.expression_annotation,
-        seq($.expression, reserved_symbols.has_type, $.expression),
+        seq(
+          field("lhs", $.expression),
+          reserved_symbols.has_type,
+          field("rhs", $.expression),
+        ),
       ),
     expression_parentheses: ($) =>
       seq(
