@@ -21,79 +21,79 @@ module.exports = grammar({
     ],
   ],
 
+  supertypes: ($) => [$.statement, $.predicate, $.expression],
+
   rules: {
     source_file: ($) => $.statements,
 
-    statements: ($) => $._statements,
-    _statements: ($) => repeat1($.statement),
+    statements: ($) => repeat1($.statement),
 
-    statement: ($) => $._statement,
-    _statement: ($) =>
+    statement: ($) =>
       choice(
-        $.assignment,
-        $.skip,
-        $.sequence,
-        $.if_then_else,
-        $.while_do,
-        $._bracketed_statements,
+        $.statement_assignment,
+        $.statement_skip,
+        $.statement_sequence,
+        $.statement_if_then_else,
+        $.statement_while_do,
+        $.statement_block,
+        $.expression,
       ),
 
-    assignment: ($) => seq($.variable, ":=", $.expression),
+    statement_assignment: ($) => seq($.expression_variable, ":=", $.expression),
 
-    skip: (_) => "skip",
+    statement_skip: (_) => "skip",
 
-    sequence: ($) =>
-      prec.right("sequence", seq($._statement, ";", $._statement)),
+    statement_sequence: ($) =>
+      prec.right("sequence", seq($.statement, ";", $.statement)),
 
-    if_then_else: ($) =>
+    statement_if_then_else: ($) =>
       prec.right(
         "sequence",
-        seq("if", $._predicate, "then", $._statement, "else", $._statement),
+        seq("if", $.predicate, "then", $.statement, "else", $.statement),
       ),
 
-    while_do: ($) =>
-      prec.right("sequence", seq("while", $._predicate, "do", $._statement)),
+    statement_while_do: ($) =>
+      prec.right("sequence", seq("while", $.predicate, "do", $.statement)),
 
-    _bracketed_statements: ($) => seq("{", $._statements, "}"),
+    statement_block: ($) => seq("{", $.statements, "}"),
 
-    predicate: ($) => $._predicate,
-    _predicate: ($) =>
+    predicate: ($) =>
       choice(
-        $.true,
-        $.false,
-        $.negation,
-        $.conjunction,
-        $.disjunction,
-        $.comparison,
-        $._parenthesized_predicate,
+        $.predicate_true,
+        $.predicate_false,
+        $.predicate_negation,
+        $.predicate_conjunction,
+        $.predicate_disjunction,
+        $.predicate_comparison,
+        $.parenthesized_predicate,
       ),
 
-    true: ($) => "true",
+    predicate_true: ($) => "true",
 
-    false: ($) => "false",
+    predicate_false: ($) => "false",
 
-    negation: ($) => prec("negation", seq("not", $._predicate)),
+    predicate_negation: ($) => prec("negation", seq("not", $.predicate)),
 
-    conjunction: ($) =>
+    predicate_conjunction: ($) =>
       prec.left(
         "conjunction",
-        seq(field("left", $._predicate), "and", field("right", $._predicate)),
+        seq(field("left", $.predicate), "and", field("right", $.predicate)),
       ),
 
-    disjunction: ($) =>
+    predicate_disjunction: ($) =>
       prec.left(
         "disjunction",
-        seq(field("left", $._predicate), "or", field("right", $._predicate)),
+        seq(field("left", $.predicate), "or", field("right", $.predicate)),
       ),
 
-    comparison: ($) =>
+    predicate_comparison: ($) =>
       seq(
-        field("left", $._expression),
-        $._comparison_operator,
-        field("right", $._expression),
+        field("left", $.expression),
+        $.comparison_operator,
+        field("right", $.expression),
       ),
 
-    _comparison_operator: ($) => choice($.lt, $.le, $.eq, $.gt, $.ge),
+    comparison_operator: ($) => choice($.lt, $.le, $.eq, $.gt, $.ge),
 
     lt: (_) => "<",
     le: (_) => "<=",
@@ -101,48 +101,47 @@ module.exports = grammar({
     gt: (_) => ">",
     ge: (_) => ">=",
 
-    _parenthesized_predicate: ($) => seq("(", $._predicate, ")"),
+    parenthesized_predicate: ($) => seq("(", $.predicate, ")"),
 
-    expression: ($) => $._expression,
-    _expression: ($) =>
+    expression: ($) =>
       choice(
-        $.variable,
-        $.number,
-        $.addition,
-        $.subtraction,
-        $.multiplication,
-        $.division,
-        $._parenthesized_expression,
+        $.expression_variable,
+        $.expression_number,
+        $.expression_addition,
+        $.expression_subtraction,
+        $.expression_multiplication,
+        $.expression_division,
+        $.parenthesized_expression,
       ),
 
-    addition: ($) =>
+    expression_variable: (_) => /[a-z]+/,
+
+    expression_number: (_) => /[0-9]+/,
+
+    expression_addition: ($) =>
       prec.left(
         "addition",
-        seq(field("left", $._expression), "+", field("right", $._expression)),
+        seq(field("left", $.expression), "+", field("right", $.expression)),
       ),
 
-    subtraction: ($) =>
+    expression_subtraction: ($) =>
       prec.left(
         "addition",
-        seq(field("left", $._expression), "-", field("right", $._expression)),
+        seq(field("left", $.expression), "-", field("right", $.expression)),
       ),
 
-    multiplication: ($) =>
+    expression_multiplication: ($) =>
       prec.left(
         "multiplication",
-        seq(field("left", $._expression), "*", field("right", $._expression)),
+        seq(field("left", $.expression), "*", field("right", $.expression)),
       ),
 
-    division: ($) =>
+    expression_division: ($) =>
       prec.left(
         "multiplication",
-        seq(field("left", $._expression), "/", field("right", $._expression)),
+        seq(field("left", $.expression), "/", field("right", $.expression)),
       ),
 
-    _parenthesized_expression: ($) => seq("(", $._expression, ")"),
-
-    number: (_) => /[0-9]+/,
-
-    variable: (_) => /[a-z]+/,
+    parenthesized_expression: ($) => seq("(", $.expression, ")"),
   },
 });

@@ -13,26 +13,24 @@ while x < 5 do
 
 (source_file
   (statements
-    (statement
-      (sequence
-        (assignment
-          (variable)
-          (expression
-            (number)))
-        (sequence
-          (assignment
-            (variable)
-            (expression
-              (number)))
-          (while_do
-            (comparison
-              left: (variable)
-              (lt)
-              right: (number))
-            (statement
-              (assignment
-                (variable)
-                (expression
-                  (addition
-                    left: (variable)
-                    right: (number)))))))))))
+    (statement_sequence
+      (statement_assignment
+        (expression_variable)
+        (expression_number))
+      (statement_sequence
+        (statement_assignment
+          (expression_variable)
+          (expression_number))
+        (statement_while_do
+          (predicate_comparison
+            left: (expression_variable)
+            (comparison_operator
+              (lt))
+            right: (expression_number))
+          (statement_block
+            (statements
+              (statement_assignment
+                (expression_variable)
+                (expression_addition
+                  left: (expression_variable)
+                  right: (expression_number))))))))))
