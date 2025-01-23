@@ -69,7 +69,7 @@
     "type": "declaration_function",
     "named": true,
     "fields": {
-      "left": {
+      "lhs": {
         "multiple": false,
         "required": false,
         "types": [
@@ -89,7 +89,7 @@
           }
         ]
       },
-      "right": {
+      "rhs": {
         "multiple": false,
         "required": true,
         "types": [
@@ -115,7 +115,7 @@
           }
         ]
       },
-      "right": {
+      "rhs": {
         "multiple": false,
         "required": true,
         "types": [
@@ -130,16 +130,27 @@
   {
     "type": "expression_annotation",
     "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "expression",
-          "named": true
-        }
-      ]
+    "fields": {
+      "lhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "rhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -160,27 +171,34 @@
   {
     "type": "expression_function_abstraction",
     "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "expression",
-          "named": true
-        },
-        {
-          "type": "pattern",
-          "named": true
-        }
-      ]
+    "fields": {
+      "lhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "pattern_list",
+            "named": true
+          }
+        ]
+      },
+      "rhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
     "type": "expression_function_application",
     "named": true,
     "fields": {
-      "argument": {
+      "arg": {
         "multiple": false,
         "required": true,
         "types": [
@@ -190,7 +208,7 @@
           }
         ]
       },
-      "function": {
+      "fun": {
         "multiple": false,
         "required": true,
         "types": [
@@ -205,16 +223,27 @@
   {
     "type": "expression_function_type",
     "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "expression",
-          "named": true
-        }
-      ]
+    "fields": {
+      "lhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      },
+      "rhs": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {

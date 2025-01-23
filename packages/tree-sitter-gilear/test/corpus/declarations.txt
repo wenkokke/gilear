@@ -10,26 +10,26 @@ id a x = x;
 (source_file
   (declaration_type_signature
     name: (variable_name)
-    right: (expression_function_type
-      (expression_parentheses
+    rhs: (expression_function_type
+      lhs: (expression_parentheses
         (expression_annotation
-          (expression_variable
+          lhs: (expression_variable
             (variable_name))
-          (expression_constructor
+          rhs: (expression_constructor
             (constructor_name))))
-      (expression_function_type
-        (expression_variable
+      rhs: (expression_function_type
+        lhs: (expression_variable
           (variable_name))
-        (expression_variable
+        rhs: (expression_variable
           (variable_name)))))
   (declaration_function
     name: (variable_name)
-    left: (pattern_list
+    lhs: (pattern_list
       (pattern_variable
         (variable_name))
       (pattern_variable
         (variable_name)))
-    right: (expression_variable
+    rhs: (expression_variable
       (variable_name))))
 
 ============================================
@@ -44,24 +44,25 @@ id = \a x -> x;
 (source_file
   (declaration_type_signature
     name: (variable_name)
-    right: (expression_function_type
-      (expression_parentheses
+    rhs: (expression_function_type
+      lhs: (expression_parentheses
         (expression_annotation
-          (expression_variable
+          lhs: (expression_variable
             (variable_name))
-          (expression_constructor
+          rhs: (expression_constructor
             (constructor_name))))
-      (expression_function_type
-        (expression_variable
+      rhs: (expression_function_type
+        lhs: (expression_variable
           (variable_name))
-        (expression_variable
+        rhs: (expression_variable
           (variable_name)))))
   (declaration_function
     name: (variable_name)
-    right: (expression_function_abstraction
-      (pattern_variable
-        (variable_name))
-      (pattern_variable
-        (variable_name))
-      (expression_variable
+    rhs: (expression_function_abstraction
+      lhs: (pattern_list
+        (pattern_variable
+          (variable_name))
+        (pattern_variable
+          (variable_name)))
+      rhs: (expression_variable
         (variable_name)))))

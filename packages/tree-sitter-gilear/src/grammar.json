@@ -39,7 +39,7 @@
         },
         {
           "type": "FIELD",
-          "name": "right",
+          "name": "rhs",
           "content": {
             "type": "SYMBOL",
             "name": "expression"
@@ -64,7 +64,7 @@
         },
         {
           "type": "FIELD",
-          "name": "left",
+          "name": "lhs",
           "content": {
             "type": "CHOICE",
             "members": [
@@ -84,7 +84,7 @@
         },
         {
           "type": "FIELD",
-          "name": "right",
+          "name": "rhs",
           "content": {
             "type": "SYMBOL",
             "name": "expression"
@@ -193,16 +193,24 @@
         "type": "SEQ",
         "members": [
           {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "FIELD",
+            "name": "lhs",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
           },
           {
             "type": "STRING",
             "value": "->"
           },
           {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "FIELD",
+            "name": "rhs",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
           }
         ]
       }
@@ -215,7 +223,7 @@
         "members": [
           {
             "type": "FIELD",
-            "name": "function",
+            "name": "fun",
             "content": {
               "type": "SYMBOL",
               "name": "expression"
@@ -223,7 +231,7 @@
           },
           {
             "type": "FIELD",
-            "name": "argument",
+            "name": "arg",
             "content": {
               "type": "SYMBOL",
               "name": "expression"
@@ -243,10 +251,11 @@
             "value": "\\"
           },
           {
-            "type": "REPEAT1",
+            "type": "FIELD",
+            "name": "lhs",
             "content": {
               "type": "SYMBOL",
-              "name": "pattern"
+              "name": "pattern_list"
             }
           },
           {
@@ -254,8 +263,12 @@
             "value": "->"
           },
           {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "FIELD",
+            "name": "rhs",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
           }
         ]
       }
@@ -267,16 +280,24 @@
         "type": "SEQ",
         "members": [
           {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "FIELD",
+            "name": "lhs",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
           },
           {
             "type": "STRING",
             "value": ":"
           },
           {
-            "type": "SYMBOL",
-            "name": "expression"
+            "type": "FIELD",
+            "name": "rhs",
+            "content": {
+              "type": "SYMBOL",
+              "name": "expression"
+            }
           }
         ]
       }
