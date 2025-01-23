@@ -47,8 +47,9 @@ library tree-sitter-ast
   import:          language
   exposed-modules: TreeSitter.AST
   other-modules:
-    TreeSitter.AST.Internal.Core
     TreeSitter.AST.Internal.Generate
+    TreeSitter.AST.Internal.Grammar
+    TreeSitter.AST.Internal.NodeTypes
 
   hs-source-dirs:  src-ast
   build-depends:

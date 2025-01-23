@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TreeSitter.AST.Internal.Core (
+module TreeSitter.AST.Internal.NodeTypes (
   NodeTypes (..),
   TypeName (..),
   FieldName (..),
@@ -25,7 +25,7 @@ import GHC.Records (HasField (..))
 
 --------------------------------------------------------------------------------
 
-newtype NodeTypes = NodeTypes (Vector NodeType)
+newtype NodeTypes = NodeTypes {unNodeTypes :: Vector NodeType}
   deriving newtype (ToJSON, FromJSON)
 
 newtype TypeName = TypeName Text
