@@ -43,6 +43,18 @@ library tree-sitter-internal
     , text                  >=2.1  && <2.2
     , tree-sitter-capi      >=0.13 && <0.14
 
+library tree-sitter-ast
+  import:          language
+  exposed-modules: TreeSitter.AST
+  other-modules:   TreeSitter.AST.Internal.Core
+  hs-source-dirs:  src-ast
+  build-depends:
+    , aeson       >=2.2  && <2.3
+    , base        >=4.13 && <5
+    , containers  >=0.6  && <0.8
+    , text        >=2.1  && <2.2
+    , vector      >=0.13 && <0.14
+
 library tree-sitter-sexp
   import:          language
   exposed-modules: TreeSitter.SExp
