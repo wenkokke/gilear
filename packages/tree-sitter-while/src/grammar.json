@@ -7,10 +7,6 @@
       "name": "statements"
     },
     "statements": {
-      "type": "SYMBOL",
-      "name": "_statements"
-    },
-    "_statements": {
       "type": "REPEAT1",
       "content": {
         "type": "SYMBOL",
@@ -18,44 +14,44 @@
       }
     },
     "statement": {
-      "type": "SYMBOL",
-      "name": "_statement"
-    },
-    "_statement": {
       "type": "CHOICE",
       "members": [
         {
           "type": "SYMBOL",
-          "name": "assignment"
+          "name": "statement_assignment"
         },
         {
           "type": "SYMBOL",
-          "name": "skip"
+          "name": "statement_skip"
         },
         {
           "type": "SYMBOL",
-          "name": "sequence"
+          "name": "statement_sequence"
         },
         {
           "type": "SYMBOL",
-          "name": "if_then_else"
+          "name": "statement_if_then_else"
         },
         {
           "type": "SYMBOL",
-          "name": "while_do"
+          "name": "statement_while_do"
         },
         {
           "type": "SYMBOL",
-          "name": "_bracketed_statements"
+          "name": "statement_block"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "expression"
         }
       ]
     },
-    "assignment": {
+    "statement_assignment": {
       "type": "SEQ",
       "members": [
         {
           "type": "SYMBOL",
-          "name": "variable"
+          "name": "expression_variable"
         },
         {
           "type": "STRING",
@@ -67,11 +63,11 @@
         }
       ]
     },
-    "skip": {
+    "statement_skip": {
       "type": "STRING",
       "value": "skip"
     },
-    "sequence": {
+    "statement_sequence": {
       "type": "PREC_RIGHT",
       "value": "sequence",
       "content": {
@@ -79,7 +75,7 @@
         "members": [
           {
             "type": "SYMBOL",
-            "name": "_statement"
+            "name": "statement"
           },
           {
             "type": "STRING",
@@ -87,12 +83,12 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_statement"
+            "name": "statement"
           }
         ]
       }
     },
-    "if_then_else": {
+    "statement_if_then_else": {
       "type": "PREC_RIGHT",
       "value": "sequence",
       "content": {
@@ -104,7 +100,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_predicate"
+            "name": "predicate"
           },
           {
             "type": "STRING",
@@ -112,7 +108,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_statement"
+            "name": "statement"
           },
           {
             "type": "STRING",
@@ -120,12 +116,12 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_statement"
+            "name": "statement"
           }
         ]
       }
     },
-    "while_do": {
+    "statement_while_do": {
       "type": "PREC_RIGHT",
       "value": "sequence",
       "content": {
@@ -137,7 +133,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_predicate"
+            "name": "predicate"
           },
           {
             "type": "STRING",
@@ -145,12 +141,12 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_statement"
+            "name": "statement"
           }
         ]
       }
     },
-    "_bracketed_statements": {
+    "statement_block": {
       "type": "SEQ",
       "members": [
         {
@@ -159,7 +155,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_statements"
+          "name": "statements"
         },
         {
           "type": "STRING",
@@ -168,51 +164,47 @@
       ]
     },
     "predicate": {
-      "type": "SYMBOL",
-      "name": "_predicate"
-    },
-    "_predicate": {
       "type": "CHOICE",
       "members": [
         {
           "type": "SYMBOL",
-          "name": "true"
+          "name": "predicate_true"
         },
         {
           "type": "SYMBOL",
-          "name": "false"
+          "name": "predicate_false"
         },
         {
           "type": "SYMBOL",
-          "name": "negation"
+          "name": "predicate_negation"
         },
         {
           "type": "SYMBOL",
-          "name": "conjunction"
+          "name": "predicate_conjunction"
         },
         {
           "type": "SYMBOL",
-          "name": "disjunction"
+          "name": "predicate_disjunction"
         },
         {
           "type": "SYMBOL",
-          "name": "comparison"
+          "name": "predicate_comparison"
         },
         {
           "type": "SYMBOL",
-          "name": "_parenthesized_predicate"
+          "name": "parenthesized_predicate"
         }
       ]
     },
-    "true": {
+    "predicate_true": {
       "type": "STRING",
       "value": "true"
     },
-    "false": {
+    "predicate_false": {
       "type": "STRING",
       "value": "false"
     },
-    "negation": {
+    "predicate_negation": {
       "type": "PREC",
       "value": "negation",
       "content": {
@@ -224,12 +216,12 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_predicate"
+            "name": "predicate"
           }
         ]
       }
     },
-    "conjunction": {
+    "predicate_conjunction": {
       "type": "PREC_LEFT",
       "value": "conjunction",
       "content": {
@@ -240,7 +232,7 @@
             "name": "left",
             "content": {
               "type": "SYMBOL",
-              "name": "_predicate"
+              "name": "predicate"
             }
           },
           {
@@ -252,13 +244,13 @@
             "name": "right",
             "content": {
               "type": "SYMBOL",
-              "name": "_predicate"
+              "name": "predicate"
             }
           }
         ]
       }
     },
-    "disjunction": {
+    "predicate_disjunction": {
       "type": "PREC_LEFT",
       "value": "disjunction",
       "content": {
@@ -269,7 +261,7 @@
             "name": "left",
             "content": {
               "type": "SYMBOL",
-              "name": "_predicate"
+              "name": "predicate"
             }
           },
           {
@@ -281,13 +273,13 @@
             "name": "right",
             "content": {
               "type": "SYMBOL",
-              "name": "_predicate"
+              "name": "predicate"
             }
           }
         ]
       }
     },
-    "comparison": {
+    "predicate_comparison": {
       "type": "SEQ",
       "members": [
         {
@@ -295,24 +287,24 @@
           "name": "left",
           "content": {
             "type": "SYMBOL",
-            "name": "_expression"
+            "name": "expression"
           }
         },
         {
           "type": "SYMBOL",
-          "name": "_comparison_operator"
+          "name": "comparison_operator"
         },
         {
           "type": "FIELD",
           "name": "right",
           "content": {
             "type": "SYMBOL",
-            "name": "_expression"
+            "name": "expression"
           }
         }
       ]
     },
-    "_comparison_operator": {
+    "comparison_operator": {
       "type": "CHOICE",
       "members": [
         {
@@ -357,7 +349,7 @@
       "type": "STRING",
       "value": ">="
     },
-    "_parenthesized_predicate": {
+    "parenthesized_predicate": {
       "type": "SEQ",
       "members": [
         {
@@ -366,7 +358,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_predicate"
+          "name": "predicate"
         },
         {
           "type": "STRING",
@@ -375,43 +367,47 @@
       ]
     },
     "expression": {
-      "type": "SYMBOL",
-      "name": "_expression"
-    },
-    "_expression": {
       "type": "CHOICE",
       "members": [
         {
           "type": "SYMBOL",
-          "name": "variable"
+          "name": "expression_variable"
         },
         {
           "type": "SYMBOL",
-          "name": "number"
+          "name": "expression_number"
         },
         {
           "type": "SYMBOL",
-          "name": "addition"
+          "name": "expression_addition"
         },
         {
           "type": "SYMBOL",
-          "name": "subtraction"
+          "name": "expression_subtraction"
         },
         {
           "type": "SYMBOL",
-          "name": "multiplication"
+          "name": "expression_multiplication"
         },
         {
           "type": "SYMBOL",
-          "name": "division"
+          "name": "expression_division"
         },
         {
           "type": "SYMBOL",
-          "name": "_parenthesized_expression"
+          "name": "parenthesized_expression"
         }
       ]
     },
-    "addition": {
+    "expression_variable": {
+      "type": "PATTERN",
+      "value": "[a-z]+"
+    },
+    "expression_number": {
+      "type": "PATTERN",
+      "value": "[0-9]+"
+    },
+    "expression_addition": {
       "type": "PREC_LEFT",
       "value": "addition",
       "content": {
@@ -422,7 +418,7 @@
             "name": "left",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           },
           {
@@ -434,13 +430,13 @@
             "name": "right",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           }
         ]
       }
     },
-    "subtraction": {
+    "expression_subtraction": {
       "type": "PREC_LEFT",
       "value": "addition",
       "content": {
@@ -451,7 +447,7 @@
             "name": "left",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           },
           {
@@ -463,13 +459,13 @@
             "name": "right",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           }
         ]
       }
     },
-    "multiplication": {
+    "expression_multiplication": {
       "type": "PREC_LEFT",
       "value": "multiplication",
       "content": {
@@ -480,7 +476,7 @@
             "name": "left",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           },
           {
@@ -492,13 +488,13 @@
             "name": "right",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           }
         ]
       }
     },
-    "division": {
+    "expression_division": {
       "type": "PREC_LEFT",
       "value": "multiplication",
       "content": {
@@ -509,7 +505,7 @@
             "name": "left",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           },
           {
@@ -521,13 +517,13 @@
             "name": "right",
             "content": {
               "type": "SYMBOL",
-              "name": "_expression"
+              "name": "expression"
             }
           }
         ]
       }
     },
-    "_parenthesized_expression": {
+    "parenthesized_expression": {
       "type": "SEQ",
       "members": [
         {
@@ -536,21 +532,13 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_expression"
+          "name": "expression"
         },
         {
           "type": "STRING",
           "value": ")"
         }
       ]
-    },
-    "number": {
-      "type": "PATTERN",
-      "value": "[0-9]+"
-    },
-    "variable": {
-      "type": "PATTERN",
-      "value": "[a-z]+"
     }
   },
   "extras": [
@@ -590,5 +578,9 @@
   ],
   "externals": [],
   "inline": [],
-  "supertypes": []
+  "supertypes": [
+    "statement",
+    "predicate",
+    "expression"
+  ]
 }
