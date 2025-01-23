@@ -46,7 +46,10 @@ library tree-sitter-internal
 library tree-sitter-ast
   import:          language
   exposed-modules: TreeSitter.AST
-  other-modules:   TreeSitter.AST.Internal.Core
+  other-modules:
+    TreeSitter.AST.Internal.Core
+    TreeSitter.AST.Internal.Generate
+
   hs-source-dirs:  src-ast
   build-depends:
     , aeson       >=2.2  && <2.3
