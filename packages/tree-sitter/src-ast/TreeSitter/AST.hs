@@ -7,7 +7,7 @@ module TreeSitter.AST (
   ChildType (..),
 ) where
 
-import TreeSitter.AST.Internal.Core (
+import TreeSitter.AST.Internal.NodeTypes (
   ChildType (..),
   FieldName (..),
   NodeId (..),
