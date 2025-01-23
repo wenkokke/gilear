@@ -9,6 +9,7 @@ export class GoldenTest {
   readonly name: string;
   readonly file: string;
   readonly steps: Step[];
+  diagnosis: Promise<any>;
 
   constructor(name: string, file: string, steps: Step[]) {
     this.name = name;
@@ -39,6 +40,30 @@ export class GoldenTest {
     fs.writeFileSync(goldenTestFile, goldenTestContents);
   }
 
+  triggerDiagnosis(step, editor) {
+    vscode.languages.onDidChangeDiagnostics(
+      (event: vscode.DiagnosticChangeEvent) => {
+        this.diagnosis = new Promise((resolve, reject) => {
+          if (event.uris.toString() == editor.document.uri.toString()) {
+            const expect = step.diagnostics;
+            const actual = vscode.languages
+              .getDiagnostics(editor.document.uri)
+              .map(toDiagnostic);
+
+            try {
+              assert.deepStrictEqual(actual, expect);
+              resolve(actual);
+            } catch (e) {
+              reject(e);
+              throw e;
+            }
+          }
+        });
+      },
+      this,
+    );
+  }
+
   async assertSuccess(
     goldenTestCasesDir: string,
     goldenTestFilesDir: string,
@@ -54,48 +79,47 @@ export class GoldenTest {
     const docFile = path.join(goldenTestFilesDir, this.file);
     const doc = await vscode.workspace.openTextDocument(docFile);
     const editor = await vscode.window.showTextDocument(doc);
+
     try {
       for (const step of this.steps) {
         // Apply the edits...
         await editor.edit((editorEdit) => {
+          this.triggerDiagnosis(step, editor);
           for (const edit of step.edits) {
             editorEdit.replace(fromRange(edit.range), edit.text);
           }
         });
-        // Sleep to allow the LSP to process...
+        // TODO: more user friendly error reporting on diagnostics
+        //       1. check if only the order differs (i.e. compare as sets)
+        //       2. remove the diagnostics that are in both sets
+        //       3. visualise the diagnostics that are in one set but not the other
         await sleep(150);
-        // Validate the diagnostics...
+        const actual = await this.diagnosis;
         const expect = step.diagnostics;
-        const actual = vscode.languages
-          .getDiagnostics(editor.document.uri)
-          .map(toDiagnostic);
+
         try {
-          // TODO: more user friendly error reporting on diagnostics
-          //       1. check if only the order differs (i.e. compare as sets)
-          //       2. remove the diagnostics that are in both sets
-          //       3. visualise the diagnostics that are in one set but not the other
           assert.deepStrictEqual(actual, expect);
         } catch (e) {
-          hasChanges = true;
-          if (!shouldUpdate) throw e;
+          throw e;
         }
-        // Update the step...
+
         updatedGoldenTest.steps.push({
           edits: step.edits,
           diagnostics: actual,
         });
-      }
-      // If we should update golden tests, do so...
-      if (shouldUpdate && hasChanges) {
-        updatedGoldenTest.toFile(goldenTestCasesDir);
+
+        // If we should update golden tests, do so...
+        if (shouldUpdate && hasChanges) {
+          updatedGoldenTest.toFile(goldenTestCasesDir);
+        }
       }
     } catch (e) {
+      throw e;
+    } finally {
       // Close the file without saving...
       await vscode.commands.executeCommand(
         "workbench.action.revertAndCloseActiveEditor",
       );
-      // Rethrow the error...
-      throw e;
     }
   }
 
