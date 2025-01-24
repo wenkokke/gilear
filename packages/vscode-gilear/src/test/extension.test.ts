@@ -59,4 +59,16 @@ suite("Extension Test Suite", () => {
       await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
     });
   });
+
+  test("Test: Diagnostics work", async () => {
+    assert.rejects(async () => {
+      const testCaseFile = Object.assign({}, goldenTestCaseFiles[0]);
+      testCaseFile["steps"] = testCaseFile["steps"].map((elm) => {
+        elm.diagnostics = [];
+        return elm;
+      });
+      const testCase = GoldenTest.fromFile(testCaseFile);
+      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
+    });
+  });
 });
