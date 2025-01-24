@@ -92,11 +92,12 @@ suite("Extension Test Suite", () => {
       assert.ok(testCase);
       await Gilear.extensionAPI();
       // Run the test case:
-      (
-        await testCase.run(goldenTestFilesDir, {
+      const updatedTestCase = await testCase.run(goldenTestFilesDir, {
           shouldUpdate,
-        })
-      )?.writeTo(goldenTestCasesDir);
+        });
+      if (shouldUpdate && updatedTestCase !== null) {
+        updatedTestCase.writeTo(goldenTestCasesDir);
+      }
     });
   });
 });
