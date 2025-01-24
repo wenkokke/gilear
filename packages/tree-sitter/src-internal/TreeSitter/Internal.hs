@@ -431,11 +431,11 @@ pattern InputEdit
 
 newtype Node = WrapTSNode {unWrapTSNode :: C.TSNode}
 
-newtype NodeId = WrapTSNodeId {unWrapTSNodeId :: Word}
-  deriving stock (Eq, Ord)
+newtype NodeId = WrapTSNodeId {unWrapTSNodeId :: Int}
+  deriving stock (Eq, Ord, Show)
 
 nodeId :: Node -> NodeId
-nodeId = coerce . ptrToWordPtr . coerce . TSNode._id . coerce
+nodeId = coerce . ptrToIntPtr . coerce . TSNode._id . coerce
 
 newtype TreeCursor = WrapTSTreeCursor {unWrapTSTreeCursor :: ForeignPtr C.TSTreeCursor}
 

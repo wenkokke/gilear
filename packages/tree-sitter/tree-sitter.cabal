@@ -1,17 +1,18 @@
-cabal-version:   3.4
-name:            tree-sitter
-version:         0.13.0.0
-license:         AGPL-3.0-only
-synopsis:        Haskell bindings for tree-sitter
+cabal-version:      3.4
+name:               tree-sitter
+version:            0.13.0.0
+license:            AGPL-3.0-only
+synopsis:           Haskell bindings for tree-sitter
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/tree-sitter/#README>
 
-author:          Wen Kokke
-maintainer:      wenkokke@users.noreply.github.com
-category:        Language
-build-type:      Simple
-extra-doc-files: CHANGELOG.md
-data-files:      test/data/jQuery.js
+author:             Wen Kokke
+maintainer:         wenkokke@users.noreply.github.com
+category:           Language
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+extra-source-files: data/Ast.hs.template
+data-files:         test/data/jQuery.js
 
 common language
   ghc-options:        -Wall
@@ -43,21 +44,28 @@ library tree-sitter-internal
     , text                  >=2.1  && <2.2
     , tree-sitter-capi      >=0.13 && <0.14
 
-library tree-sitter-ast
-  import:          language
-  exposed-modules: TreeSitter.AST
+executable tree-sitter-generate-ast
+  import:         language
+  main-is:        Main.hs
   other-modules:
-    TreeSitter.AST.Internal.Generate
-    TreeSitter.AST.Internal.Grammar
-    TreeSitter.AST.Internal.NodeTypes
+    TreeSitter.GenerateAst.Internal.CodeGen
+    TreeSitter.GenerateAst.Internal.Data
+    TreeSitter.GenerateAst.Internal.Grammar
 
-  hs-source-dirs:  src-ast
+  hs-source-dirs: app-generate-ast
   build-depends:
-    , aeson       >=2.2  && <2.3
-    , base        >=4.13 && <5
-    , containers  >=0.6  && <0.8
-    , text        >=2.1  && <2.2
-    , vector      >=0.13 && <0.14
+    , aeson                 >=2.2  && <2.3
+    , base                  >=4.13 && <5
+    , containers            >=0.6  && <0.8
+    , data-default          >=0.7  && <0.8
+    , doclayout             >=0.5  && <0.6
+    , doctemplates          >=0.11 && <0.12
+    , fgl                   >=5.8  && <5.9
+    , file-embed            >=0.0  && <0.1
+    , optparse-applicative  >=0.18 && <0.19
+    , prettyprinter         >=1.7  && <1.8
+    , text                  >=2.1  && <2.2
+    , vector                >=0.13 && <0.14
 
 library tree-sitter-sexp
   import:          language

@@ -21,7 +21,12 @@ module.exports = grammar({
     ],
   ],
 
-  supertypes: ($) => [$.statement, $.predicate, $.expression],
+  supertypes: ($) => [
+    $.statement,
+    $.predicate,
+    $.expression,
+    $.comparison_operator,
+  ],
 
   rules: {
     source_file: ($) => $.statements,

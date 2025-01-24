@@ -31,6 +31,11 @@ cradle:
         cradle:
           cabal:
 
+    - path: "./packages/tree-sitter/data"
+      config:
+        cradle:
+          none:
+
     - path: "./packages/tree-sitter"
       config:
         cradle:
