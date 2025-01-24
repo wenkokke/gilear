@@ -60,7 +60,7 @@ suite("Extension Test Suite", () => {
       testCase.steps.map((step) => {
         step.diagnostics = [];
       });
-      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
+      await testCase.run(goldenTestCasesDir, goldenTestFilesDir);
     });
   });
 
@@ -73,7 +73,7 @@ suite("Extension Test Suite", () => {
       assert.ok(testCase);
       await Gilear.extensionAPI();
       // Run the test case:
-      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir, {
+      await testCase.run(goldenTestCasesDir, goldenTestFilesDir, {
         shouldUpdate,
       });
     });

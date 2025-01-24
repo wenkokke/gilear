@@ -43,7 +43,7 @@ export class GoldenTest {
     fs.writeFileSync(goldenTestFile, goldenTestContents);
   }
 
-  async assertSuccess(
+  async run(
     goldenTestCasesDir: string,
     goldenTestFilesDir: string,
     options?: GoldenTestOptions,
