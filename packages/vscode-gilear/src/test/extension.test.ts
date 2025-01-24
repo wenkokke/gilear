@@ -93,8 +93,8 @@ suite("Extension Test Suite", () => {
       await Gilear.extensionAPI();
       // Run the test case:
       const updatedTestCase = await testCase.run(goldenTestFilesDir, {
-          shouldUpdate,
-        });
+        shouldUpdate,
+      });
       if (shouldUpdate && updatedTestCase !== null) {
         updatedTestCase.writeTo(goldenTestCasesDir);
       }
