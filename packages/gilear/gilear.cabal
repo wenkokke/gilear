@@ -24,25 +24,30 @@ library
     Gilear.Internal.Core.Diagnostics
     Gilear.Internal.Core.Location
     Gilear.Internal.Parser
+    Gilear.Internal.Parser.Ast
     Gilear.Internal.Parser.Cache
     Gilear.Internal.Parser.Core
     Gilear.Internal.Parser.TextEdit
 
+  autogen-modules: Gilear.Internal.Parser.Ast
   build-depends:
     , base                  >=4.13 && <5
     , bytestring            >=0.12 && <0.13
     , co-log-core           >=0.3  && <0.4
+    , containers            >=0.6  && <0.8
     , hashable              >=1.4  && <1.5
     , IntervalMap           >=0.6  && <0.7
     , mtl                   >=2.3  && <2.4
+    , primitive             >=0.7  && <1.0
     , text                  >=2.1  && <2.2
     , text-rope             >=0.3  && <0.4
+    , transformers          >=0.6  && <0.7
     , tree-sitter           >=0.13 && <0.14
     , tree-sitter-gilear    >=0.0  && <0.1
     , unliftio-core         >=0.2  && <0.3
     , unordered-containers  >=0.2  && <0.3
 
-  hs-source-dirs:  src
+  hs-source-dirs:  autogen src
 
 executable gilear
   import:         language

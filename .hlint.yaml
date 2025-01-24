@@ -19,6 +19,8 @@
       within: "TreeSitter.Internal"
     - name: "-Wno-orphans"
       within: "Data.DeBruijn.Arbitrary"
+    - name: "-Wno-orphans"
+      within: "TreeSitter.GenerateAst.Internal.CodeGen"
 
 # Control which modules can be used
 - modules:

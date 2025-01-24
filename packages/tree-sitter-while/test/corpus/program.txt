@@ -24,8 +24,7 @@ while x < 5 do
         (statement_while_do
           (predicate_comparison
             left: (expression_variable)
-            (comparison_operator
-              (lt))
+            (lt)
             right: (expression_number))
           (statement_block
             (statements
