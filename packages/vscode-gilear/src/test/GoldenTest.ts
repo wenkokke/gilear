@@ -3,13 +3,16 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 
+export interface GoldenTestOptions {
+  shouldUpdate?: boolean;
+}
+
 export class GoldenTest {
   static fileExt = ".test.json";
 
   readonly name: string;
   readonly file: string;
   readonly steps: Step[];
-  diagnosis: Promise<any>;
 
   constructor(name: string, file: string, steps: Step[]) {
     this.name = name;
@@ -40,37 +43,13 @@ export class GoldenTest {
     fs.writeFileSync(goldenTestFile, goldenTestContents);
   }
 
-  triggerDiagnosis(step, editor) {
-    vscode.languages.onDidChangeDiagnostics(
-      (event: vscode.DiagnosticChangeEvent) => {
-        this.diagnosis = new Promise((resolve, reject) => {
-          if (event.uris.toString() == editor.document.uri.toString()) {
-            const expect = step.diagnostics;
-            const actual = vscode.languages
-              .getDiagnostics(editor.document.uri)
-              .map(toDiagnostic);
-
-            try {
-              assert.deepStrictEqual(actual, expect);
-              resolve(actual);
-            } catch (e) {
-              reject(e);
-              throw e;
-            }
-          }
-        });
-      },
-      this,
-    );
-  }
-
   async assertSuccess(
     goldenTestCasesDir: string,
     goldenTestFilesDir: string,
+    options?: GoldenTestOptions,
   ): Promise<void> {
-    // Validate the golden test...
-    // Track whether or not the test case is being updated...
-    const shouldUpdate = this.shouldUpdateGolden();
+    // Track whether or not the test case should be updated...
+    const shouldUpdate = options?.shouldUpdate ?? false;
     // Track whether or not the test case has any changes...
     let hasChanges = false;
     // Maintain an updated golden test...
@@ -79,41 +58,44 @@ export class GoldenTest {
     const docFile = path.join(goldenTestFilesDir, this.file);
     const doc = await vscode.workspace.openTextDocument(docFile);
     const editor = await vscode.window.showTextDocument(doc);
-
     try {
       for (const step of this.steps) {
+        // Register the onDidChangeDiagnostics handler...
+        const didChangeDiagnostics = new Promise((resolve, _reject) => {
+          vscode.languages.onDidChangeDiagnostics((e) => resolve(e));
+        });
         // Apply the edits...
         await editor.edit((editorEdit) => {
-          this.triggerDiagnosis(step, editor);
-          for (const edit of step.edits) {
+          step.edits.forEach((edit) => {
             editorEdit.replace(fromRange(edit.range), edit.text);
-          }
+          });
         });
+        // Await the diagnostics...
+        await didChangeDiagnostics;
         // TODO: more user friendly error reporting on diagnostics
         //       1. check if only the order differs (i.e. compare as sets)
         //       2. remove the diagnostics that are in both sets
         //       3. visualise the diagnostics that are in one set but not the other
-        await sleep(150);
-        const actual = await this.diagnosis;
+        const actual = vscode.languages
+          .getDiagnostics(editor.document.uri)
+          .map(toDiagnostic);
         const expect = step.diagnostics;
-
         try {
           assert.deepStrictEqual(actual, expect);
         } catch (e) {
-          throw e;
+          hasChanges = true;
+          if (!shouldUpdate) throw e;
         }
-
+        // Maintain updated golden test...
         updatedGoldenTest.steps.push({
           edits: step.edits,
           diagnostics: actual,
         });
-
-        // If we should update golden tests, do so...
-        if (shouldUpdate && hasChanges) {
-          updatedGoldenTest.toFile(goldenTestCasesDir);
-        }
       }
     } catch (e) {
+      // If we should update golden tests, do so...
+      if (shouldUpdate && hasChanges)
+        updatedGoldenTest.toFile(goldenTestCasesDir);
       throw e;
     } finally {
       // Close the file without saving...
@@ -122,17 +104,6 @@ export class GoldenTest {
       );
     }
   }
-
-  shouldUpdateGolden(): boolean {
-    return (
-      process.env.TEST_UPDATE === "true" ||
-      process.env.npm_config_test_update === "true"
-    );
-  }
-}
-
-async function sleep(ms: number): Promise<void> {
-  return await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export interface Step {

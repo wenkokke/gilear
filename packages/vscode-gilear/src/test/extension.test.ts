@@ -16,6 +16,13 @@ const goldenTestCasePattern = path.join(
 );
 const goldenTestCaseOptions = { windowsPathsNoEscape: true };
 
+// NOTE: the golden tests are updated if either the environment variable
+//       TEST_UPDATE or the npm configuration option test-update is set
+//       to the literal string "true"
+const shouldUpdate: boolean =
+  process.env.TEST_UPDATE === "true" ||
+  process.env.npm_config_test_update === "true";
+
 // TODO: run cabal build gilear-lsp before starting tests
 suite("Extension Test Suite", () => {
   suiteSetup(async () => {
@@ -47,6 +54,16 @@ suite("Extension Test Suite", () => {
     );
   });
 
+  test("Do the golden tests actually test something?", async () => {
+    assert.rejects(async () => {
+      const testCase = GoldenTest.fromFile(goldenTestCaseFiles[0]);
+      testCase.steps.map((step) => {
+        step.diagnostics = [];
+      });
+      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
+    });
+  });
+
   goldenTestCaseFiles.sort().forEach((testCaseFile) => {
     const name = path.basename(testCaseFile, GoldenTest.fileExt);
     const title = `Test: ${name}`;
@@ -56,19 +73,9 @@ suite("Extension Test Suite", () => {
       assert.ok(testCase);
       await Gilear.extensionAPI();
       // Run the test case:
-      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
-    });
-  });
-
-  test("Test: Diagnostics work", async () => {
-    assert.rejects(async () => {
-      const testCaseFile = Object.assign({}, goldenTestCaseFiles[0]);
-      testCaseFile["steps"] = testCaseFile["steps"].map((elm) => {
-        elm.diagnostics = [];
-        return elm;
+      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir, {
+        shouldUpdate,
       });
-      const testCase = GoldenTest.fromFile(testCaseFile);
-      await testCase.assertSuccess(goldenTestCasesDir, goldenTestFilesDir);
     });
   });
 });
