@@ -3,8 +3,8 @@ import * as assert from "assert";
 import * as path from "path";
 import * as vscode from "vscode";
 import * as Gilear from "../extension";
-import { Extension } from "vscode";
 import { GoldenTest } from "./GoldenTest";
+import * as Mocha from "mocha";
 
 // NOTE(directory-structure): this code depends on the directory that contains the test data
 const testDir = path.join(__dirname, "..", "..", "src", "test");
@@ -60,22 +60,43 @@ suite("Extension Test Suite", () => {
       testCase.steps.map((step) => {
         step.diagnostics = [];
       });
-      await testCase.run(goldenTestCasesDir, goldenTestFilesDir);
+      await testCase.run(goldenTestFilesDir);
     });
+  });
+
+  test("Does updating the golden tests actually work?", async () => {
+    // Load the first test golden test:
+    const testCase = GoldenTest.fromFile(goldenTestCaseFiles[0]);
+    // Create a broken version of the golden test:
+    const brokenTestCase = new GoldenTest(
+      testCase.name,
+      testCase.file,
+      testCase.steps.map((step) => ({ edits: step.edits, diagnostics: [] })),
+    );
+    // Ensure that the original and broken test cases are not equal:
+    assert.notDeepStrictEqual(testCase, brokenTestCase);
+    // Run the golden test with shouldUpdate
+    const updatedGoldenTest = await brokenTestCase.run(goldenTestFilesDir, {
+      shouldUpdate: true,
+    });
+    // Assert that the original and updated test cases are equal:
+    assert.deepStrictEqual(testCase, updatedGoldenTest);
   });
 
   goldenTestCaseFiles.sort().forEach((testCaseFile) => {
     const name = path.basename(testCaseFile, GoldenTest.fileExt);
-    const title = `Test: ${name}`;
+    const title = shouldUpdate ? `Update: ${name}` : `Test: ${name}`;
     test(title, async () => {
       // Track whether or not the test case has change
       const testCase = GoldenTest.fromFile(testCaseFile);
       assert.ok(testCase);
       await Gilear.extensionAPI();
       // Run the test case:
-      await testCase.run(goldenTestCasesDir, goldenTestFilesDir, {
-        shouldUpdate,
-      });
+      (
+        await testCase.run(goldenTestFilesDir, {
+          shouldUpdate,
+        })
+      )?.writeTo(goldenTestCasesDir);
     });
   });
 });

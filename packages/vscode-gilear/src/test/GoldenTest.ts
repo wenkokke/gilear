@@ -31,7 +31,7 @@ export class GoldenTest {
     return new GoldenTest(name, goldenTestInfo.file, goldenTestInfo.steps);
   }
 
-  toFile(goldenTestDir: string): void {
+  writeTo(goldenTestDir: string): void {
     const goldenTestFile = path.join(
       goldenTestDir,
       `${this.name}${GoldenTest.fileExt}`,
@@ -44,10 +44,9 @@ export class GoldenTest {
   }
 
   async run(
-    goldenTestCasesDir: string,
     goldenTestFilesDir: string,
     options?: GoldenTestOptions,
-  ): Promise<void> {
+  ): Promise<GoldenTest | null> {
     // Track whether or not the test case should be updated...
     const shouldUpdate = options?.shouldUpdate ?? false;
     // Track whether or not the test case has any changes...
@@ -102,9 +101,10 @@ export class GoldenTest {
       );
       // If we should update golden tests, do so...
       if (shouldUpdate && hasChanges) {
-        updatedGoldenTest.toFile(goldenTestCasesDir);
+        return updatedGoldenTest;
       }
     }
+    return null;
   }
 }
 
