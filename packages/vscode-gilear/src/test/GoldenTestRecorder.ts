@@ -265,7 +265,7 @@ export class GoldenTestRecorder implements lsp.Middleware {
     if (this && this.ongoing) {
       const { name, file, fileIsNew, steps } = this.ongoing;
       const goldenTest = new GoldenTest(name, file, steps);
-      goldenTest.toFile(this.goldenTestCasesDir);
+      goldenTest.writeTo(this.goldenTestCasesDir);
       this.ongoing = null;
     }
   }

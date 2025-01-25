@@ -3,6 +3,10 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 
+export interface GoldenTestOptions {
+  shouldUpdate?: boolean;
+}
+
 export class GoldenTest {
   static fileExt = ".test.json";
 
@@ -27,7 +31,7 @@ export class GoldenTest {
     return new GoldenTest(name, goldenTestInfo.file, goldenTestInfo.steps);
   }
 
-  toFile(goldenTestDir: string): void {
+  writeTo(goldenTestDir: string): void {
     const goldenTestFile = path.join(
       goldenTestDir,
       `${this.name}${GoldenTest.fileExt}`,
@@ -39,13 +43,12 @@ export class GoldenTest {
     fs.writeFileSync(goldenTestFile, goldenTestContents);
   }
 
-  async assertSuccess(
-    goldenTestCasesDir: string,
+  async run(
     goldenTestFilesDir: string,
-  ): Promise<void> {
-    // Validate the golden test...
-    // Track whether or not the test case is being updated...
-    const shouldUpdate = this.shouldUpdateGolden();
+    options?: GoldenTestOptions,
+  ): Promise<GoldenTest | null> {
+    // Track whether or not the test case should be updated...
+    const shouldUpdate = options?.shouldUpdate ?? false;
     // Track whether or not the test case has any changes...
     let hasChanges = false;
     // Maintain an updated golden test...
@@ -56,54 +59,52 @@ export class GoldenTest {
     const editor = await vscode.window.showTextDocument(doc);
     try {
       for (const step of this.steps) {
+        // Register the onDidChangeDiagnostics handler...
+        const didChangeDiagnostics = new Promise((resolve, _reject) => {
+          vscode.languages.onDidChangeDiagnostics((e) => resolve(e));
+        });
         // Apply the edits...
         await editor.edit((editorEdit) => {
-          for (const edit of step.edits) {
+          step.edits.forEach((edit) => {
             editorEdit.replace(fromRange(edit.range), edit.text);
-          }
+          });
         });
-        // Sleep to allow the LSP to process...
-        await sleep(150);
-        // Validate the diagnostics...
+        // Await the diagnostics...
+        await didChangeDiagnostics;
+        // Get the diagnostics...
         const expect = step.diagnostics;
         const actual = vscode.languages
           .getDiagnostics(editor.document.uri)
           .map(toDiagnostic);
+        // Maintain updated golden test...
+        updatedGoldenTest.steps.push({
+          edits: step.edits,
+          diagnostics: actual,
+        });
+        // TODO: more user friendly error reporting on diagnostics
+        //       1. check if only the order differs (i.e. compare as sets)
+        //       2. remove the diagnostics that are in both sets
+        //       3. visualise the diagnostics that are in one set but not the other
         try {
-          // TODO: more user friendly error reporting on diagnostics
-          //       1. check if only the order differs (i.e. compare as sets)
-          //       2. remove the diagnostics that are in both sets
-          //       3. visualise the diagnostics that are in one set but not the other
           assert.deepStrictEqual(actual, expect);
         } catch (e) {
           hasChanges = true;
           if (!shouldUpdate) throw e;
         }
-        // Update the step...
-        updatedGoldenTest.steps.push({
-          edits: step.edits,
-          diagnostics: actual,
-        });
-      }
-      // If we should update golden tests, do so...
-      if (shouldUpdate && hasChanges) {
-        updatedGoldenTest.toFile(goldenTestCasesDir);
       }
     } catch (e) {
+      throw e;
+    } finally {
       // Close the file without saving...
       await vscode.commands.executeCommand(
         "workbench.action.revertAndCloseActiveEditor",
       );
-      // Rethrow the error...
-      throw e;
+      // If we should update golden tests, do so...
+      if (shouldUpdate && hasChanges) {
+        return updatedGoldenTest;
+      }
     }
-  }
-
-  shouldUpdateGolden(): boolean {
-    return (
-      process.env.TEST_UPDATE === "true" ||
-      process.env.npm_config_test_update === "true"
-    );
+    return null;
   }
 }
 
