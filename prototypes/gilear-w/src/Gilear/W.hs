@@ -17,9 +17,9 @@ import Data.Kind (Type)
 import Data.Monoid (Any (..))
 import Data.Set (Set)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Unsafe.Coerce (unsafeCoerce)
 import Prelude hiding (id, (.))
-import Data.Text qualified as T
 
 data Name = Name
   { text :: !Text
@@ -40,7 +40,7 @@ instance Show Name where
 
 data TyF (t :: Type)
   = t :-> t
-  | t :*  t
+  | t :* t
   | Bool
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
