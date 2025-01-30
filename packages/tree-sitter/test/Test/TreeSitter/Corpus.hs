@@ -15,8 +15,8 @@ import Test.Tasty.HUnit (
   assertFailure,
   testCase,
  )
+import TreeSitter qualified as TS
 import TreeSitter.Corpus qualified as TSC
-import TreeSitter.Internal qualified as TS
 import TreeSitter.SExp (
   loose,
   parseSExp,

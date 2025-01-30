@@ -212,6 +212,6 @@ import TreeSitter.Internal
 
 --------------------------------------------------------------------------------
 
-{-# ANN module ("HLint: ignore TreeSitter.Internal should be imported post-qualified or with an explicit import list" :: String) #-}
+{-# ANN module "HLint: ignore TreeSitter.Internal should be imported post-qualified or with an explicit import list" #-}
 
 --------------------------------------------------------------------------------
