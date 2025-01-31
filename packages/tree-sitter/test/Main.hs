@@ -6,8 +6,8 @@ import Data.Functor ((<&>))
 import Test.Tasty (askOption, defaultMain, localOption, testGroup)
 import Test.Tasty.Patterns.Types (Expr (..))
 import Test.Tasty.Runners (TestPattern (..))
+import Test.TreeSitter qualified as TreeSitter
 import Test.TreeSitter.Corpus (makeCorpusTests)
-import Test.TreeSitter.Internal qualified as Internal
 import TreeSitter.JavaScript qualified as JavaScript
 import TreeSitter.While qualified as While
 
@@ -43,7 +43,7 @@ main = do
   defaultMain $
     testGroup
       "TreeSitter"
-      [ Internal.tests
+      [ TreeSitter.tests
       , askOption $ \(TestPattern maybeExpr) -> do
           let testPattern =
                 TestPattern . Just $

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.TreeSitter.Internal where
+module Test.TreeSitter where
 
 import Control.Exception (handle)
 import Control.Monad (unless)

@@ -28,8 +28,8 @@ import Options.Applicative (
 import System.Exit (exitSuccess)
 import System.FilePath ((-<.>))
 import System.IO (IOMode (..), withFile)
+import TreeSitter qualified as TS
 import TreeSitter.Gilear qualified as TS (tree_sitter_gilear)
-import TreeSitter.Internal qualified as TS
 
 parserParseText :: TS.Parser -> Maybe TS.Tree -> Text -> IO (Maybe TS.Tree)
 parserParseText parser oldTree text =
