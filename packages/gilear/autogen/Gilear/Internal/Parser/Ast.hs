@@ -8,13 +8,14 @@
 --   , transformers  >=0.6  && <0.7
 --   , tree-sitter
 --
+
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Gilear.Internal.Parser.Ast (
@@ -34,7 +35,8 @@ module Gilear.Internal.Parser.Ast (
   SymbolTable,
   mkSymbolTable,
   type (:<) (..),
-  Node (
+  Node
+  (
     SourceFile,
     DeclarationTypeSignature,
     DeclarationFunction,
@@ -60,15 +62,16 @@ module Gilear.Internal.Parser.Ast (
   Children (..),
   ChildList (..),
   SomeNode (..),
-  SomeNodeCache,
-  parseTree,
+  Ast,
+  AstCache,
+  parseAst,
 ) where
 
 import Control.Applicative (Alternative (..), optional)
 import Control.Monad (MonadPlus (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader, ReaderT (..), asks)
-import Control.Monad.State.Strict (MonadState (..), StateT (..), gets, modify')
+import Control.Monad.State.Strict (MonadState (..), StateT (..), modify', gets)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.ByteString.Char8 qualified as BSC
 import Data.IntMap.Strict (IntMap)
@@ -85,14 +88,16 @@ import TreeSitter qualified as TS
 -- Entry point
 --------------------------------------------------------------------------------
 
-parseTree :: SymbolTable -> TS.Tree -> IO (Maybe (Node SourceFileSort, SomeNodeCache))
-parseTree symbolTable tree = do
+type Ast = Node SourceFileSort
+
+parseAst :: SymbolTable -> TS.Tree -> AstCache -> IO (Maybe (Ast, AstCache))
+parseAst symbolTable tree astCache = do
   rootNode <- TS.treeRootNode tree
   treeCursor <- TS.treeCursorNew rootNode
-  let pEnv = PEnv symbolTable treeCursor mempty
+  let pEnv = PEnv symbolTable treeCursor astCache
   let pState = PState rootNode mempty
   (maybeNode, pState') <- runStateT (runMaybeT (runReaderT (unP p) pEnv)) pState
-  pure $ fmap (,newCache pState') maybeNode
+  pure $ (,newCache pState') <$> maybeNode
 
 --------------------------------------------------------------------------------
 -- Sort
@@ -376,52 +381,52 @@ data NodeContent (symbolType :: SymbolType) (symbol :: Symbol symbolType) where
   SourceFileContent ::
     !NodeId ->
     !Range ->
-    !(Children '[[Node DeclarationSort]]) ->
+    !(Children '[[Node DeclarationSort]]) ->  
     NodeContent Regular SourceFileSymbol
   DeclarationTypeSignatureContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node VariableNameSort, Node ExpressionSort]) ->
+    !(Children '[Node VariableNameSort, Node ExpressionSort]) ->  
     NodeContent Regular DeclarationTypeSignatureSymbol
   DeclarationFunctionContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node VariableNameSort, Maybe (Node PatternListSort), Node ExpressionSort]) ->
+    !(Children '[Node VariableNameSort, Maybe (Node PatternListSort), Node ExpressionSort]) ->  
     NodeContent Regular DeclarationFunctionSymbol
   ExpressionVariableContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node VariableNameSort]) ->
+    !(Children '[Node VariableNameSort]) ->  
     NodeContent Regular ExpressionVariableSymbol
   ExpressionConstructorContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node ConstructorNameSort]) ->
+    !(Children '[Node ConstructorNameSort]) ->  
     NodeContent Regular ExpressionConstructorSymbol
   ExpressionFunctionTypeContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node ExpressionSort, Node ExpressionSort]) ->
+    !(Children '[Node ExpressionSort, Node ExpressionSort]) ->  
     NodeContent Regular ExpressionFunctionTypeSymbol
   ExpressionFunctionApplicationContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node ExpressionSort, Node ExpressionSort]) ->
+    !(Children '[Node ExpressionSort, Node ExpressionSort]) ->  
     NodeContent Regular ExpressionFunctionApplicationSymbol
   ExpressionFunctionAbstractionContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node PatternListSort, Node ExpressionSort]) ->
+    !(Children '[Node PatternListSort, Node ExpressionSort]) ->  
     NodeContent Regular ExpressionFunctionAbstractionSymbol
   ExpressionAnnotationContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node ExpressionSort, Node ExpressionSort]) ->
+    !(Children '[Node ExpressionSort, Node ExpressionSort]) ->  
     NodeContent Regular ExpressionAnnotationSymbol
   ExpressionParenthesesContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node ExpressionSort]) ->
+    !(Children '[Node ExpressionSort]) ->  
     NodeContent Regular ExpressionParenthesesSymbol
   ConstructorNameContent ::
     !NodeId ->
@@ -430,22 +435,22 @@ data NodeContent (symbolType :: SymbolType) (symbol :: Symbol symbolType) where
   PatternListContent ::
     !NodeId ->
     !Range ->
-    !(Children '[NonEmpty (Node PatternSort)]) ->
+    !(Children '[NonEmpty (Node PatternSort)]) ->  
     NodeContent Regular PatternListSymbol
   PatternVariableContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node VariableNameSort]) ->
+    !(Children '[Node VariableNameSort]) ->  
     NodeContent Regular PatternVariableSymbol
   PatternConstructorContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node ConstructorNameSort]) ->
+    !(Children '[Node ConstructorNameSort]) ->  
     NodeContent Regular PatternConstructorSymbol
   PatternParenthesesContent ::
     !NodeId ->
     !Range ->
-    !(Children '[Node PatternSort]) ->
+    !(Children '[Node PatternSort]) ->  
     NodeContent Regular PatternParenthesesSymbol
   VariableNameContent ::
     !NodeId ->
@@ -519,67 +524,67 @@ deriving instance (Show (ChildList as)) => Show (Children as)
 -- Pattern Synonyms
 --------------------------------------------------------------------------------
 
-pattern SourceFile :: () => (sort ~ SourceFileSort) => NodeId -> Range -> [Node DeclarationSort] -> Node sort
+pattern SourceFile :: () => (sort ~ SourceFileSort) => NodeId -> Range -> [Node DeclarationSort] ->  Node sort
 pattern SourceFile nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (SourceFileContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern DeclarationTypeSignature :: () => (sort ~ DeclarationSort) => NodeId -> Range -> Node VariableNameSort -> Node ExpressionSort -> Node sort
+pattern DeclarationTypeSignature :: () => (sort ~ DeclarationSort) => NodeId -> Range -> Node VariableNameSort -> Node ExpressionSort ->  Node sort
 pattern DeclarationTypeSignature nodeId nodeRange nodeChild0 nodeChild1 =
   Node (RegularWellSorted Refl) (DeclarationTypeSignatureContent nodeId nodeRange (Children (Cons nodeChild0 (Cons nodeChild1 Nil))))
 
-pattern DeclarationFunction :: () => (sort ~ DeclarationSort) => NodeId -> Range -> Node VariableNameSort -> Maybe (Node PatternListSort) -> Node ExpressionSort -> Node sort
+pattern DeclarationFunction :: () => (sort ~ DeclarationSort) => NodeId -> Range -> Node VariableNameSort -> Maybe (Node PatternListSort) -> Node ExpressionSort ->  Node sort
 pattern DeclarationFunction nodeId nodeRange nodeChild0 nodeChild1 nodeChild2 =
   Node (RegularWellSorted Refl) (DeclarationFunctionContent nodeId nodeRange (Children (Cons nodeChild0 (Cons nodeChild1 (Cons nodeChild2 Nil)))))
 
-pattern ExpressionVariable :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node VariableNameSort -> Node sort
+pattern ExpressionVariable :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node VariableNameSort ->  Node sort
 pattern ExpressionVariable nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (ExpressionVariableContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern ExpressionConstructor :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ConstructorNameSort -> Node sort
+pattern ExpressionConstructor :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ConstructorNameSort ->  Node sort
 pattern ExpressionConstructor nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (ExpressionConstructorContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern ExpressionFunctionType :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node ExpressionSort -> Node sort
+pattern ExpressionFunctionType :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node ExpressionSort ->  Node sort
 pattern ExpressionFunctionType nodeId nodeRange nodeChild0 nodeChild1 =
   Node (RegularWellSorted Refl) (ExpressionFunctionTypeContent nodeId nodeRange (Children (Cons nodeChild0 (Cons nodeChild1 Nil))))
 
-pattern ExpressionFunctionApplication :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node ExpressionSort -> Node sort
+pattern ExpressionFunctionApplication :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node ExpressionSort ->  Node sort
 pattern ExpressionFunctionApplication nodeId nodeRange nodeChild0 nodeChild1 =
   Node (RegularWellSorted Refl) (ExpressionFunctionApplicationContent nodeId nodeRange (Children (Cons nodeChild0 (Cons nodeChild1 Nil))))
 
-pattern ExpressionFunctionAbstraction :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node PatternListSort -> Node ExpressionSort -> Node sort
+pattern ExpressionFunctionAbstraction :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node PatternListSort -> Node ExpressionSort ->  Node sort
 pattern ExpressionFunctionAbstraction nodeId nodeRange nodeChild0 nodeChild1 =
   Node (RegularWellSorted Refl) (ExpressionFunctionAbstractionContent nodeId nodeRange (Children (Cons nodeChild0 (Cons nodeChild1 Nil))))
 
-pattern ExpressionAnnotation :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node ExpressionSort -> Node sort
+pattern ExpressionAnnotation :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node ExpressionSort ->  Node sort
 pattern ExpressionAnnotation nodeId nodeRange nodeChild0 nodeChild1 =
   Node (RegularWellSorted Refl) (ExpressionAnnotationContent nodeId nodeRange (Children (Cons nodeChild0 (Cons nodeChild1 Nil))))
 
-pattern ExpressionParentheses :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort -> Node sort
+pattern ExpressionParentheses :: () => (sort ~ ExpressionSort) => NodeId -> Range -> Node ExpressionSort ->  Node sort
 pattern ExpressionParentheses nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (ExpressionParenthesesContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern ConstructorName :: () => (sort ~ ConstructorNameSort) => NodeId -> Range -> Node sort
+pattern ConstructorName :: () => (sort ~ ConstructorNameSort) => NodeId -> Range ->  Node sort
 pattern ConstructorName nodeId nodeRange =
   Node (RegularWellSorted Refl) (ConstructorNameContent nodeId nodeRange)
 
-pattern PatternList :: () => (sort ~ PatternListSort) => NodeId -> Range -> NonEmpty (Node PatternSort) -> Node sort
+pattern PatternList :: () => (sort ~ PatternListSort) => NodeId -> Range -> NonEmpty (Node PatternSort) ->  Node sort
 pattern PatternList nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (PatternListContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern PatternVariable :: () => (sort ~ PatternSort) => NodeId -> Range -> Node VariableNameSort -> Node sort
+pattern PatternVariable :: () => (sort ~ PatternSort) => NodeId -> Range -> Node VariableNameSort ->  Node sort
 pattern PatternVariable nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (PatternVariableContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern PatternConstructor :: () => (sort ~ PatternSort) => NodeId -> Range -> Node ConstructorNameSort -> Node sort
+pattern PatternConstructor :: () => (sort ~ PatternSort) => NodeId -> Range -> Node ConstructorNameSort ->  Node sort
 pattern PatternConstructor nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (PatternConstructorContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern PatternParentheses :: () => (sort ~ PatternSort) => NodeId -> Range -> Node PatternSort -> Node sort
+pattern PatternParentheses :: () => (sort ~ PatternSort) => NodeId -> Range -> Node PatternSort ->  Node sort
 pattern PatternParentheses nodeId nodeRange nodeChild0 =
   Node (RegularWellSorted Refl) (PatternParenthesesContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
 
-pattern VariableName :: () => (sort ~ VariableNameSort) => NodeId -> Range -> Node sort
+pattern VariableName :: () => (sort ~ VariableNameSort) => NodeId -> Range ->  Node sort
 pattern VariableName nodeId nodeRange =
   Node (RegularWellSorted Refl) (VariableNameContent nodeId nodeRange)
 
@@ -596,25 +601,25 @@ pattern SortMismatch nodeChild0 =
   Node AuxiliaryWellSorted (SortMismatchContent nodeChild0)
 
 {-# COMPLETE
-  SourceFile
-  , DeclarationTypeSignature
-  , DeclarationFunction
-  , ExpressionVariable
-  , ExpressionConstructor
-  , ExpressionFunctionType
-  , ExpressionFunctionApplication
-  , ExpressionFunctionAbstraction
-  , ExpressionAnnotation
-  , ExpressionParentheses
-  , ConstructorName
-  , PatternList
-  , PatternVariable
-  , PatternConstructor
-  , PatternParentheses
-  , VariableName
-  , Error
-  , Missing
-  , SortMismatch
+  SourceFile,
+  DeclarationTypeSignature,
+  DeclarationFunction,
+  ExpressionVariable,
+  ExpressionConstructor,
+  ExpressionFunctionType,
+  ExpressionFunctionApplication,
+  ExpressionFunctionAbstraction,
+  ExpressionAnnotation,
+  ExpressionParentheses,
+  ConstructorName,
+  PatternList,
+  PatternVariable,
+  PatternConstructor,
+  PatternParentheses,
+  VariableName,
+  Error,
+  Missing,
+  SortMismatch
   #-}
 
 --------------------------------------------------------------------------------
@@ -652,12 +657,12 @@ mkSymbolTable language =
 -- Node Cache
 --------------------------------------------------------------------------------
 
-newtype SomeNodeCache = SomeNodeCache {unSomeNodeCache :: IntMap SomeNode}
+newtype AstCache = AstCache {unAstCache :: IntMap SomeNode}
   deriving (Show, Semigroup, Monoid)
 
-insertSomeNode :: NodeId -> SomeNode -> SomeNodeCache -> SomeNodeCache
-insertSomeNode nodeId someNode someNodeCacheMap =
-  SomeNodeCache (IM.insert (unWrapTSNodeId nodeId) someNode (unSomeNodeCache someNodeCacheMap))
+insertSomeNode :: NodeId -> SomeNode -> AstCache -> AstCache
+insertSomeNode nodeId someNode astCacheMap =
+  AstCache (IM.insert (unWrapTSNodeId nodeId) someNode (unAstCache astCacheMap))
 
 --------------------------------------------------------------------------------
 -- Parser Monad
@@ -665,13 +670,13 @@ insertSomeNode nodeId someNode someNodeCacheMap =
 
 data PState = PState
   { currentNode :: TS.Node
-  , newCache :: !SomeNodeCache
+  , newCache :: !AstCache
   }
 
 data PEnv = PEnv
   { symbolTable :: !SymbolTable
   , treeCursor :: !TS.TreeCursor
-  , oldCache :: !SomeNodeCache
+  , oldCache :: !AstCache
   }
 
 newtype P a = P {unP :: ReaderT PEnv (MaybeT (StateT PState IO)) a}
@@ -703,7 +708,7 @@ emitSomeNode nodeId someNode = modify' updatePState >> pure someNode
 
 lookupSomeNode :: NodeId -> P SomeNode
 lookupSomeNode nodeId =
-  maybe mzero pure . IM.lookup (unWrapTSNodeId nodeId) . unSomeNodeCache =<< asks oldCache
+  maybe mzero pure . IM.lookup (unWrapTSNodeId nodeId) . unAstCache =<< asks oldCache
 
 gotoParent :: P ()
 gotoParent = do
@@ -869,7 +874,7 @@ instance (Show (SExp a)) => Show (SExp [a]) where
   showsPrec d = mconcat . intersperse (showString " ") . fmap (showsPrec d . SExp) . unSExp
 
 instance (Show (SExp a)) => Show (SExp (NonEmpty a)) where
-  showsPrec d = showsPrec d . SExp . toList . unSExp
+  showsPrec d = showsPrec d  . SExp . toList . unSExp
 
 instance (Show (SExp a)) => Show (SExp (Maybe a)) where
   showsPrec d = maybe id (showsPrec d . SExp) . unSExp
@@ -918,6 +923,6 @@ instance Show (SExp SomeNode) where
   showsPrec d (SExp (SomeNode content)) =
     let symbol = nodeContentToSymbol content
         symbolType = symbolToSymbolType symbol
-    in  case symbolType of
-          SRegular -> showsPrec d (SExp (Node (RegularWellSorted Refl) content))
-          SAuxiliary -> showsPrec d (SExp (Node AuxiliaryWellSorted content))
+    in case symbolType of
+        SRegular -> showsPrec d (SExp (Node (RegularWellSorted Refl) content))
+        SAuxiliary -> showsPrec d (SExp (Node AuxiliaryWellSorted content))

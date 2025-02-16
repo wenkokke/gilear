@@ -15,6 +15,7 @@ import Gilear.Internal.Parser.Cache qualified as Cache
 import TreeSitter (Parser)
 import TreeSitter qualified as TS
 import TreeSitter.Gilear (tree_sitter_gilear)
+import Gilear.Internal.Parser.Ast (SymbolTable, mkSymbolTable)
 
 --------------------------------------------------------------------------------
 -- Parser
@@ -54,11 +55,15 @@ type ParserEnv :: Type -> Type
 data ParserEnv uri = ParserEnv
   { parserVar :: IORef Parser
   , parserCacheVar :: IORef (ParserCache uri)
+  , parserSymbolTable :: !SymbolTable
   }
 
 -- | Create an empty type-checker environment.
 newParserEnv :: IO (ParserEnv uri)
 newParserEnv = do
-  parserVar <- newIORef =<< newParser
+  parser <- newParser
+  parserVar <- newIORef parser
   parserCacheVar <- newIORef Cache.empty
+  parserLanguage <- TS.parserLanguage parser
+  parserSymbolTable <- mkSymbolTable parserLanguage
   pure $ ParserEnv{..}

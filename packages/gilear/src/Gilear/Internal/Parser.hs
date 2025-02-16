@@ -23,7 +23,7 @@ import Data.Text.Encoding qualified as T
 import Data.Text.Lines (Position)
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
-import Gilear.Internal.Core (MonadTc, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser)
+import Gilear.Internal.Core (MonadTc, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser, getSymbolTable)
 import Gilear.Internal.Core.Diagnostics (Diagnostic (..), Diagnostics)
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (pointToPosition, positionToPoint)
@@ -33,6 +33,7 @@ import Gilear.Internal.Parser.TextEdit (TextEdit (..), applyTextEditToItem, leng
 import Text.Printf (printf)
 import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
+import Gilear.Internal.Parser.Ast (parseAst)
 
 -- | Open a text document.
 documentOpen ::
@@ -74,10 +75,26 @@ documentChangeWholeDocument logger encoding uri rope = do
     -- If parsing succeeded...
     Just tree -> do
       -- ... update the tree
-      -- TODO: do not update tree if it contains errors?
-      let newCacheItem = ParserCacheItem rope tree D.empty
-      modifyCache_ (Cache.insert uri newCacheItem)
-      pure True
+      symbolTable <- getSymbolTable
+      maybeAstAndCache <- liftIO (parseAst symbolTable tree mempty)
+      case maybeAstAndCache of
+        Nothing -> do
+          -- ... this must be due to a programming error:
+          let message = T.pack $ printf "failed to parse %s due to programming error" (show uri)
+          logger <& WithSeverity message Warning
+          modifyCache_ (Cache.delete uri)
+          pure False
+        Just (ast, astCache) -> do
+          -- TODO: do not update tree if it contains errors?
+          let newCacheItem = ParserCacheItem
+                { itemRope = rope
+                , itemTree = tree
+                , itemDiag = D.empty
+                , itemAst = ast
+                , itemAstCache = astCache
+                }
+          modifyCache_ (Cache.insert uri newCacheItem)
+          pure True
 {-# INLINEABLE documentChangeWholeDocument #-}
 
 -- | Change part of the content of the text document.
@@ -102,7 +119,13 @@ documentChangePartial logger encoding uri newRope edits = do
     -- If an old tree is found...
     Just cacheItem -> do
       -- ... edit the old tree with the input edits
-      ParserCacheItem{itemRope = editedOldRope, itemTree = editedOldTree, itemDiag = oldDiag} <-
+      ParserCacheItem
+        { itemRope = editedOldRope
+        , itemTree = editedOldTree
+        , itemDiag = oldDiag
+        , itemAst = _oldAst
+        , itemAstCache = oldAstCache
+        } <-
         applyTextEditToItem logger encoding edits cacheItem
       -- ... report a warning when the editedOldRope is distinct from the newRope
       when (newRope /= editedOldRope) $ do
@@ -121,12 +144,28 @@ documentChangePartial logger encoding uri newRope edits = do
         -- If parsing succeeded...
         Just newTree -> do
           -- Traverse the syntax tree searching for parse errors...
-          rootNode <- liftIO (TS.treeRootNode newTree)
-          newDiag <- diagnose logger encoding newRope rootNode
-          -- ... update the cache item
-          let newCacheItem = ParserCacheItem newRope newTree (oldDiag <> newDiag)
-          modifyCache_ (Cache.insert uri newCacheItem)
-          pure True
+          newDiag <- diagnose logger encoding newRope =<< liftIO (TS.treeRootNode newTree)
+          -- Convert the syntax tree to a typed Ast...
+          symbolTable <- getSymbolTable
+          maybeNewAstAndCache <- liftIO (parseAst symbolTable newTree oldAstCache)
+          case maybeNewAstAndCache of
+            Nothing -> do
+              -- ... this must be due to a programming error:
+              let message = T.pack $ printf "failed to parse %s due to programming error" (show uri)
+              logger <& WithSeverity message Warning
+              modifyCache_ (Cache.delete uri)
+              pure False
+            Just (newAst, newAstCache) -> do
+              -- ... update the cache item
+              let newCacheItem = ParserCacheItem
+                    { itemRope = newRope
+                    , itemTree = newTree
+                    , itemDiag = oldDiag <> newDiag
+                    , itemAst = newAst
+                    , itemAstCache = newAstCache
+                    }
+              modifyCache_ (Cache.insert uri newCacheItem)
+              pure True
 {-# INLINEABLE documentChangePartial #-}
 
 diagnose ::

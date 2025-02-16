@@ -17,6 +17,7 @@ import Data.Hashable (Hashable)
 import Data.Kind (Type)
 import Data.Text.Mixed.Rope (Rope)
 import Gilear.Internal.Core.Diagnostics (Diagnostics)
+import Gilear.Internal.Parser.Ast (Ast, AstCache)
 import TreeSitter (Tree)
 import Prelude hiding (lookup)
 
@@ -25,6 +26,8 @@ data ParserCacheItem = ParserCacheItem
   { itemRope :: !Rope
   , itemTree :: !Tree
   , itemDiag :: !Diagnostics
+  , itemAst :: !Ast
+  , itemAstCache :: !AstCache
   }
 
 -- | Collection of ASTs for all open files.
