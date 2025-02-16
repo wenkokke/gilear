@@ -38,13 +38,13 @@ import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Gilear.Internal.Core.Diagnostics (Diagnostics)
+import Gilear.Internal.Parser.Ast (SymbolTable)
 import Gilear.Internal.Parser.Cache (ParserCache, ParserCacheItem)
 import Gilear.Internal.Parser.Cache qualified as Cache
 import Gilear.Internal.Parser.Core (ParserEnv (..), newParserEnv)
 import Text.Printf (printf)
 import TreeSitter (Language, Parser)
 import TreeSitter qualified as TS
-import Gilear.Internal.Parser.Ast (SymbolTable)
 
 --------------------------------------------------------------------------------
 -- Package Name

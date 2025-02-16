@@ -5,17 +5,19 @@
 --   , bytestring    >=0.12 && <0.13
 --   , containers    >=0.6  && <0.8
 --   , mtl           >=2.3  && <2.4
+--   , prettyprinter >=1.7  && <1.8
 --   , transformers  >=0.6  && <0.7
 --   , tree-sitter
 --
 
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-+}
@@ -56,23 +58,23 @@ ${endfor}${endfor}
   SomeNode (..),
   Ast,
   AstCache,
-  parseAst,
+  parseAst
 ) where
 
 import Control.Applicative (Alternative (..), optional)
 import Control.Monad (MonadPlus (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader, ReaderT (..), asks)
-import Control.Monad.State.Strict (MonadState (..), StateT (..), modify', gets)
+import Control.Monad.State.Strict (MonadState (..), StateT (..), gets, modify')
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.ByteString.Char8 qualified as BSC
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IM
 import Data.Kind (Type)
-import Data.List (intersperse)
-import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (isJust)
 import Data.Type.Equality (type (:~:) (..), type (:~~:) (..))
+import Prettyprinter (Pretty (..), line, nest, parens, sep)
 import TreeSitter (NodeId (..), Range (..))
 import TreeSitter qualified as TS
 
@@ -258,7 +260,7 @@ data (:<) symbol sort where
     symbol :< sort
   RegularWellSorted ::
     forall (symbol :: Symbol Regular) (sort :: Sort).
-    !(SymbolToSort symbol :~: sort) ->
+    {-# UNPACK #-} !(SymbolToSort symbol :~: sort) ->
     symbol :< sort
 
 deriving instance Eq (symbol :< sort)
@@ -303,8 +305,8 @@ data NodeContent (symbolType :: SymbolType) (symbol :: Symbol symbolType) where
 ${for(dataTypes)}
 ${for(it.constrs)}
   ${it.name.camelCase}Content ::
-    !NodeId ->
-    !Range ->
+    {-# UNPACK #-} !NodeId ->
+    {-# UNPACK #-} !Range ->
 ${if(it.hasChildren)}
     !(Children '[${for(it.fields)}${it.type}${sep}, ${endfor}]) ->  
 ${endif}
@@ -313,13 +315,13 @@ ${endfor}
 ${endfor}
 {+-}
   ErrorContent ::
-    !NodeId ->
-    !Range ->
+    {-# UNPACK #-} !NodeId ->
+    {-# UNPACK #-} !Range ->
     !(Children '[[SomeNode]]) ->
     NodeContent Auxiliary ErrorSymbol
   MissingContent ::
-    !NodeId ->
-    !Range ->
+    {-# UNPACK #-} !NodeId ->
+    {-# UNPACK #-} !Range ->
     NodeContent Auxiliary MissingSymbol
   SortMismatchContent ::
     !SomeNode ->
@@ -452,14 +454,14 @@ insertSomeNode nodeId someNode astCacheMap =
 --------------------------------------------------------------------------------
 
 data PState = PState
-  { currentNode :: TS.Node
-  , newCache :: !AstCache
+  { currentNode :: {-# UNPACK #-} !TS.Node
+  , newCache :: {-# NOUNPACK #-} !AstCache
   }
 
 data PEnv = PEnv
-  { symbolTable :: !SymbolTable
-  , treeCursor :: !TS.TreeCursor
-  , oldCache :: !AstCache
+  { symbolTable :: {-# UNPACK #-} !SymbolTable
+  , treeCursor :: {-# UNPACK #-} !TS.TreeCursor
+  , oldCache :: {-# UNPACK #-} !AstCache
   }
 
 newtype P a = P {unP :: ReaderT PEnv (MaybeT (StateT PState IO)) a}
@@ -642,37 +644,46 @@ ${endfor}
 -- Pretty Printing
 --------------------------------------------------------------------------------
 
-newtype SExp a = SExp {unSExp :: a}
+instance Pretty (Node sort) where
+  pretty (Node _wellSorted content) = pretty content
+  prettyList = sep . fmap pretty
 
-instance (Show (SExp a)) => Show (SExp [a]) where
-  showsPrec d = mconcat . intersperse (showString " ") . fmap (showsPrec d . SExp) . unSExp
+instance Pretty SomeNode where
+  pretty (SomeNode content) = pretty content
+  prettyList = sep . fmap pretty
 
-instance (Show (SExp a)) => Show (SExp (NonEmpty a)) where
-  showsPrec d = showsPrec d  . SExp . toList . unSExp
-
-instance (Show (SExp a)) => Show (SExp (Maybe a)) where
-  showsPrec d = maybe id (showsPrec d . SExp) . unSExp
-
-instance Show (SExp (Node sort)) where
+instance Pretty (NodeContent symbolType symbol) where
+  pretty = \case
 {-+}
 ${for(dataTypes)}
 ${for(it.constrs)}
-  showsPrec d (SExp (${it.name.camelCase} _nodeId _nodeRange${if(it.hasChildren)}${for(it.fields)} nodeChild${it.index}${endfor}${endif})) =
-    showParen (d > 10) (showString "${it.name.camelCase} "${if(it.hasChildren)}${for(it.fields)} . showsPrec 11 (SExp nodeChild${it.index})${endfor}${endif})
+    ${it.name.camelCase}Content _nodeId _nodeRange${if(it.hasChildren)} (Children${for(it.fields)} (Cons nodeChild${it.index}${endfor} Nil${for(it.fields)})${endfor})${endif} ->
+${if(it.hasChildren)}
+      parens . nest 2 . sep $$
+        ["${it.name.text}", ${if(it.hasChildren)}${for(it.fields)}pretty nodeChild${it.index}${sep}, ${endfor}${endif}]
+${else}
+      "(${it.name.text})"
+${endif}
 ${endfor}
 ${endfor}
 {+-}
-  showsPrec d (SExp (Error _nodeId _nodeRange nodeChild0)) =
-    showParen (d > 10) (showString "Error " . showsPrec 11 (SExp nodeChild0))
-  showsPrec d (SExp (Missing _nodeId _nodeRange)) =
-    showParen (d > 10) (showString "Missing")
-  showsPrec d (SExp (SortMismatch nodeChild0)) =
-    showParen (d > 10) (showString "SortMismatch " . showsPrec 11 (SExp nodeChild0))
+    ErrorContent _nodeId _nodeRange nodeChildren ->
+      parens . nest 2 . sep $
+        ["error", pretty nodeChildren]
+    MissingContent _nodeId _nodeRange ->
+      "(missing)"
+    SortMismatchContent nodeChildren ->
+      parens . nest 2 . sep $
+        ["error", pretty nodeChildren]
 
-instance Show (SExp SomeNode) where
-  showsPrec d (SExp (SomeNode content)) =
-    let symbol = nodeContentToSymbol content
-        symbolType = symbolToSymbolType symbol
-    in case symbolType of
-        SRegular -> showsPrec d (SExp (Node (RegularWellSorted Refl) content))
-        SAuxiliary -> showsPrec d (SExp (Node AuxiliaryWellSorted content))
+instance Pretty (ChildList '[]) where
+  pretty = mempty
+
+instance (Pretty a) => Pretty (ChildList (a ': '[])) where
+  pretty (Cons x Nil) = pretty x
+
+instance (Pretty a, Pretty (ChildList (b ': bs))) => Pretty (ChildList (a ': b ': bs)) where
+  pretty (Cons x xs) = pretty x <> line <> pretty xs
+
+instance (Pretty (ChildList as)) => Pretty (Children as) where
+  pretty (Children xs) = pretty xs
