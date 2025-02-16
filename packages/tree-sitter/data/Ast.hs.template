@@ -5,7 +5,11 @@
 --   , bytestring    >=0.12 && <0.13
 --   , containers    >=0.6  && <0.8
 --   , mtl           >=2.3  && <2.4
+{-+}
+${if(pretty)}
 --   , prettyprinter >=1.7  && <1.8
+${endif}
+{+-}
 --   , transformers  >=0.6  && <0.7
 --   , tree-sitter
 --
@@ -74,7 +78,11 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (isJust)
 import Data.Type.Equality (type (:~:) (..), type (:~~:) (..))
+{-+}
+${if(pretty)}
 import Prettyprinter (Pretty (..), line, nest, parens, sep)
+${endif}
+{+-}
 import TreeSitter (NodeId (..), Range (..))
 import TreeSitter qualified as TS
 
@@ -639,6 +647,8 @@ ${endfor}
   SErrorSymbol -> ErrorContent <$> p <*> p <*> p
   SMissingSymbol -> MissingContent <$> p <*> p
   SSortMismatchSymbol -> SortMismatchContent <$> p
+{-+}
+${if(pretty)}
 
 --------------------------------------------------------------------------------
 -- Pretty Printing
@@ -654,7 +664,6 @@ instance Pretty SomeNode where
 
 instance Pretty (NodeContent symbolType symbol) where
   pretty = \case
-{-+}
 ${for(dataTypes)}
 ${for(it.constrs)}
     ${it.name.camelCase}Content _nodeId _nodeRange${if(it.hasChildren)} (Children${for(it.fields)} (Cons nodeChild${it.index}${endfor} Nil${for(it.fields)})${endfor})${endif} ->
@@ -666,14 +675,13 @@ ${else}
 ${endif}
 ${endfor}
 ${endfor}
-{+-}
     ErrorContent _nodeId _nodeRange nodeChildren ->
-      parens . nest 2 . sep $
+      parens . nest 2 . sep $$
         ["error", pretty nodeChildren]
     MissingContent _nodeId _nodeRange ->
       "(missing)"
     SortMismatchContent nodeChildren ->
-      parens . nest 2 . sep $
+      parens . nest 2 . sep $$
         ["error", pretty nodeChildren]
 
 instance Pretty (ChildList '[]) where
@@ -687,3 +695,6 @@ instance (Pretty a, Pretty (ChildList (b ': bs))) => Pretty (ChildList (a ': b '
 
 instance (Pretty (ChildList as)) => Pretty (Children as) where
   pretty (Children xs) = pretty xs
+
+${endif}
+{+-}
