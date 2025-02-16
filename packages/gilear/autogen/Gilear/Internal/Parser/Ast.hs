@@ -98,7 +98,7 @@ parseAst symbolTable tree astCache = do
   treeCursor <- TS.treeCursorNew rootNode
   let pEnv = PEnv symbolTable treeCursor astCache
   let pState = PState rootNode mempty
-  (maybeNode, pState') <- runStateT (runMaybeT (runReaderT (unP p) pEnv)) pState
+  (maybeNode, pState') <- runStateT (runReaderT (runMaybeT (unP p)) pEnv) pState
   pure $ (,newCache pState') <$> maybeNode
 
 --------------------------------------------------------------------------------
@@ -681,7 +681,7 @@ data PEnv = PEnv
   , oldCache :: {-# UNPACK #-} !AstCache
   }
 
-newtype P a = P {unP :: ReaderT PEnv (MaybeT (StateT PState IO)) a}
+newtype P a = P {unP :: MaybeT (ReaderT PEnv (StateT PState IO)) a}
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader PEnv, MonadState PState, Alternative, MonadPlus)
 
 getCurrentNode :: P TS.Node
