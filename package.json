@@ -10,6 +10,6 @@
   "scripts": {
     "compile": "npm run compile --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "generate-ast": "cabal run tree-sitter-generate-ast -- -g 'packages/tree-sitter-gilear/src/grammar.json' -s 'source_file' -m 'Gilear.Internal.Parser.Ast' -o 'packages/gilear/autogen/Gilear/Internal/Parser/Ast.hs'"
+    "generate-ast": "cabal run tree-sitter-generate-ast -- 'packages/tree-sitter-gilear/src/grammar.json' -s 'source_file' -m 'Gilear.Internal.Parser.Ast' -o 'packages/gilear/autogen/Gilear/Internal/Parser/Ast.hs' --pretty"
   }
 }

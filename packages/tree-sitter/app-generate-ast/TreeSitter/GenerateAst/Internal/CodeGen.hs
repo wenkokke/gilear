@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -20,8 +21,9 @@ import Data.Text.Lazy.Builder qualified as TLB
 import Text.DocLayout (Doc, render)
 import Text.DocLayout qualified as Doc (Doc (..))
 import Text.DocTemplates (Context (..), ToContext (..), Val (..), applyTemplate)
-import TreeSitter.GenerateAst.Internal.Data (Constr (..), Data (..), Field (..), Name (..), Type (..), fieldName)
-import TreeSitter.GenerateAst.Internal.Grammar (RuleName)
+import TreeSitter.GenerateAst.Internal.Data (Constr (..), Data (..), Field (..), Name (..), Type (..), fieldName, toDataTypes)
+import TreeSitter.GenerateAst.Internal.Grammar (RuleName, Grammar (..))
+import Data.Maybe (fromMaybe)
 
 --------------------------------------------------------------------------------
 -- Template Parser and Renderer
@@ -29,22 +31,27 @@ import TreeSitter.GenerateAst.Internal.Grammar (RuleName)
 
 data Metadata = Metadata
   { startRuleName :: RuleName
-  , moduleName :: Text
+  , moduleName :: Maybe Text
+  , pretty :: Bool
   }
 
-generateAst :: Metadata -> [Data] -> FilePath -> Text -> Either String Text
-generateAst metadata dataTypes templateFile template =
-  renderTemplate templateFile template (makeContext metadata dataTypes)
-
-instance ToContext Text Metadata where
-  toVal :: Metadata -> Val Text
-  toVal = MapVal . toContext
-  toContext :: Metadata -> Context Text
-  toContext Metadata{..} =
-    Context . M.fromList $
+generateAst :: Metadata -> Grammar -> FilePath -> Text -> Either String Text
+generateAst Metadata{..} grammar templateFile template = errorOrModule
+  where
+    defaultModuleName = snakeToCase Upper grammar.name <> "Ast"
+    metadataContext = Context . M.fromList $
       [ ("startRuleName", textToVal startRuleName)
-      , ("moduleName", textToVal moduleName)
+      , ("moduleName", textToVal $ fromMaybe defaultModuleName moduleName)
+      , ("pretty", BoolVal pretty)
       ]
+    dataTypesContext =
+      Context . M.fromList $
+        [ ("dataTypes", toVal dataTypes)
+        , ("startSort", maybe NullVal (\(Data name _, _) -> toVal name) (uncons dataTypes))
+        ]
+    dataTypes = toDataTypes startRuleName grammar
+    context = metadataContext <> dataTypesContext
+    errorOrModule = renderTemplate templateFile template context
 
 data RenderState = InText | InTemplate [Text]
 
@@ -73,17 +80,6 @@ renderTemplate templateFile templateText context =
 
 textToVal :: Text -> Val Text
 textToVal text = SimpleVal (Doc.Text (T.length text) text)
-
-makeContext :: Metadata -> [Data] -> Context Text
-makeContext metadata dataTypes = metadataContext <> dataTypeContext
- where
-  metadataContext =
-    toContext metadata
-  dataTypeContext =
-    Context . M.fromList $
-      [ ("dataTypes", toVal dataTypes)
-      , ("startSort", maybe NullVal (\(Data name _, _) -> toVal name) (uncons dataTypes))
-      ]
 
 isNodeLike :: Type -> Bool
 isNodeLike = \case
