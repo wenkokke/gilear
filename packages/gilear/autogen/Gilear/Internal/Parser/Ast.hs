@@ -837,7 +837,7 @@ pSomeNode = pSomeNode' =<< getCurrentNode
     nodeId = TS.nodeId node
     tryCache = do
       nodeHasChanges <- liftIO (TS.nodeHasChanges node)
-      if nodeHasChanges then lookupSomeNode nodeId else mzero
+      if nodeHasChanges then mzero else lookupSomeNode nodeId
     tryParse = do
       getSymbol node >>= \(SomeSymbolSing symbol) -> do
         -- grammarType <- liftIO (TS.nodeGrammarTypeAsString node)
