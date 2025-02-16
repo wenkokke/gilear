@@ -10,12 +10,12 @@ module Gilear.Internal.Parser.Core (
 import Control.Monad (unless)
 import Data.IORef (IORef, newIORef)
 import Data.Kind (Type)
+import Gilear.Internal.Parser.Ast (SymbolTable, mkSymbolTable)
 import Gilear.Internal.Parser.Cache (ParserCache)
 import Gilear.Internal.Parser.Cache qualified as Cache
 import TreeSitter (Parser)
 import TreeSitter qualified as TS
 import TreeSitter.Gilear (tree_sitter_gilear)
-import Gilear.Internal.Parser.Ast (SymbolTable, mkSymbolTable)
 
 --------------------------------------------------------------------------------
 -- Parser

@@ -23,17 +23,19 @@ import Data.Text.Encoding qualified as T
 import Data.Text.Lines (Position)
 import Data.Text.Mixed.Rope (Rope)
 import Data.Text.Mixed.Rope qualified as Rope
-import Gilear.Internal.Core (MonadTc, assertNoCacheItem, lookupCache, modifyCache_, withLanguage, withParser, getSymbolTable)
+import Gilear.Internal.Core (MonadTc, assertNoCacheItem, getSymbolTable, lookupCache, modifyCache_, withLanguage, withParser)
 import Gilear.Internal.Core.Diagnostics (Diagnostic (..), Diagnostics)
 import Gilear.Internal.Core.Diagnostics qualified as D
 import Gilear.Internal.Core.Location (pointToPosition, positionToPoint)
+import Gilear.Internal.Parser.Ast (parseAst)
 import Gilear.Internal.Parser.Cache (ParserCacheItem (..))
 import Gilear.Internal.Parser.Cache qualified as Cache
 import Gilear.Internal.Parser.TextEdit (TextEdit (..), applyTextEditToItem, lengthInBytes)
+import Prettyprinter (Pretty (..), defaultLayoutOptions, layoutPretty)
+import Prettyprinter.Render.Text (renderStrict)
 import Text.Printf (printf)
 import TreeSitter (InputEncoding (..))
 import TreeSitter qualified as TS
-import Gilear.Internal.Parser.Ast (parseAst)
 
 -- | Open a text document.
 documentOpen ::
@@ -86,13 +88,14 @@ documentChangeWholeDocument logger encoding uri rope = do
           pure False
         Just (ast, astCache) -> do
           -- TODO: do not update tree if it contains errors?
-          let newCacheItem = ParserCacheItem
-                { itemRope = rope
-                , itemTree = tree
-                , itemDiag = D.empty
-                , itemAst = ast
-                , itemAstCache = astCache
-                }
+          let newCacheItem =
+                ParserCacheItem
+                  { itemRope = rope
+                  , itemTree = tree
+                  , itemDiag = D.empty
+                  , itemAst = ast
+                  , itemAstCache = astCache
+                  }
           modifyCache_ (Cache.insert uri newCacheItem)
           pure True
 {-# INLINEABLE documentChangeWholeDocument #-}
@@ -157,14 +160,18 @@ documentChangePartial logger encoding uri newRope edits = do
               pure False
             Just (newAst, newAstCache) -> do
               -- ... update the cache item
-              let newCacheItem = ParserCacheItem
-                    { itemRope = newRope
-                    , itemTree = newTree
-                    , itemDiag = oldDiag <> newDiag
-                    , itemAst = newAst
-                    , itemAstCache = newAstCache
-                    }
+              let newCacheItem =
+                    ParserCacheItem
+                      { itemRope = newRope
+                      , itemTree = newTree
+                      , itemDiag = oldDiag <> newDiag
+                      , itemAst = newAst
+                      , itemAstCache = newAstCache
+                      }
               modifyCache_ (Cache.insert uri newCacheItem)
+              -- ... log the generated ast:
+              let message = renderStrict (layoutPretty defaultLayoutOptions (pretty newAst))
+              logger <& WithSeverity message Debug
               pure True
 {-# INLINEABLE documentChangePartial #-}
 
