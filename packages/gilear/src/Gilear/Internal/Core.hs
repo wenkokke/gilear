@@ -16,6 +16,7 @@ module Gilear.Internal.Core (
   withParser,
   getLanguage,
   withLanguage,
+  getSymbolTable,
   getParserCache,
   lookupCache,
   modifyCache,
@@ -43,6 +44,7 @@ import Gilear.Internal.Parser.Core (ParserEnv (..), newParserEnv)
 import Text.Printf (printf)
 import TreeSitter (Language, Parser)
 import TreeSitter qualified as TS
+import Gilear.Internal.Parser.Ast (SymbolTable)
 
 --------------------------------------------------------------------------------
 -- Package Name
@@ -109,6 +111,11 @@ getLanguage = liftIO . TS.parserLanguage =<< getParser
 withLanguage :: (MonadTc uri m) => (Language -> m a) -> m a
 withLanguage action = action =<< getLanguage
 {-# INLINEABLE withLanguage #-}
+
+-- | Get the `Language`.
+getSymbolTable :: (MonadTc uri m) => m SymbolTable
+getSymbolTable = parserSymbolTable <$> getParserEnv
+{-# INLINEABLE getSymbolTable #-}
 
 -- -- * Cache
 

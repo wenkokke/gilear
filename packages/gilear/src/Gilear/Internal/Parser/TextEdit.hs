@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Gilear.Internal.Parser.TextEdit (
   TextEdit (..),
@@ -39,7 +40,7 @@ applyTextEditToItem logger encoding = go
  where
   -- go :: [TextEdit] -> CacheItem -> m CacheItem
   go [] item = pure item
-  go (edit : edits) (ParserCacheItem{itemRope = oldRope, itemTree = mutTree, itemDiag = oldDiag}) = do
+  go (edit : edits) (ParserCacheItem{itemRope = oldRope, itemTree = mutTree, itemDiag = oldDiag, ..}) = do
     let (newRope, inputEdit) = applyTextEditToRope encoding edit oldRope
     liftIO (TS.treeEdit mutTree inputEdit)
     -- Delete any diagnostics out-of-bounds diagnostics
@@ -54,7 +55,7 @@ applyTextEditToItem logger encoding = go
     let deleteOldDiag = D.deleteByRange oldByteRange
     -- Apply the above delete functions
     let newDiag = deleteOoBDiag . deleteOldDiag $ oldDiag
-    go edits (ParserCacheItem{itemRope = newRope, itemTree = mutTree, itemDiag = newDiag})
+    go edits (ParserCacheItem{itemRope = newRope, itemTree = mutTree, itemDiag = newDiag, ..})
 
 oldEndByteToNewEndByteRange :: InputEncoding -> Rope -> Rope -> Maybe ByteRange
 oldEndByteToNewEndByteRange encoding oldRope newRope

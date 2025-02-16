@@ -54,8 +54,9 @@ ${endfor}${endfor}
   Children (..),
   ChildList (..),
   SomeNode (..),
-  SomeNodeCache,
-  parseTree,
+  Ast,
+  AstCache,
+  parseAst,
 ) where
 
 import Control.Applicative (Alternative (..), optional)
@@ -80,15 +81,17 @@ import TreeSitter qualified as TS
 --------------------------------------------------------------------------------
 
 {-+}
-parseTree :: SymbolTable -> TS.Tree -> IO (Maybe (Node ${startSort.camelCase}Sort, SomeNodeCache))
-parseTree symbolTable tree = do
+type Ast = Node ${startSort.camelCase}Sort
+{+-}
+
+parseAst :: SymbolTable -> TS.Tree -> AstCache -> IO (Maybe (Ast, AstCache))
+parseAst symbolTable tree astCache = do
   rootNode <- TS.treeRootNode tree
   treeCursor <- TS.treeCursorNew rootNode
-  let pEnv = PEnv symbolTable treeCursor mempty
+  let pEnv = PEnv symbolTable treeCursor astCache
   let pState = PState rootNode mempty
   (maybeNode, pState') <- runStateT (runMaybeT (runReaderT (unP p) pEnv)) pState
-  pure $$ fmap (,newCache pState') maybeNode
-{+-}
+  pure $ (,newCache pState') <$> maybeNode
 
 --------------------------------------------------------------------------------
 -- Sort
@@ -437,12 +440,12 @@ ${endfor}
 -- Node Cache
 --------------------------------------------------------------------------------
 
-newtype SomeNodeCache = SomeNodeCache {unSomeNodeCache :: IntMap SomeNode}
+newtype AstCache = AstCache {unAstCache :: IntMap SomeNode}
   deriving (Show, Semigroup, Monoid)
 
-insertSomeNode :: NodeId -> SomeNode -> SomeNodeCache -> SomeNodeCache
-insertSomeNode nodeId someNode someNodeCacheMap =
-  SomeNodeCache (IM.insert (unWrapTSNodeId nodeId) someNode (unSomeNodeCache someNodeCacheMap))
+insertSomeNode :: NodeId -> SomeNode -> AstCache -> AstCache
+insertSomeNode nodeId someNode astCacheMap =
+  AstCache (IM.insert (unWrapTSNodeId nodeId) someNode (unAstCache astCacheMap))
 
 --------------------------------------------------------------------------------
 -- Parser Monad
@@ -450,13 +453,13 @@ insertSomeNode nodeId someNode someNodeCacheMap =
 
 data PState = PState
   { currentNode :: TS.Node
-  , newCache :: !SomeNodeCache
+  , newCache :: !AstCache
   }
 
 data PEnv = PEnv
   { symbolTable :: !SymbolTable
   , treeCursor :: !TS.TreeCursor
-  , oldCache :: !SomeNodeCache
+  , oldCache :: !AstCache
   }
 
 newtype P a = P {unP :: ReaderT PEnv (MaybeT (StateT PState IO)) a}
@@ -488,7 +491,7 @@ emitSomeNode nodeId someNode = modify' updatePState >> pure someNode
 
 lookupSomeNode :: NodeId -> P SomeNode
 lookupSomeNode nodeId =
-  maybe mzero pure . IM.lookup (unWrapTSNodeId nodeId) . unSomeNodeCache =<< asks oldCache
+  maybe mzero pure . IM.lookup (unWrapTSNodeId nodeId) . unAstCache =<< asks oldCache
 
 gotoParent :: P ()
 gotoParent = do
