@@ -13,6 +13,12 @@ ${endif}
 --   , transformers  >=0.6  && <0.7
 --   , tree-sitter
 --
+-- TODO:
+-- + insert sequences of Extra nodes between Children
+-- + insert Missing nodes for all missing Children
+-- + what to do when there's more Children than expected?
+-- + distinguish between parser monad with and without failure
+--
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImportQualifiedPost #-}
