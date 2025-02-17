@@ -750,42 +750,42 @@ gotoNextNamedSibling = do
 -- Parser Class
 --------------------------------------------------------------------------------
 
-class HasParser a where
+class HasP a where
   p :: P a
 
-instance HasParser NodeId where
+instance HasP NodeId where
   p :: P NodeId
   p = TS.nodeId <$> getCurrentNode
 
-instance HasParser (ChildList '[]) where
+instance HasP (ChildList '[]) where
   p :: P (ChildList '[])
   p = pure Nil
 
-instance (HasParser a) => HasParser (ChildList (a ': '[])) where
-  p :: (HasParser a) => P (ChildList '[a])
+instance (HasP a) => HasP (ChildList (a ': '[])) where
+  p :: (HasP a) => P (ChildList '[a])
   p = Cons <$> p <*> pure Nil
 
-instance (HasParser a, HasParser (ChildList (b ': bs))) => HasParser (ChildList (a ': b ': bs)) where
-  p :: (HasParser a, HasParser (ChildList (b : bs))) => P (ChildList (a ': b ': bs))
+instance (HasP a, HasP (ChildList (b ': bs))) => HasP (ChildList (a ': b ': bs)) where
+  p :: (HasP a, HasP (ChildList (b : bs))) => P (ChildList (a ': b ': bs))
   p = Cons <$> p <* gotoNextNamedSibling <*> p
 
-instance (HasParser (ChildList as)) => HasParser (Children as) where
-  p :: (HasParser (ChildList as)) => P (Children as)
+instance (HasP (ChildList as)) => HasP (Children as) where
+  p :: (HasP (ChildList as)) => P (Children as)
   p = Children <$> (gotoFirstNamedChild *> p <* gotoParent)
 
-instance (HasParser a) => HasParser (Maybe a) where
-  p :: (HasParser a) => P (Maybe a)
+instance (HasP a) => HasP (Maybe a) where
+  p :: (HasP a) => P (Maybe a)
   p = optional p
 
-instance (HasParser a) => HasParser [a] where
-  p :: (HasParser a) => P [a]
+instance (HasP a) => HasP [a] where
+  p :: (HasP a) => P [a]
   p = pPostFence p gotoNextNamedSibling
 
-instance (HasParser a) => HasParser (NonEmpty a) where
-  p :: (HasParser a) => P (NonEmpty a)
+instance (HasP a) => HasP (NonEmpty a) where
+  p :: (HasP a) => P (NonEmpty a)
   p = pPostFence1 p gotoNextNamedSibling
 
-instance HasParser Range where
+instance HasP Range where
   p :: P Range
   p = liftIO . TS.nodeRange =<< getCurrentNode
 
@@ -805,7 +805,7 @@ pPostFence1 post fence = postFence
 -- Node Parser
 --------------------------------------------------------------------------------
 
-instance (KnownSort sort) => HasParser (Node sort) where
+instance (KnownSort sort) => HasP (Node sort) where
   p :: (KnownSort sort) => P (Node sort)
   p = pNode
 
@@ -822,7 +822,7 @@ pNode =
             Nothing -> SortMismatch (SomeNode nodeContent)
       SAuxiliary -> pure $ Node AuxiliaryWellSorted nodeContent
 
-instance HasParser SomeNode where
+instance HasP SomeNode where
   p :: P SomeNode
   p = pSomeNode
 
