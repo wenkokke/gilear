@@ -4,6 +4,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
@@ -26,7 +27,7 @@ import Data.Proxy (Proxy)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Type-level natural numbers.
-data Nat = Z | S Nat
+type data Nat = Z | S Nat
 
 -- | Addition of type-level naturals.
 type family (+) (n :: Nat) (m :: Nat) = (r :: Nat) where
