@@ -687,9 +687,11 @@ cacheSomeNode someNode = modify' updatePState >> pure someNode
   updateAstCache = AstCache . IM.insert (unWrapTSNodeId nodeId) someNode . unAstCache
   updatePState pstate = pstate{newCache = updateAstCache (newCache pstate)}
 
-lookupSomeNode :: NodeId -> P SomeNode
-lookupSomeNode nodeId =
-  maybe mzero pure . IM.lookup (unWrapTSNodeId nodeId) . unAstCache =<< asks oldCache
+findOldSomeNodeInCache :: P SomeNode
+findOldSomeNodeInCache =
+  gets (TS.nodeId . currentNode) >>= \nodeId -> do
+    asks (IM.lookup (unWrapTSNodeId nodeId) . unAstCache . oldCache)
+      >>= maybe mzero pure
 
 gotoParent :: P ()
 gotoParent = do
@@ -812,14 +814,11 @@ pSomeNode = cacheSomeNode =<< pSomeNode' =<< getCurrentNode
   pSomeNode' :: TS.Node -> P SomeNode
   pSomeNode' node = tryCache <|> tryParse
    where
-    nodeId = TS.nodeId node
     tryCache = do
-      nodeHasChanges <- liftIO (TS.nodeHasChanges node)
-      if nodeHasChanges then lookupSomeNode nodeId else mzero
+      liftIO (TS.nodeHasChanges node) >>= \nodeHasChanges ->
+        if nodeHasChanges then mzero else findOldSomeNodeInCache
     tryParse = do
-      getSymbol node >>= \(SomeSymbolSing isReal symbol) -> do
-        -- grammarType <- liftIO (TS.nodeGrammarTypeAsString node)
-        -- liftIO (printf "(%s %#x) -> %s\n" grammarType (unWrapTSNodeId nodeId) (show symbol))
+      getSymbol node >>= \(SomeSymbolSing isReal symbol) ->
         SomeNode isReal <$> pNodeContent symbol
 
 pNodeContent :: SymbolSing symbolType symbol -> P (NodeContent symbolType symbol)
