@@ -13,7 +13,6 @@ ${endif}
 --   , transformers  >=0.6  && <0.7
 --   , tree-sitter
 --
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
@@ -43,8 +42,7 @@ module ${moduleName} (
   SymbolTable,
   mkSymbolTable,
   type (:<) (..),
-  Node
-  (
+  Node (
 {-+}
 ${for(dataTypes)}
 ${for(it.constrs)}
@@ -55,14 +53,20 @@ ${endfor}${endfor}
     Missing,
     SortMismatch
   ),
+  nodeToNodeId,
+  nodeToRange,
+  nodeToChildren,
+  SomeNode (..),
+  someNodeToNodeId,
+  someNodeToRange,
+  someNodeToChildren,
   NodeContent (..),
   nodeContentToSymbol,
   Children (..),
   ChildList (..),
-  SomeNode (..),
   Ast,
   AstCache,
-  parseAst
+  parseAst,
 ) where
 
 import Control.Applicative (Alternative (..), optional)
@@ -80,7 +84,7 @@ import Data.Maybe (isJust)
 import Data.Type.Equality (type (:~:) (..), type (:~~:) (..))
 {-+}
 ${if(pretty)}
-import Prettyprinter (Pretty (..), line, nest, parens, sep)
+import Prettyprinter (Doc, Pretty (..), nest, parens, sep)
 ${endif}
 {+-}
 import TreeSitter (NodeId (..), Range (..))
@@ -151,10 +155,12 @@ ${endfor}
 type data SymbolType where
   Regular :: SymbolType
   Auxiliary :: SymbolType
+  Virtual :: SymbolType
 
 data SymbolTypeSing (symbolType :: SymbolType) where
   SRegular :: SymbolTypeSing Regular
   SAuxiliary :: SymbolTypeSing Auxiliary
+  SVirtual :: SymbolTypeSing Virtual
 
 deriving instance Eq (SymbolTypeSing symbolType)
 
@@ -163,7 +169,22 @@ deriving instance Show (SymbolTypeSing symbolType)
 decSymbolTypeSing :: SymbolTypeSing symbolType1 -> SymbolTypeSing symbolType2 -> Maybe (symbolType1 :~: symbolType2)
 decSymbolTypeSing SRegular SRegular = Just Refl
 decSymbolTypeSing SAuxiliary SAuxiliary = Just Refl
+decSymbolTypeSing SVirtual SVirtual = Just Refl
 decSymbolTypeSing _ _ = Nothing
+
+data IsReal (symbolType :: SymbolType) where
+  RegularIsReal :: IsReal Regular
+  AuxiliaryIsReal :: IsReal Auxiliary
+
+deriving instance Eq (IsReal symbolType)
+
+deriving instance Show (IsReal symbolType)
+
+symbolTypeIsReal :: SymbolTypeSing symbolType -> Either (IsReal symbolType) (symbolType :~: Virtual)
+symbolTypeIsReal = \case
+  SRegular -> Left RegularIsReal
+  SAuxiliary -> Left AuxiliaryIsReal
+  SVirtual -> Right Refl
 
 --------------------------------------------------------------------------------
 -- Symbol
@@ -179,7 +200,7 @@ ${endfor}
 {+-}
   ErrorSymbol :: (symbolType ~ Auxiliary) => Symbol symbolType
   MissingSymbol :: (symbolType ~ Auxiliary) => Symbol symbolType
-  SortMismatchSymbol :: (symbolType ~ Auxiliary) => Symbol symbolType
+  SortMismatchSymbol :: (symbolType ~ Virtual) => Symbol symbolType
 
 data SymbolSing (symbolType :: SymbolType) (symbol :: Symbol symbolType) where
 {-+}
@@ -191,7 +212,7 @@ ${endfor}
 {+-}
   SErrorSymbol :: SymbolSing Auxiliary ErrorSymbol
   SMissingSymbol :: SymbolSing Auxiliary MissingSymbol
-  SSortMismatchSymbol :: SymbolSing Auxiliary SortMismatchSymbol
+  SSortMismatchSymbol :: SymbolSing Virtual SortMismatchSymbol
 
 deriving instance Eq (SymbolSing sort symbol)
 
@@ -205,17 +226,26 @@ decSymbolSing S${it.name.camelCase}Symbol S${it.name.camelCase}Symbol = Just (Re
 ${endfor}
 ${endfor}
 {+-}
+decSymbolSing SErrorSymbol SErrorSymbol = Just (Refl, HRefl)
+decSymbolSing SMissingSymbol SMissingSymbol = Just (Refl, HRefl)
+decSymbolSing SSortMismatchSymbol SSortMismatchSymbol = Just (Refl, HRefl)
 decSymbolSing _ _ = Nothing
 
 data SomeSymbolSing
   = forall (symbolType :: SymbolType) (symbol :: Symbol symbolType).
-    SomeSymbolSing !(SymbolSing symbolType symbol)
+    SomeSymbolSing !(IsReal symbolType) !(SymbolSing symbolType symbol)
 
 instance Eq SomeSymbolSing where
-  SomeSymbolSing symbolSing1 == SomeSymbolSing symbolSing2 =
+  SomeSymbolSing _isReal1 symbolSing1 == SomeSymbolSing _isReal2 symbolSing2 =
     isJust (decSymbolSing symbolSing1 symbolSing2)
 
 deriving instance Show SomeSymbolSing
+
+pattern SomeRegularSymbolSing :: () => (symbolType ~ Regular) => SymbolSing symbolType symbol -> SomeSymbolSing
+pattern SomeRegularSymbolSing symbolSing = SomeSymbolSing RegularIsReal symbolSing
+
+pattern SomeAuxiliarySymbolSing :: () => (symbolType ~ Auxiliary) => SymbolSing symbolType symbol -> SomeSymbolSing
+pattern SomeAuxiliarySymbolSing symbolSing = SomeSymbolSing AuxiliaryIsReal symbolSing
 
 --------------------------------------------------------------------------------
 -- Getting the symbol types for symbols
@@ -232,7 +262,7 @@ ${endfor}
 {+-}
   SErrorSymbol -> SAuxiliary
   SMissingSymbol -> SAuxiliary
-  SSortMismatchSymbol -> SAuxiliary
+  SSortMismatchSymbol -> SVirtual
 
 --------------------------------------------------------------------------------
 -- Inferring sorts for regular symbols
@@ -263,12 +293,15 @@ ${endfor}
 
 type (:<) :: forall (symbolType :: SymbolType). Symbol symbolType -> Sort -> Type
 data (:<) symbol sort where
-  AuxiliaryWellSorted ::
-    forall (symbol :: Symbol Auxiliary) (sort :: Sort).
-    symbol :< sort
   RegularWellSorted ::
     forall (symbol :: Symbol Regular) (sort :: Sort).
     {-# UNPACK #-} !(SymbolToSort symbol :~: sort) ->
+    symbol :< sort
+  AuxiliaryWellSorted ::
+    forall (symbol :: Symbol Auxiliary) (sort :: Sort).
+    symbol :< sort
+  VirtualWellSorted ::
+    forall (symbol :: Symbol Virtual) (sort :: Sort).
     symbol :< sort
 
 deriving instance Eq (symbol :< sort)
@@ -281,32 +314,51 @@ deriving instance Show (symbol :< sort)
 
 data Node (sort :: Sort)
   = forall (symbolType :: SymbolType) (symbol :: Symbol symbolType).
-  Node
-  { nodeWellSorted :: !(symbol :< sort)
-  , nodeContent :: !(NodeContent symbolType symbol)
-  }
+    Node !(symbol :< sort) !(NodeContent symbolType symbol)
 
 instance Eq (Node sort) where
-  Node wellSorted1 content1 == Node wellSorted2 content2 =
+  Node isWellSorted1 content1 == Node isWellSorted2 content2 =
     case nodeContentToSymbol content1 `decSymbolSing` nodeContentToSymbol content2 of
       Nothing -> False
-      Just (Refl, HRefl) -> wellSorted1 == wellSorted2 && content1 == content2
+      Just (Refl, HRefl) -> isWellSorted1 == isWellSorted2 && content1 == content2
 
 deriving instance Show (Node sort)
 
+nodeToNodeId :: Node sort -> NodeId
+nodeToNodeId = someNodeToNodeId . nodeToSomeNode
+
+nodeToRange :: Node sort -> Range
+nodeToRange = someNodeToRange . nodeToSomeNode
+
+nodeToChildren :: Node sort -> [SomeNode]
+nodeToChildren = getChildren
+
 data SomeNode
   = forall (symbolType :: SymbolType) (symbol :: Symbol symbolType).
-  SomeNode
-  { someNodeContent :: !(NodeContent symbolType symbol)
-  }
+    SomeNode !(IsReal symbolType) !(NodeContent symbolType symbol)
 
 instance Eq SomeNode where
-  SomeNode content1 == SomeNode content2 =
+  SomeNode _isReal1 content1 == SomeNode _isReal2 content2 =
     case nodeContentToSymbol content1 `decSymbolSing` nodeContentToSymbol content2 of
       Nothing -> False
       Just (Refl, HRefl) -> content1 == content2
 
 deriving instance Show SomeNode
+
+someNodeToNodeId :: SomeNode -> NodeId
+someNodeToNodeId (SomeNode isReal content) = nodeContentToNodeId isReal content
+
+someNodeToRange :: SomeNode -> Range
+someNodeToRange (SomeNode isReal content) = nodeContentToRange isReal content
+
+someNodeToChildren :: SomeNode -> [SomeNode]
+someNodeToChildren = getChildren
+
+nodeToSomeNode :: Node sort -> SomeNode
+nodeToSomeNode (Node _isWellSorted content) =
+  case symbolTypeIsReal (symbolToSymbolType (nodeContentToSymbol content)) of
+    Left isReal -> SomeNode isReal content
+    Right Refl -> let SortMismatchContent someNode = content in someNode
 
 data NodeContent (symbolType :: SymbolType) (symbol :: Symbol symbolType) where
 {-+}
@@ -316,7 +368,7 @@ ${for(it.constrs)}
     {-# UNPACK #-} !NodeId ->
     {-# UNPACK #-} !Range ->
 ${if(it.hasChildren)}
-    !(Children '[${for(it.fields)}${it.type}${sep}, ${endfor}]) ->  
+    !(Children '[${for(it.fields)}${it.type}${sep}, ${endfor}]) ->
 ${endif}
     NodeContent Regular ${it.name.camelCase}Symbol
 ${endfor}
@@ -333,7 +385,7 @@ ${endfor}
     NodeContent Auxiliary MissingSymbol
   SortMismatchContent ::
     !SomeNode ->
-    NodeContent Auxiliary SortMismatchSymbol
+    NodeContent Virtual SortMismatchSymbol
 
 deriving instance Eq (NodeContent symbolType symbol)
 
@@ -354,6 +406,40 @@ ${endfor}
   ErrorContent{} -> SErrorSymbol
   MissingContent{} -> SMissingSymbol
   SortMismatchContent{} -> SSortMismatchSymbol
+
+nodeContentToNodeId ::
+  forall (symbolType :: SymbolType) (symbol :: Symbol symbolType).
+  IsReal symbolType ->
+  NodeContent symbolType symbol ->
+  NodeId
+nodeContentToNodeId RegularIsReal = \case
+{-+}
+${for(dataTypes)}
+${for(it.constrs)}
+  ${it.name.camelCase}Content nodeId _range${if(it.hasChildren)} _children${endif} -> nodeId
+${endfor}
+${endfor}
+{+-}
+nodeContentToNodeId AuxiliaryIsReal = \case
+  ErrorContent nodeId _range _children -> nodeId
+  MissingContent nodeId _range -> nodeId
+
+nodeContentToRange ::
+  forall (symbolType :: SymbolType) (symbol :: Symbol symbolType).
+  IsReal symbolType ->
+  NodeContent symbolType symbol ->
+  Range
+nodeContentToRange RegularIsReal = \case
+{-+}
+${for(dataTypes)}
+${for(it.constrs)}
+  ${it.name.camelCase}Content _nodeId range${if(it.hasChildren)} _children${endif} -> range
+${endfor}
+${endfor}
+{+-}
+nodeContentToRange AuxiliaryIsReal = \case
+  ErrorContent _nodeId range _children -> range
+  MissingContent _nodeId range -> range
 
 --------------------------------------------------------------------------------
 -- Node Children as Heterogeneous Lists
@@ -378,42 +464,146 @@ deriving instance (Eq (ChildList as)) => Eq (Children as)
 deriving instance (Show (ChildList as)) => Show (Children as)
 
 --------------------------------------------------------------------------------
+-- Difference Lists
+--------------------------------------------------------------------------------
+
+newtype DList a = DList ([a] -> [a])
+
+instance Semigroup (DList a) where
+  (<>) :: DList a -> DList a -> DList a
+  DList xs <> DList ys = DList (xs . ys)
+
+instance Monoid (DList a) where
+  mempty :: DList a
+  mempty = DList id
+
+instance Functor DList where
+  fmap :: (a -> b) -> DList a -> DList b
+  fmap f = foldMap (singleton . f)
+
+instance Foldable DList where
+  foldMap :: (Monoid m) => (a -> m) -> DList a -> m
+  foldMap f = foldMap f . toList
+
+singleton :: a -> DList a
+singleton x = DList (x :)
+
+toList :: DList a -> [a]
+toList (DList xs) = xs []
+
+--------------------------------------------------------------------------------
+-- Node Children as Lists
+--------------------------------------------------------------------------------
+
+{-# SPECIALIZE getChildren :: Node sort -> [SomeNode] #-}
+{-# SPECIALIZE getChildren :: SomeNode -> [SomeNode] #-}
+getChildren :: (HasNodes a) => a -> [SomeNode]
+getChildren = toList . foldMap getNodesDList . getNodesDList
+
+{-# SPECIALIZE getNodes :: Node sort -> [SomeNode] #-}
+{-# SPECIALIZE getNodes :: SomeNode -> [SomeNode] #-}
+getNodes :: (HasNodes a) => a -> [SomeNode]
+getNodes = toList . getNodesDList
+
+class HasNodes a where
+  getNodesDList :: a -> DList SomeNode
+
+instance HasNodes (ChildList '[]) where
+  getNodesDList :: ChildList '[] -> DList SomeNode
+  getNodesDList Nil = mempty
+
+instance (HasNodes a, HasNodes (ChildList as)) => HasNodes (ChildList (a ': as)) where
+  getNodesDList :: (HasNodes a, HasNodes (ChildList as)) => ChildList (a : as) -> DList SomeNode
+  getNodesDList (Cons x xs) = getNodesDList x <> getNodesDList xs
+
+instance (HasNodes (ChildList as)) => HasNodes (Children as) where
+  getNodesDList :: (HasNodes (ChildList as)) => Children as -> DList SomeNode
+  getNodesDList (Children xs) = getNodesDList xs
+
+instance HasNodes () where
+  getNodesDList :: () -> DList SomeNode
+  getNodesDList () = mempty
+
+instance (HasNodes a, HasNodes b) => HasNodes (a, b) where
+  getNodesDList :: (HasNodes a, HasNodes b) => (a, b) -> DList SomeNode
+  getNodesDList (x, y) = getNodesDList x <> getNodesDList y
+
+instance (HasNodes a, HasNodes b) => HasNodes (Either a b) where
+  getNodesDList :: (HasNodes a, HasNodes b) => Either a b -> DList SomeNode
+  getNodesDList = either getNodesDList getNodesDList
+
+instance (Foldable t, HasNodes a) => HasNodes (t a) where
+  getNodesDList :: (Foldable t, HasNodes a) => t a -> DList SomeNode
+  getNodesDList = foldMap getNodesDList
+
+instance HasNodes (Node sort) where
+  getNodesDList :: Node sort -> DList SomeNode
+  getNodesDList = getNodesDList . nodeToSomeNode
+
+instance HasNodes SomeNode where
+  getNodesDList :: SomeNode -> DList SomeNode
+  getNodesDList = singleton
+
+instance HasNodes (NodeContent symbolType symbol) where
+  getNodesDList :: NodeContent symbolType symbol -> DList SomeNode
+  getNodesDList = \case
+{-+}
+${for(dataTypes)}
+${for(it.constrs)}
+    ${it.name.camelCase}Content _nodeId _range${if(it.hasChildren)} _children${endif} -> ${if(it.hasChildren)}getNodesDList _children${else}mempty${endif}
+${endfor}
+${endfor}
+{+-}
+    ErrorContent _nodeId _range _children -> getNodesDList _children
+    MissingContent _nodeId _range -> mempty
+    SortMismatchContent _children -> getNodesDList _children
+
+--------------------------------------------------------------------------------
 -- Pattern Synonyms
 --------------------------------------------------------------------------------
 
 {-+}
 ${for(dataTypes)}
 ${for(it.constrs)}
-pattern ${it.name.camelCase} :: () => (sort ~ ${it.sort.camelCase}Sort) => NodeId -> Range -> ${if(it.hasChildren)}${for(it.fields)}${it.type} -> ${endfor}${endif} Node sort
-pattern ${it.name.camelCase} nodeId nodeRange${if(it.hasChildren)}${for(it.fields)} nodeChild${it.index}${endfor}${endif} =
-  Node (RegularWellSorted Refl) (${it.name.camelCase}Content nodeId nodeRange${if(it.hasChildren)} (Children${for(it.fields)} (Cons nodeChild${it.index}${endfor} Nil${for(it.fields)})${endfor})${endif})
+pattern ${it.name.camelCase} :: () => (sort ~ ${it.sort.camelCase}Sort) => NodeId -> Range -> ${if(it.hasChildren)}${for(it.fields)}${it.type} -> ${endfor}${endif}Node sort
+pattern ${it.name.camelCase} nodeId range${if(it.hasChildren)}${for(it.fields)} nodeChild${it.index}${endfor}${endif} =
+  Node (RegularWellSorted Refl) (${it.name.camelCase}Content nodeId range${if(it.hasChildren)} (Children${for(it.fields)} (Cons nodeChild${it.index}${endfor} Nil${for(it.fields)})${endfor})${endif})
 
 ${endfor}
 ${endfor}
 {+-}
 
 pattern Error :: NodeId -> Range -> [SomeNode] -> Node sort
-pattern Error nodeId nodeRange nodeChild0 =
-  Node AuxiliaryWellSorted (ErrorContent nodeId nodeRange (Children (Cons nodeChild0 Nil)))
+pattern Error nodeId range nodeChild0 =
+  Node AuxiliaryWellSorted (ErrorContent nodeId range (Children (Cons nodeChild0 Nil)))
 
 pattern Missing :: NodeId -> Range -> Node sort
-pattern Missing nodeId nodeRange =
-  Node AuxiliaryWellSorted (MissingContent nodeId nodeRange)
+pattern Missing nodeId range =
+  Node AuxiliaryWellSorted (MissingContent nodeId range)
 
 pattern SortMismatch :: SomeNode -> Node sort
 pattern SortMismatch nodeChild0 =
-  Node AuxiliaryWellSorted (SortMismatchContent nodeChild0)
+  Node VirtualWellSorted (SortMismatchContent nodeChild0)
 
 {-# COMPLETE
 {-+}
-${for(dataTypes)}
+${for(dataTypes/first)}
+${for(it.constrs/first)}
+  ${it.name.camelCase}
+${endfor}
+${for(it.constrs/rest)}
+  , ${it.name.camelCase}
+${endfor}
+${endfor}
+${for(dataTypes/rest)}
 ${for(it.constrs)}
-  ${it.name.camelCase},
-${endfor}${endfor}
+  , ${it.name.camelCase}
+${endfor}
+${endfor}
 {+-}
-  Error,
-  Missing,
-  SortMismatch
+  , Error
+  , Missing
+  , SortMismatch
   #-}
 
 --------------------------------------------------------------------------------
@@ -428,15 +618,15 @@ mkSymbolTable language =
 {-+}
 ${for(dataTypes/first)}
 ${for(it.constrs/first)}
-    [ mkEntry "${it.name.text}" (SomeSymbolSing S${it.name.camelCase}Symbol)
+    [ mkEntry "${it.name.text}" (SomeRegularSymbolSing S${it.name.camelCase}Symbol)
 ${endfor}
 ${for(it.constrs/rest)}
-    , mkEntry "${it.name.text}" (SomeSymbolSing S${it.name.camelCase}Symbol)
+    , mkEntry "${it.name.text}" (SomeRegularSymbolSing S${it.name.camelCase}Symbol)
 ${endfor}
 ${endfor}
 ${for(dataTypes/rest)}
 ${for(it.constrs)}
-    , mkEntry "${it.name.text}" (SomeSymbolSing S${it.name.camelCase}Symbol)
+    , mkEntry "${it.name.text}" (SomeRegularSymbolSing S${it.name.camelCase}Symbol)
 ${endfor}
 ${endfor}
 {+-}
@@ -485,11 +675,11 @@ getSymbol :: TS.Node -> P SomeSymbolSing
 getSymbol node = do
   currentNodeIsError <- liftIO (TS.nodeIsError node)
   if currentNodeIsError
-    then pure (SomeSymbolSing SErrorSymbol)
+    then pure (SomeAuxiliarySymbolSing SErrorSymbol)
     else do
       currentNodeIsMissing <- liftIO (TS.nodeIsMissing node)
       if currentNodeIsMissing
-        then pure (SomeSymbolSing SMissingSymbol)
+        then pure (SomeAuxiliarySymbolSing SMissingSymbol)
         else do
           symbol <- liftIO (TS.nodeSymbol node)
           asks ((IM.! fromIntegral symbol) . unSymbolTable . symbolTable)
@@ -604,16 +794,15 @@ instance (KnownSort sort) => HasParser (Node sort) where
 
 pNode :: (KnownSort sort) => P (Node sort)
 pNode =
-  pSomeNode >>= \(SomeNode nodeContent) -> do
-    let symbol = nodeContentToSymbol nodeContent
-    let symbolType = symbolToSymbolType symbol
-    case symbolType of
-      SRegular ->
+  pSomeNode >>= \someNode@(SomeNode isReal content) -> do
+    let symbol = nodeContentToSymbol content
+    case isReal of
+      RegularIsReal ->
         pure $
           case decSortSing (symbolToSort symbol) sortSing of
-            Just prf -> Node (RegularWellSorted prf) nodeContent
-            Nothing -> SortMismatch (SomeNode nodeContent)
-      SAuxiliary -> pure $ Node AuxiliaryWellSorted nodeContent
+            Just prf -> Node (RegularWellSorted prf) content
+            Nothing -> SortMismatch someNode
+      AuxiliaryIsReal -> pure $ Node AuxiliaryWellSorted content
 
 instance HasParser SomeNode where
   p :: P SomeNode
@@ -630,10 +819,10 @@ pSomeNode = pSomeNode' =<< getCurrentNode
       nodeHasChanges <- liftIO (TS.nodeHasChanges node)
       if nodeHasChanges then lookupSomeNode nodeId else mzero
     tryParse = do
-      getSymbol node >>= \(SomeSymbolSing symbol) -> do
+      getSymbol node >>= \(SomeSymbolSing isReal symbol) -> do
         -- grammarType <- liftIO (TS.nodeGrammarTypeAsString node)
         -- liftIO (printf "(%s %#x) -> %s\n" grammarType (unWrapTSNodeId nodeId) (show symbol))
-        SomeNode <$> pNodeContent symbol
+        SomeNode isReal <$> pNodeContent symbol
 
 pNodeContent :: SymbolSing symbolType symbol -> P (NodeContent symbolType symbol)
 pNodeContent = \case
@@ -654,47 +843,31 @@ ${if(pretty)}
 -- Pretty Printing
 --------------------------------------------------------------------------------
 
-instance Pretty (Node sort) where
-  pretty (Node _wellSorted content) = pretty content
-  prettyList = sep . fmap pretty
-
 instance Pretty SomeNode where
-  pretty (SomeNode content) = pretty content
-  prettyList = sep . fmap pretty
+  pretty :: SomeNode -> Doc ann
+  pretty (SomeNode _isReal content) = pretty content
+
+instance Pretty (Node sort) where
+  pretty :: Node sort -> Doc ann
+  pretty (Node _isWellSorted content) = pretty content
 
 instance Pretty (NodeContent symbolType symbol) where
+  pretty :: NodeContent symbolType symbol -> Doc ann
+  pretty content = prettySList (pretty (nodeContentToSymbol content) : fmap pretty (getNodes content))
+
+prettySList :: [Doc ann] -> Doc ann
+prettySList = parens . nest 2 . sep
+
+instance Pretty (SymbolSing symbolType symbol) where
+  pretty :: SymbolSing symbolType symbol -> Doc ann
   pretty = \case
 ${for(dataTypes)}
 ${for(it.constrs)}
-    ${it.name.camelCase}Content _nodeId _nodeRange${if(it.hasChildren)} (Children${for(it.fields)} (Cons nodeChild${it.index}${endfor} Nil${for(it.fields)})${endfor})${endif} ->
-${if(it.hasChildren)}
-      parens . nest 2 . sep $$
-        ["${it.name.text}", ${if(it.hasChildren)}${for(it.fields)}pretty nodeChild${it.index}${sep}, ${endfor}${endif}]
-${else}
-      "(${it.name.text})"
-${endif}
+    S${it.name.camelCase}Symbol -> "${it.name.text}"
 ${endfor}
 ${endfor}
-    ErrorContent _nodeId _nodeRange nodeChildren ->
-      parens . nest 2 . sep $$
-        ["error", pretty nodeChildren]
-    MissingContent _nodeId _nodeRange ->
-      "(missing)"
-    SortMismatchContent nodeChildren ->
-      parens . nest 2 . sep $$
-        ["error", pretty nodeChildren]
-
-instance Pretty (ChildList '[]) where
-  pretty = mempty
-
-instance (Pretty a) => Pretty (ChildList (a ': '[])) where
-  pretty (Cons x Nil) = pretty x
-
-instance (Pretty a, Pretty (ChildList (b ': bs))) => Pretty (ChildList (a ': b ': bs)) where
-  pretty (Cons x xs) = pretty x <> line <> pretty xs
-
-instance (Pretty (ChildList as)) => Pretty (Children as) where
-  pretty (Children xs) = pretty xs
-
+    SErrorSymbol -> "ERROR"
+    SMissingSymbol -> "MISSING"
+    SSortMismatchSymbol -> "SORT_MISMATCH"
 ${endif}
 {+-}
