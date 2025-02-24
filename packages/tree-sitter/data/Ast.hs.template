@@ -643,10 +643,6 @@ ${endfor}
 newtype AstCache = AstCache {unAstCache :: IntMap SomeNode}
   deriving (Show, Semigroup, Monoid)
 
-insertSomeNode :: NodeId -> SomeNode -> AstCache -> AstCache
-insertSomeNode nodeId someNode astCacheMap =
-  AstCache (IM.insert (unWrapTSNodeId nodeId) someNode (unAstCache astCacheMap))
-
 --------------------------------------------------------------------------------
 -- Parser Monad
 --------------------------------------------------------------------------------
@@ -684,10 +680,12 @@ getSymbol node = do
           symbol <- liftIO (TS.nodeSymbol node)
           asks ((IM.! fromIntegral symbol) . unSymbolTable . symbolTable)
 
-emitSomeNode :: NodeId -> SomeNode -> P SomeNode
-emitSomeNode nodeId someNode = modify' updatePState >> pure someNode
+cacheSomeNode :: SomeNode -> P SomeNode
+cacheSomeNode someNode = modify' updatePState >> pure someNode
  where
-  updatePState pstate = pstate{newCache = insertSomeNode nodeId someNode (newCache pstate)}
+  nodeId = someNodeToNodeId someNode
+  updateAstCache = AstCache . IM.insert (unWrapTSNodeId nodeId) someNode . unAstCache
+  updatePState pstate = pstate{newCache = updateAstCache (newCache pstate)}
 
 lookupSomeNode :: NodeId -> P SomeNode
 lookupSomeNode nodeId =
@@ -809,10 +807,10 @@ instance HasParser SomeNode where
   p = pSomeNode
 
 pSomeNode :: P SomeNode
-pSomeNode = pSomeNode' =<< getCurrentNode
+pSomeNode = cacheSomeNode =<< pSomeNode' =<< getCurrentNode
  where
   pSomeNode' :: TS.Node -> P SomeNode
-  pSomeNode' node = emitSomeNode nodeId =<< tryCache <|> tryParse
+  pSomeNode' node = tryCache <|> tryParse
    where
     nodeId = TS.nodeId node
     tryCache = do
