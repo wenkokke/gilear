@@ -25,6 +25,41 @@ import Text.DocTemplates (Context (..), ToContext (..), Val (..), applyTemplate)
 import TreeSitter.GenerateAst.Internal.Data (Constr (..), Data (..), Field (..), Name (..), Type (..), fieldName, toDataTypes)
 import TreeSitter.GenerateAst.Internal.Grammar (Grammar (..), RuleName)
 
+{- Note [One AstCache per syntax tree]
+
+  We create one AstCache per syntax tree, which contains a mapping from NodeIds
+  to nodes. It seems like an alluring idea to traverse the old and new trees in
+  parallel. This works for strictly specified ASTs, where each node has a known
+  number of children, but breaks down when nodes are allowed optional children,
+  children that contain lists of nodes, etc.
+-}
+
+-- TODO:
+--
+-- 1. Add internal `CanBeMissing` class that yields the appropriate "missing" value:
+--    + For `Node` and `SomeNode`, the appropriate value is `Missing`.
+--    + For `NonEmpty`, the appropriate value is `missing :| []`.
+--    + For any type with a `Monoid` instance, the appropriate value is `mempty`.
+--    + For `Either`, the appropriate value is ambiguous; let's just pick `Left missing`.
+--      A proper approach would require us to, in essence, represent each sum type `T` as `Maybe T`,
+--      though this would be pretty terrible unless we normalise nested `Either`'s to n-ary unions.
+--
+-- 2. Restructure parser to omit `MaybeT` and use `CanBeMissing` in case of failure.
+--
+-- 3. Add `Extra` type to represent extra nodes; `Extra sort` wraps a `Node sort` and a proof that
+--    the `sort` is an "extra" sort. Permit occurances of `Extra` nodes before, after, and between
+--    all child nodes.
+--
+-- 4. Add callbacks for error and missing nodes. Distinguish between missing nodes and missing text.
+--    (The latter is not represented in the ast, but certainly constitutes a parsing failure.)
+--    Refine traversal functions, e.g., `gotoNextSibling`, to invoke these callbacks for all error
+--    and missing nodes. This requires changing `gotoNextSibling` to not call `gotoParent` until the
+--    end of the list of siblings is reached. The contract for these callbacks is that they are only
+--    called when the node has changes.
+--
+-- 5. Analyse the current tree traversal to see whether it is bottom-up or top-down, since the former
+--    is desirable with regards to memory usage.
+
 --------------------------------------------------------------------------------
 -- Template Parser and Renderer
 --------------------------------------------------------------------------------
@@ -84,7 +119,7 @@ textToVal text = SimpleVal (Doc.Text (T.length text) text)
 
 isNodeLike :: Type -> Bool
 isNodeLike = \case
-  Type _name -> True
+  Node _name -> True
   List a -> isNodeLike a
   NonEmpty a -> isNodeLike a
   Unit -> False
@@ -134,7 +169,7 @@ instance ToContext Text Type where
    where
     par b t = if b then "(" <> t <> ")" else t
     t2t p = \case
-      Type name -> par p ("Node" <> " " <> TLB.fromText (snakeToCase Upper (unName name) <> "Sort"))
+      Node name -> par p ("Node" <> " " <> TLB.fromText (snakeToCase Upper (unName name) <> "Sort"))
       List a -> "[" <> t2t False a <> "]"
       NonEmpty a -> par p ("NonEmpty" <> " " <> t2t True a)
       Unit -> "()"
