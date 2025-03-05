@@ -12,7 +12,7 @@ build-type:      Simple
 extra-doc-files: CHANGELOG.md
 
 common language
-  ghc-options:        -Wall
+  ghc-options:        -Wall -Wunused-packages
   default-language:   GHC2021
   default-extensions: ImportQualifiedPost
 
@@ -39,7 +39,6 @@ library
     , IntervalMap           >=0.6  && <0.7
     , mtl                   >=2.3  && <2.4
     , prettyprinter         >=1.7  && <1.8
-    , primitive             >=0.7  && <1.0
     , text                  >=2.1  && <2.2
     , text-rope             >=0.3  && <0.4
     , transformers          >=0.6  && <0.7
@@ -53,10 +52,7 @@ library
 executable gilear
   import:         language
   main-is:        Main.hs
-  build-depends:
-    , base
-    , gilear
-
+  build-depends:  base
   hs-source-dirs: app
 
 test-suite gilear-test
@@ -64,6 +60,4 @@ test-suite gilear-test
   type:           exitcode-stdio-1.0
   hs-source-dirs: test
   main-is:        Main.hs
-  build-depends:
-    , base
-    , gilear
+  build-depends:  base

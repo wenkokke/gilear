@@ -3,7 +3,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Gilear.LSP.Internal.Handlers where
+module Gilear.LSP.Internal.Handlers
+  ( handlers
+  ) where
 
 import Colog.Core (LogAction, Severity (..), WithSeverity (..), (<&))
 import Control.Lens ((^.))
