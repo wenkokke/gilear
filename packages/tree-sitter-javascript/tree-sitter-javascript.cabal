@@ -27,7 +27,7 @@ data-files:
   vendor/test/corpus/*.txt
 
 common language
-  ghc-options:        -Wall
+  ghc-options:        -Wall -Wunused-packages
   default-language:   GHC2021
   default-extensions: ImportQualifiedPost
 
