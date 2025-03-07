@@ -143,6 +143,7 @@ class KnownSort sort where
 {-+}
 ${for(dataTypes)}
 instance KnownSort ${it.name.camelCase}Sort where
+  sortSing :: SortSing ${it.name.camelCase}Sort
   sortSing = S${it.name.camelCase}Sort
 
 ${endfor}
