@@ -1,4 +1,4 @@
-actionlint=1.7.4
+actionlint=1.7.7
 cabal=3.12.1.0
 cabal-fmt=0.1.12
 cabal-hoogle=3.10.0.0
