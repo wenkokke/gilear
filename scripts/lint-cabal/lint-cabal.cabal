@@ -12,7 +12,11 @@ category:      Development
 build-type:    Simple
 
 common language
-  ghc-options:        -Wall -Wredundant-constraints -Wunused-packages
+  ghc-options:
+    -Wall -Wcompat -Widentities -Wprepositive-qualified-module
+    -Wredundant-constraints -Wunticked-promoted-constructors
+    -Wunused-packages
+
   default-language:   GHC2021
   default-extensions: ImportQualifiedPost
 
