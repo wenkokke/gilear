@@ -58,4 +58,4 @@ test-suite tree-sitter-gilear-test
   type:           exitcode-stdio-1.0
   hs-source-dirs: bindings/haskell/test
   main-is:        Main.hs
-  build-depends:  base
+  build-depends:  base >=4.13 && <5

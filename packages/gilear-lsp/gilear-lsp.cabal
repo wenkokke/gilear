@@ -63,4 +63,4 @@ test-suite gilear-lsp-test
   type:           exitcode-stdio-1.0
   hs-source-dirs: test
   main-is:        Main.hs
-  build-depends:  base
+  build-depends:  base >=4.13 && <5
