@@ -676,11 +676,11 @@ instance HasNodes (ChildList '[]) where
   getNodesDList Nil = mempty
 
 instance (HasNodes a, HasNodes (ChildList as)) => HasNodes (ChildList (a ': as)) where
-  getNodesDList :: (HasNodes a, HasNodes (ChildList as)) => ChildList (a : as) -> DList SomeNode
+  getNodesDList :: ChildList (a : as) -> DList SomeNode
   getNodesDList (Cons x xs) = getNodesDList x <> getNodesDList xs
 
 instance (HasNodes (ChildList as)) => HasNodes (Children as) where
-  getNodesDList :: (HasNodes (ChildList as)) => Children as -> DList SomeNode
+  getNodesDList :: Children as -> DList SomeNode
   getNodesDList (Children xs) = getNodesDList xs
 
 instance HasNodes () where
@@ -688,15 +688,15 @@ instance HasNodes () where
   getNodesDList () = mempty
 
 instance (HasNodes a, HasNodes b) => HasNodes (a, b) where
-  getNodesDList :: (HasNodes a, HasNodes b) => (a, b) -> DList SomeNode
+  getNodesDList :: (a, b) -> DList SomeNode
   getNodesDList (x, y) = getNodesDList x <> getNodesDList y
 
 instance (HasNodes a, HasNodes b) => HasNodes (Either a b) where
-  getNodesDList :: (HasNodes a, HasNodes b) => Either a b -> DList SomeNode
+  getNodesDList :: Either a b -> DList SomeNode
   getNodesDList = either getNodesDList getNodesDList
 
 instance (Foldable t, HasNodes a) => HasNodes (t a) where
-  getNodesDList :: (Foldable t, HasNodes a) => t a -> DList SomeNode
+  getNodesDList :: t a -> DList SomeNode
   getNodesDList = foldMap getNodesDList
 
 instance HasNodes (Node sort) where

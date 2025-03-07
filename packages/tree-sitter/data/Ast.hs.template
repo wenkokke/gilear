@@ -513,11 +513,11 @@ instance HasNodes (ChildList '[]) where
   getNodesDList Nil = mempty
 
 instance (HasNodes a, HasNodes (ChildList as)) => HasNodes (ChildList (a ': as)) where
-  getNodesDList :: (HasNodes a, HasNodes (ChildList as)) => ChildList (a : as) -> DList SomeNode
+  getNodesDList :: ChildList (a : as) -> DList SomeNode
   getNodesDList (Cons x xs) = getNodesDList x <> getNodesDList xs
 
 instance (HasNodes (ChildList as)) => HasNodes (Children as) where
-  getNodesDList :: (HasNodes (ChildList as)) => Children as -> DList SomeNode
+  getNodesDList :: Children as -> DList SomeNode
   getNodesDList (Children xs) = getNodesDList xs
 
 instance HasNodes () where
@@ -525,15 +525,15 @@ instance HasNodes () where
   getNodesDList () = mempty
 
 instance (HasNodes a, HasNodes b) => HasNodes (a, b) where
-  getNodesDList :: (HasNodes a, HasNodes b) => (a, b) -> DList SomeNode
+  getNodesDList :: (a, b) -> DList SomeNode
   getNodesDList (x, y) = getNodesDList x <> getNodesDList y
 
 instance (HasNodes a, HasNodes b) => HasNodes (Either a b) where
-  getNodesDList :: (HasNodes a, HasNodes b) => Either a b -> DList SomeNode
+  getNodesDList :: Either a b -> DList SomeNode
   getNodesDList = either getNodesDList getNodesDList
 
 instance (Foldable t, HasNodes a) => HasNodes (t a) where
-  getNodesDList :: (Foldable t, HasNodes a) => t a -> DList SomeNode
+  getNodesDList :: t a -> DList SomeNode
   getNodesDList = foldMap getNodesDList
 
 instance HasNodes (Node sort) where
@@ -745,27 +745,27 @@ instance HasParser (ChildList '[]) where
   p = pure Nil
 
 instance (HasParser a) => HasParser (ChildList (a ': '[])) where
-  p :: (HasParser a) => P (ChildList '[a])
+  p :: P (ChildList '[a])
   p = Cons <$> p <*> pure Nil
 
 instance (HasParser a, HasParser (ChildList (b ': bs))) => HasParser (ChildList (a ': b ': bs)) where
-  p :: (HasParser a, HasParser (ChildList (b : bs))) => P (ChildList (a ': b ': bs))
+  p :: P (ChildList (a ': b ': bs))
   p = Cons <$> p <* gotoNextNamedSibling <*> p
 
 instance (HasParser (ChildList as)) => HasParser (Children as) where
-  p :: (HasParser (ChildList as)) => P (Children as)
+  p :: P (Children as)
   p = Children <$> (gotoFirstNamedChild *> p <* gotoParent)
 
 instance (HasParser a) => HasParser (Maybe a) where
-  p :: (HasParser a) => P (Maybe a)
+  p :: P (Maybe a)
   p = optional p
 
 instance (HasParser a) => HasParser [a] where
-  p :: (HasParser a) => P [a]
+  p :: P [a]
   p = pPostFence p gotoNextNamedSibling
 
 instance (HasParser a) => HasParser (NonEmpty a) where
-  p :: (HasParser a) => P (NonEmpty a)
+  p :: P (NonEmpty a)
   p = pPostFence1 p gotoNextNamedSibling
 
 instance HasParser Range where
@@ -789,7 +789,7 @@ pPostFence1 post fence = postFence
 --------------------------------------------------------------------------------
 
 instance (KnownSort sort) => HasParser (Node sort) where
-  p :: (KnownSort sort) => P (Node sort)
+  p :: P (Node sort)
   p = pNode
 
 pNode :: (KnownSort sort) => P (Node sort)
