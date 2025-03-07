@@ -468,6 +468,24 @@ deriving instance (Eq (ChildList as)) => Eq (Children as)
 deriving instance (Show (ChildList as)) => Show (Children as)
 
 --------------------------------------------------------------------------------
+-- Check Sort
+--------------------------------------------------------------------------------
+
+checkSort ::
+  SortSing sort ->
+  SomeNode ->
+  Maybe (Node sort)
+checkSort sort (SomeNode _isReal content) = do
+  let symbol = nodeContentToSymbol content
+  let symbolType = symbolToSymbolType symbol
+  case symbolType of
+    SRegular ->
+      case decSortSing sort (symbolToSort symbol) of
+        Just Refl -> pure $ Node (RegularWellSorted Refl) content
+        Nothing -> Nothing
+    SAuxiliary -> pure $ Node AuxiliaryWellSorted content
+
+--------------------------------------------------------------------------------
 -- Difference Lists
 --------------------------------------------------------------------------------
 
