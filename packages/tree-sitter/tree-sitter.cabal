@@ -15,7 +15,7 @@ extra-source-files: data/Ast.hs.template
 data-files:         test/data/jQuery.js
 
 common language
-  ghc-options:        -Wall -Wunused-packages
+  ghc-options:        -Wall -Wredundant-constraints -Wunused-packages
   default-language:   GHC2021
   default-extensions: ImportQualifiedPost
 

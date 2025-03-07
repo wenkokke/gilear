@@ -27,7 +27,7 @@ data-files:
   test/corpus/*.txt
 
 common language
-  ghc-options:        -Wall -Wunused-packages
+  ghc-options:        -Wall -Wredundant-constraints -Wunused-packages
   default-language:   GHC2021
   default-extensions: ImportQualifiedPost
 
@@ -54,5 +54,4 @@ test-suite tree-sitter-gilear-test
   type:           exitcode-stdio-1.0
   hs-source-dirs: bindings/haskell/test
   main-is:        Main.hs
-  build-depends:
-    , base
+  build-depends:  base
