@@ -287,6 +287,7 @@ data SomeSymbolSing
     SomeSymbolSing !(IsReal symbolType) !(SymbolSing symbolType symbol)
 
 instance Eq SomeSymbolSing where
+  (==) :: SomeSymbolSing -> SomeSymbolSing -> Bool
   SomeSymbolSing _isReal1 symbolSing1 == SomeSymbolSing _isReal2 symbolSing2 =
     isJust (decSymbolSing symbolSing1 symbolSing2)
 
@@ -395,6 +396,7 @@ data Node (sort :: Sort)
     Node !(symbol :< sort) !(NodeContent symbolType symbol)
 
 instance Eq (Node sort) where
+  (==) :: Node sort -> Node sort -> Bool
   Node isWellSorted1 content1 == Node isWellSorted2 content2 =
     case nodeContentToSymbol content1 `decSymbolSing` nodeContentToSymbol content2 of
       Nothing -> False
@@ -416,6 +418,7 @@ data SomeNode
     SomeNode !(IsReal symbolType) !(NodeContent symbolType symbol)
 
 instance Eq SomeNode where
+  (==) :: SomeNode -> SomeNode -> Bool
   SomeNode _isReal1 content1 == SomeNode _isReal2 content2 =
     case nodeContentToSymbol content1 `decSymbolSing` nodeContentToSymbol content2 of
       Nothing -> False
