@@ -36,28 +36,22 @@ import TreeSitter.GenerateAst.Internal.Grammar (Grammar (..), RuleName)
 
 -- TODO:
 --
--- 1. Add internal `CanBeMissing` class that yields the appropriate "missing" value:
---    + For `Node` and `SomeNode`, the appropriate value is `Missing`.
---    + For `NonEmpty`, the appropriate value is `missing :| []`.
---    + For any type with a `Monoid` instance, the appropriate value is `mempty`.
---    + For `Either`, the appropriate value is ambiguous; let's just pick `Left missing`.
---      A proper approach would require us to, in essence, represent each sum type `T` as `Maybe T`,
---      though this would be pretty terrible unless we normalise nested `Either`'s to n-ary unions.
+-- 1. Restructure parser to parse children as '[SomeNode]' and only then attempt to unpack
+--    that list to the appropriate instance of 'ChildList' so that any mismatch at this point
+--    can result in a 'VirtualError' as opposed to a 'SortMismatch'.
 --
--- 2. Restructure parser to omit `MaybeT` and use `CanBeMissing` in case of failure.
---
--- 3. Add `Extra` type to represent extra nodes; `Extra sort` wraps a `Node sort` and a proof that
+-- 2. Add `Extra` type to represent extra nodes; `Extra sort` wraps a `Node sort` and a proof that
 --    the `sort` is an "extra" sort. Permit occurances of `Extra` nodes before, after, and between
 --    all child nodes.
 --
--- 4. Add callbacks for error and missing nodes. Distinguish between missing nodes and missing text.
+-- 3. Add callbacks for error and missing nodes. Distinguish between missing nodes and missing text.
 --    (The latter is not represented in the ast, but certainly constitutes a parsing failure.)
 --    Refine traversal functions, e.g., `gotoNextSibling`, to invoke these callbacks for all error
 --    and missing nodes. This requires changing `gotoNextSibling` to not call `gotoParent` until the
 --    end of the list of siblings is reached. The contract for these callbacks is that they are only
 --    called when the node has changes.
 --
--- 5. Analyse the current tree traversal to see whether it is bottom-up or top-down, since the former
+-- 4. Analyse the current tree traversal to see whether it is bottom-up or top-down, since the former
 --    is desirable with regards to memory usage.
 
 --------------------------------------------------------------------------------
