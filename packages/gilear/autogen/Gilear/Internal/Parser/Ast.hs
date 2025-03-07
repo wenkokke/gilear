@@ -145,24 +145,31 @@ class KnownSort sort where
   sortSing :: SortSing sort
 
 instance KnownSort SourceFileSort where
+  sortSing :: SortSing SourceFileSort
   sortSing = SSourceFileSort
 
 instance KnownSort DeclarationSort where
+  sortSing :: SortSing DeclarationSort
   sortSing = SDeclarationSort
 
 instance KnownSort ExpressionSort where
+  sortSing :: SortSing ExpressionSort
   sortSing = SExpressionSort
 
 instance KnownSort ConstructorNameSort where
+  sortSing :: SortSing ConstructorNameSort
   sortSing = SConstructorNameSort
 
 instance KnownSort PatternListSort where
+  sortSing :: SortSing PatternListSort
   sortSing = SPatternListSort
 
 instance KnownSort PatternSort where
+  sortSing :: SortSing PatternSort
   sortSing = SPatternSort
 
 instance KnownSort VariableNameSort where
+  sortSing :: SortSing VariableNameSort
   sortSing = SVariableNameSort
 
 --------------------------------------------------------------------------------
