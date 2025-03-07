@@ -85,7 +85,7 @@ newTcEnv = do
 type MonadTc :: Type -> (Type -> Type) -> Constraint
 class (Show uri, Hashable uri, MonadUnliftIO m) => MonadTc uri m | m -> uri where
   -- | Get the type-checker environment.
-  getTcEnv :: (MonadTc uri m) => m (TcEnv uri)
+  getTcEnv :: m (TcEnv uri)
 
 -- | Get the type-checker environment.
 getParserEnv :: (MonadTc uri m) => m (ParserEnv uri)
@@ -125,7 +125,7 @@ getParserCache = liftIO . readIORef . (.parserCacheVar) =<< getParserEnv
 {-# INLINEABLE getParserCache #-}
 
 -- | Get the parse for a file.
-lookupCache :: (Hashable uri, MonadTc uri m) => uri -> m (Maybe ParserCacheItem)
+lookupCache :: (MonadTc uri m) => uri -> m (Maybe ParserCacheItem)
 lookupCache uri = Cache.lookup uri <$> getParserCache
 {-# INLINEABLE lookupCache #-}
 

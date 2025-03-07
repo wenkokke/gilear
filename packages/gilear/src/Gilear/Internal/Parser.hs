@@ -194,7 +194,6 @@ diagnose logger encoding newRope rootNode =
         void $ tellIfError node
  where
   tellIfMissingSymbol ::
-    (MonadTc uri m) =>
     TS.Node ->
     WriterT Diagnostics m Bool
   tellIfMissingSymbol node = do
@@ -219,7 +218,6 @@ diagnose logger encoding newRope rootNode =
       else pure False
 
   tellIfUnexpectedChar ::
-    (MonadTc uri m) =>
     TS.Node ->
     WriterT Diagnostics m Bool
   tellIfUnexpectedChar node = do
@@ -244,7 +242,6 @@ diagnose logger encoding newRope rootNode =
       else pure False
 
   tellIfError ::
-    (MonadTc uri m) =>
     TS.Node ->
     WriterT Diagnostics m Bool
   tellIfError node = do

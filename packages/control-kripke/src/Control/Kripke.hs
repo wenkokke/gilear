@@ -104,10 +104,6 @@ instance
   Kripke e (Free e c p)
   where
   step ::
-    ( forall (q :: World -> Type).
-      Kripke e (c q)
-    , Kripke e p
-    ) =>
     Free e c p u ->
     e u v ->
     Free e c p v
@@ -117,10 +113,6 @@ instance
     Call (step c uv) $ \vw w -> k (vw . Step uv) w
 
   walk ::
-    ( forall (q :: World -> Type).
-      Kripke e (c q)
-    , Kripke e p
-    ) =>
     Free e c p u ->
     Path e u v ->
     Free e c p v
@@ -130,9 +122,7 @@ instance
     Call (walk c uv) $ \vw q -> k (vw . uv) q
 
 instance MonadKripke e (Free e c) where
-  kpure ::
-    (Kripke e p) =>
-    All (p --> Free e c p)
+  kpure :: All (p --> Free e c p)
   kpure = Pure
 
   kbind ::

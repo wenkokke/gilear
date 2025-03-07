@@ -762,27 +762,27 @@ instance HasParser (ChildList '[]) where
   p = pure Nil
 
 instance (HasParser a) => HasParser (ChildList (a ': '[])) where
-  p :: (HasParser a) => P (ChildList '[a])
+  p :: P (ChildList '[a])
   p = Cons <$> p <*> pure Nil
 
 instance (HasParser a, HasParser (ChildList (b ': bs))) => HasParser (ChildList (a ': b ': bs)) where
-  p :: (HasParser a, HasParser (ChildList (b : bs))) => P (ChildList (a ': b ': bs))
+  p :: P (ChildList (a ': b ': bs))
   p = Cons <$> p <* gotoNextNamedSibling <*> p
 
 instance (HasParser (ChildList as)) => HasParser (Children as) where
-  p :: (HasParser (ChildList as)) => P (Children as)
+  p :: P (Children as)
   p = Children <$> (gotoFirstNamedChild *> p <* gotoParent)
 
 instance (HasParser a) => HasParser (Maybe a) where
-  p :: (HasParser a) => P (Maybe a)
+  p :: P (Maybe a)
   p = optional p
 
 instance (HasParser a) => HasParser [a] where
-  p :: (HasParser a) => P [a]
+  p :: P [a]
   p = pPostFence p gotoNextNamedSibling
 
 instance (HasParser a) => HasParser (NonEmpty a) where
-  p :: (HasParser a) => P (NonEmpty a)
+  p :: P (NonEmpty a)
   p = pPostFence1 p gotoNextNamedSibling
 
 instance HasParser Range where
@@ -806,7 +806,7 @@ pPostFence1 post fence = postFence
 --------------------------------------------------------------------------------
 
 instance (KnownSort sort) => HasParser (Node sort) where
-  p :: (KnownSort sort) => P (Node sort)
+  p :: P (Node sort)
   p = pNode
 
 pNode :: (KnownSort sort) => P (Node sort)
