@@ -62,10 +62,6 @@ data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
   FZF :: IxF ix (S m)
   FSF :: !(ix m) -> IxF ix (S m)
 
-hasPred :: Ix n -> (n ~ S (Pred n) => a) -> a
-hasPred FZ r = r
-hasPred (FS _) r = r
-
 sucIx :: Ix n -> Ix (S n)
 sucIx (UnsafeIx _ u) = UnsafeIx Proxy (u + 1)
 
@@ -96,6 +92,11 @@ pattern FS i <- (projectIx -> FSF i)
 {-# INLINE FS #-}
 
 {-# COMPLETE FZ, FS #-}
+
+-- | If any value of type @'Ix' n@ exists, @n@ must have a predecessor.
+hasPred :: Ix n -> (n ~ S (Pred n) => a) -> a
+hasPred FZ r = r
+hasPred (FS _) r = r
 
 -- | Thinning.
 thin :: Ix (S n) -> Ix n -> Ix (S n)
