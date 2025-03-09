@@ -8,22 +8,10 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module Data.DeBruijn (
-  -- * Type-level natural numbers
-  Nat (..),
-  type Pred,
-  type (+),
+module Data.DeBruijn where
 
-  -- * De Bruijn Indices
-  Ix (FZ, FS),
-  toWord,
-  thin,
-  thick,
-  inject,
-) where
-
-import Data.Kind (Constraint, Type)
-import Data.Proxy (Proxy)
+import Data.Kind (Type)
+import Data.Proxy (Proxy (..))
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Type-level natural numbers.
@@ -50,57 +38,58 @@ data SNatF (snat :: Nat -> Type) (n :: Nat) :: Type where
 -}
 
 -- | @'Ix' n@ is the type of natural numbers less than @n@.
-newtype Ix (n :: Nat) = UnsafeIx {unIx :: Word}
-  deriving stock (Eq, Ord)
-  deriving newtype (Show)
+data Ix (n :: Nat) where
+  UnsafeIx ::
+    {-# UNPACK #-} !(Proxy m) ->
+    {-# UNPACK #-} !Word ->
+    Ix (S m)
+
+deriving instance Eq (Ix n)
+deriving instance Ord (Ix n)
+
+instance Show (Ix n) where
+  show :: Ix n -> String
+  show (UnsafeIx _ u) = show u
 
 type role Ix nominal
 
 -- | Convert an 'Ix' to 'Word'.
 toWord :: Ix n -> Word
-toWord = unIx
+toWord (UnsafeIx _ u) = u
 
 -- | @'IxF'@ is the base functor of @'Ix'@.
 data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
-  FZF :: (n ~ S m) => IxF ix n
-  FSF :: (n ~ S m) => !(ix m) -> IxF ix n
+  FZF :: IxF ix (S m)
+  FSF :: !(ix m) -> IxF ix (S m)
 
--- | @'Dict' c@ is the type that holds the evidence for constraint @c@.
-data Dict (c :: Constraint) :: Type where
-  Dict :: (c) => Dict c
+hasPred :: Ix n -> (n ~ S (Pred n) => a) -> a
+hasPred FZ r = r
+hasPred (FS _) r = r
 
-unsafeHasPred :: forall n. Dict (n ~ S (Pred n))
-unsafeHasPred = unsafeCoerce (Dict @(n ~ n))
-
-unsafeWithHasPred :: forall n f. f (S (Pred n)) -> f n
-unsafeWithHasPred i = case unsafeHasPred @n of Dict -> i
-
-unsafeSucIx :: Ix (Pred n) -> Ix n
-unsafeSucIx (UnsafeIx index) = UnsafeIx (index + 1)
+sucIx :: Ix n -> Ix (S n)
+sucIx (UnsafeIx _ u) = UnsafeIx Proxy (u + 1)
 
 projectIx :: Ix n -> IxF Ix n
-projectIx (UnsafeIx index) =
-  unsafeWithHasPred $
-    if index == 0
-      then FZF
-      else FSF (UnsafeIx (index - 1))
+projectIx (UnsafeIx (_ :: Proxy m) u)
+  | u == 0 = FZF
+  | otherwise = FSF (unsafeCoerce (UnsafeIx (Proxy :: Proxy (Pred m)) (u - 1)))
 
-embedIx :: IxF Ix (S (Pred n)) -> Ix n
-embedIx FZF = UnsafeIx 0
-embedIx (FSF i) = unsafeSucIx i
+embedIx :: forall n. IxF Ix (S n) -> Ix (S n)
+embedIx FZF = UnsafeIx (Proxy :: Proxy n) 0
+embedIx (FSF i) = sucIx i
 
 -- TODO:
 -- Type signatures for pattern synonyms are weird.
 -- We may be able to use that to simplify this code?
 -- https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/pattern_synonyms.html#typing-of-pattern-synonyms
 
-pattern FZ :: forall n. Ix n
+pattern FZ :: forall n. () => (n ~ S (Pred n)) => Ix n
 pattern FZ <- (projectIx -> FZF)
   where
     FZ = embedIx FZF
 {-# INLINE FZ #-}
 
-pattern FS :: forall n. Ix (Pred n) -> Ix n
+pattern FS :: forall n. () => (n ~ S (Pred n)) => Ix (Pred n) -> Ix n
 pattern FS i <- (projectIx -> FSF i)
   where
     FS i = embedIx (FSF i)
@@ -110,29 +99,23 @@ pattern FS i <- (projectIx -> FSF i)
 
 -- | Thinning.
 thin :: Ix (S n) -> Ix n -> Ix (S n)
-thin = thin'
- where
-  thin' :: Ix n -> Ix (Pred n) -> Ix n
-  thin' FZ j = FS j
-  thin' (FS _) FZ = FZ
-  thin' (FS i) (FS j) = FS (thin' i j)
+thin  FZ     j     = FS j
+thin (FS _)  FZ    = FZ
+thin (FS i) (FS j) = FS (thin i j)
 
 -- | Thickening.
 thick :: Ix (S n) -> Ix (S n) -> Maybe (Ix n)
-thick = thick'
- where
-  thick' :: Ix n -> Ix n -> Maybe (Ix (Pred n))
-  thick' FZ FZ = Nothing
-  thick' FZ (FS j) = Just j
-  thick' (FS _) FZ = Just FZ
-  thick' (FS i) (FS j) = FS <$> thick' i j
+thick  FZ     FZ    = Nothing
+thick  FZ    (FS j) = Just j
+thick (FS i)  FZ    = hasPred i $ Just FZ
+thick (FS i) (FS j) = hasPred i $ FS <$> thick i j
 
--- | Inject.
-inject :: Proxy n -> Ix m -> Ix (n + m)
-inject _ = unsafeCoerce
+-- -- | Inject.
+-- inject :: Proxy n -> Ix m -> Ix (n + m)
+-- inject _ = unsafeCoerce
 
-{-| Raise.
-raise :: SNat n -> Ix m -> Ix (n + m)
-raise  SZ    i = i
-raise (SS n) i = FS (raise n i)
--}
+-- {-| Raise.
+-- raise :: SNat n -> Ix m -> Ix (n + m)
+-- raise  SZ    i = i
+-- raise (SS n) i = FS (raise n i)
+-- -}
