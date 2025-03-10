@@ -8,9 +8,19 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module Data.DeBruijn where
+module Data.DeBruijn (
+  type Nat (..),
+  type (+),
+  type Pred,
+  type Pos,
+  Ix (FZ, FS),
+  toWord,
+  isPos,
+  thin,
+  thick,
+) where
 
-import Data.Kind (Type)
+import Data.Kind (Constraint, Type)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Type-level natural numbers.
@@ -24,6 +34,10 @@ type family (+) (n :: Nat) (m :: Nat) = (r :: Nat) where
 -- | Predecessor of type-level naturals.
 type family Pred (n :: Nat) = (r :: Nat) where
   Pred (S n) = n
+
+-- | @'Pos' n@ holds if @n@ is non-zero.
+type Pos :: Nat -> Constraint
+type Pos (n :: Nat) = n ~ S (Pred n)
 
 {-| @'SNat'@ is the singleton type for natural numbers.
 newtype SNat (n :: Nat) = UnsafeSN {unSN :: Word}
@@ -75,29 +89,24 @@ embedIx FZF = UnsafeIx 0
 embedIx (FSF i) = sucIx i
 {-# INLINE embedIx #-}
 
--- TODO:
--- Type signatures for pattern synonyms are weird.
--- We may be able to use that to simplify this code?
--- https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/pattern_synonyms.html#typing-of-pattern-synonyms
+-- NOTE:
+--   Type signatures for pattern synonyms are weird, see:
+--   https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/pattern_synonyms.html#typing-of-pattern-synonyms
 
-pattern FZ :: () => (n ~ S (Pred n)) => Ix n
-pattern FZ <- (projectIx -> FZF)
-  where
-    FZ = embedIx FZF
+pattern FZ :: () => (Pos n) => Ix n
+pattern FZ <- (projectIx -> FZF) where FZ = embedIx FZF
 {-# INLINE FZ #-}
 
-pattern FS :: () => (n ~ S (Pred n)) => Ix (Pred n) -> Ix n
-pattern FS i <- (projectIx -> FSF i)
-  where
-    FS i = embedIx (FSF i)
+pattern FS :: () => (Pos n) => Ix (Pred n) -> Ix n
+pattern FS i <- (projectIx -> FSF i) where FS i = embedIx (FSF i)
 {-# INLINE FS #-}
 
 {-# COMPLETE FZ, FS #-}
 
 -- | If any value of type @'Ix' n@ exists, @n@ must have a predecessor.
-hasPred :: Ix n -> ((n ~ S (Pred n)) => a) -> a
-hasPred FZ r = r
-hasPred (FS _) r = r
+isPos :: Ix n -> ((Pos n) => a) -> a
+isPos FZ r = r
+isPos (FS _) r = r
 
 -- | Thinning.
 thin :: Ix (S n) -> Ix n -> Ix (S n)
@@ -109,8 +118,8 @@ thin (FS i) (FS j) = FS (thin i j)
 thick :: Ix (S n) -> Ix (S n) -> Maybe (Ix n)
 thick FZ FZ = Nothing
 thick FZ (FS j) = Just j
-thick (FS i) FZ = hasPred i $ Just FZ
-thick (FS i) (FS j) = hasPred i $ FS <$> thick i j
+thick (FS i) FZ = isPos i $ Just FZ
+thick (FS i) (FS j) = isPos i $ FS <$> thick i j
 
 -- -- | Inject.
 -- inject :: Proxy n -> Ix m -> Ix (n + m)
