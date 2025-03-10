@@ -40,6 +40,7 @@ data SNatF (snat :: Nat -> Type) (n :: Nat) :: Type where
 newtype Ix (n :: Nat) = UnsafeIx Word
 
 deriving instance Eq (Ix n)
+
 deriving instance Ord (Ix n)
 
 instance Show (Ix n) where
@@ -94,21 +95,21 @@ pattern FS i <- (projectIx -> FSF i)
 {-# COMPLETE FZ, FS #-}
 
 -- | If any value of type @'Ix' n@ exists, @n@ must have a predecessor.
-hasPred :: Ix n -> (n ~ S (Pred n) => a) -> a
+hasPred :: Ix n -> ((n ~ S (Pred n)) => a) -> a
 hasPred FZ r = r
 hasPred (FS _) r = r
 
 -- | Thinning.
 thin :: Ix (S n) -> Ix n -> Ix (S n)
-thin  FZ     j     = FS j
-thin (FS _)  FZ    = FZ
+thin FZ j = FS j
+thin (FS _) FZ = FZ
 thin (FS i) (FS j) = FS (thin i j)
 
 -- | Thickening.
 thick :: Ix (S n) -> Ix (S n) -> Maybe (Ix n)
-thick  FZ     FZ    = Nothing
-thick  FZ    (FS j) = Just j
-thick (FS i)  FZ    = hasPred i $ Just FZ
+thick FZ FZ = Nothing
+thick FZ (FS j) = Just j
+thick (FS i) FZ = hasPred i $ Just FZ
 thick (FS i) (FS j) = hasPred i $ FS <$> thick i j
 
 -- -- | Inject.
