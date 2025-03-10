@@ -69,7 +69,7 @@ projectIx (UnsafeIx u) =
       else FSF (UnsafeIx (u - 1))
 {-# INLINE projectIx #-}
 
-embedIx :: forall n. IxF Ix (S n) -> Ix (S n)
+embedIx :: IxF Ix (S n) -> Ix (S n)
 embedIx FZF = UnsafeIx 0
 embedIx (FSF i) = sucIx i
 {-# INLINE embedIx #-}
@@ -79,13 +79,13 @@ embedIx (FSF i) = sucIx i
 -- We may be able to use that to simplify this code?
 -- https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/pattern_synonyms.html#typing-of-pattern-synonyms
 
-pattern FZ :: forall n. () => (n ~ S (Pred n)) => Ix n
+pattern FZ :: () => (n ~ S (Pred n)) => Ix n
 pattern FZ <- (projectIx -> FZF)
   where
     FZ = embedIx FZF
 {-# INLINE FZ #-}
 
-pattern FS :: forall n. () => (n ~ S (Pred n)) => Ix (Pred n) -> Ix n
+pattern FS :: () => (n ~ S (Pred n)) => Ix (Pred n) -> Ix n
 pattern FS i <- (projectIx -> FSF i)
   where
     FS i = embedIx (FSF i)
