@@ -11,7 +11,6 @@
 module Data.DeBruijn where
 
 import Data.Kind (Type)
-import Data.Proxy (Proxy (..))
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Type-level natural numbers.
@@ -38,24 +37,20 @@ data SNatF (snat :: Nat -> Type) (n :: Nat) :: Type where
 -}
 
 -- | @'Ix' n@ is the type of natural numbers less than @n@.
-data Ix (n :: Nat) where
-  UnsafeIx ::
-    {-# UNPACK #-} !(Proxy m) ->
-    {-# UNPACK #-} !Word ->
-    Ix (S m)
+newtype Ix (n :: Nat) = UnsafeIx Word
 
 deriving instance Eq (Ix n)
 deriving instance Ord (Ix n)
 
 instance Show (Ix n) where
   show :: Ix n -> String
-  show (UnsafeIx _ u) = show u
+  show (UnsafeIx u) = show u
 
 type role Ix nominal
 
 -- | Convert an 'Ix' to 'Word'.
 toWord :: Ix n -> Word
-toWord (UnsafeIx _ u) = u
+toWord (UnsafeIx u) = u
 
 -- | @'IxF'@ is the base functor of @'Ix'@.
 data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
@@ -63,16 +58,21 @@ data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
   FSF :: !(ix m) -> IxF ix (S m)
 
 sucIx :: Ix n -> Ix (S n)
-sucIx (UnsafeIx _ u) = UnsafeIx Proxy (u + 1)
+sucIx (UnsafeIx u) = UnsafeIx (u + 1)
+{-# INLINE sucIx #-}
 
 projectIx :: Ix n -> IxF Ix n
-projectIx (UnsafeIx (_ :: Proxy m) u)
-  | u == 0 = FZF
-  | otherwise = FSF (unsafeCoerce (UnsafeIx (Proxy :: Proxy (Pred m)) (u - 1)))
+projectIx (UnsafeIx u) =
+  unsafeCoerce $
+    if u == 0
+      then FZF
+      else FSF (UnsafeIx (u - 1))
+{-# INLINE projectIx #-}
 
 embedIx :: forall n. IxF Ix (S n) -> Ix (S n)
-embedIx FZF = UnsafeIx (Proxy :: Proxy n) 0
+embedIx FZF = UnsafeIx 0
 embedIx (FSF i) = sucIx i
+{-# INLINE embedIx #-}
 
 -- TODO:
 -- Type signatures for pattern synonyms are weird.
