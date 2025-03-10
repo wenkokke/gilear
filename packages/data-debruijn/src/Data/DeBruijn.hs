@@ -21,6 +21,7 @@ module Data.DeBruijn (
 ) where
 
 import Data.Kind (Constraint, Type)
+import Data.Word (Word16)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Type-level natural numbers.
@@ -51,7 +52,7 @@ data SNatF (snat :: Nat -> Type) (n :: Nat) :: Type where
 -}
 
 -- | @'Ix' n@ is the type of natural numbers less than @n@.
-newtype Ix (n :: Nat) = UnsafeIx Word
+newtype Ix (n :: Nat) = UnsafeIx Word16
 
 deriving instance Eq (Ix n)
 
@@ -64,8 +65,9 @@ instance Show (Ix n) where
 type role Ix nominal
 
 -- | Convert an 'Ix' to 'Word'.
-toWord :: Ix n -> Word
+toWord :: Ix n -> Word16
 toWord (UnsafeIx u) = u
+{-# INLINE toWord #-}
 
 -- | @'IxF'@ is the base functor of @'Ix'@.
 data IxF (ix :: Nat -> Type) (n :: Nat) :: Type where
