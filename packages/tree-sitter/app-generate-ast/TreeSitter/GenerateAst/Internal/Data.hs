@@ -35,7 +35,7 @@ newtype Name = Name {unName :: Text}
   deriving newtype (Eq, Ord, Show, IsString)
 
 data Type
-  = Type Name
+  = Node Name
   | List Type
   | NonEmpty Type
   | Unit
@@ -156,7 +156,7 @@ toDataTypes start grammar = dataTypes `reachableFrom` startName
     BlankRule -> Unit
     StringRule{} -> Unit
     PatternRule{} -> Unit
-    SymbolRule s -> Type (Name s)
+    SymbolRule s -> Node (Name s)
     SeqRule rs -> foldr1Or mkTuple Unit [t | r <- V.toList rs, let t = ruleToType r]
     ChoiceRule rs -> foldr1Or mkEither Unit [t | r <- V.toList rs, let t = ruleToType r]
     RepeatRule r -> List (ruleToType r)
@@ -188,7 +188,7 @@ depsOfConstr (Constr _ fs) = concatMap (depsOfType . (.type_)) fs
 
 depsOfType :: Type -> [Name]
 depsOfType = \case
-  Type n -> [n]
+  Node sort -> [sort]
   List t -> depsOfType t
   NonEmpty t -> depsOfType t
   Unit -> []

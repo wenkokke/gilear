@@ -25,6 +25,35 @@ import Text.DocTemplates (Context (..), ToContext (..), Val (..), applyTemplate)
 import TreeSitter.GenerateAst.Internal.Data (Constr (..), Data (..), Field (..), Name (..), Type (..), fieldName, toDataTypes)
 import TreeSitter.GenerateAst.Internal.Grammar (Grammar (..), RuleName)
 
+{- Note [One AstCache per syntax tree]
+
+  We create one AstCache per syntax tree, which contains a mapping from NodeIds
+  to nodes. It seems like an alluring idea to traverse the old and new trees in
+  parallel. This works for strictly specified ASTs, where each node has a known
+  number of children, but breaks down when nodes are allowed optional children,
+  children that contain lists of nodes, etc.
+-}
+
+-- TODO:
+--
+-- 1. Restructure parser to parse children as '[SomeNode]' and only then attempt to unpack
+--    that list to the appropriate instance of 'ChildList' so that any mismatch at this point
+--    can result in a 'VirtualError' as opposed to a 'SortMismatch'.
+--
+-- 2. Add `Extra` type to represent extra nodes; `Extra sort` wraps a `Node sort` and a proof that
+--    the `sort` is an "extra" sort. Permit occurances of `Extra` nodes before, after, and between
+--    all child nodes.
+--
+-- 3. Add callbacks for error and missing nodes. Distinguish between missing nodes and missing text.
+--    (The latter is not represented in the ast, but certainly constitutes a parsing failure.)
+--    Refine traversal functions, e.g., `gotoNextSibling`, to invoke these callbacks for all error
+--    and missing nodes. This requires changing `gotoNextSibling` to not call `gotoParent` until the
+--    end of the list of siblings is reached. The contract for these callbacks is that they are only
+--    called when the node has changes.
+--
+-- 4. Analyse the current tree traversal to see whether it is bottom-up or top-down, since the former
+--    is desirable with regards to memory usage.
+
 --------------------------------------------------------------------------------
 -- Template Parser and Renderer
 --------------------------------------------------------------------------------
@@ -84,7 +113,7 @@ textToVal text = SimpleVal (Doc.Text (T.length text) text)
 
 isNodeLike :: Type -> Bool
 isNodeLike = \case
-  Type _name -> True
+  Node _name -> True
   List a -> isNodeLike a
   NonEmpty a -> isNodeLike a
   Unit -> False
@@ -134,7 +163,7 @@ instance ToContext Text Type where
    where
     par b t = if b then "(" <> t <> ")" else t
     t2t p = \case
-      Type name -> par p ("Node" <> " " <> TLB.fromText (snakeToCase Upper (unName name) <> "Sort"))
+      Node name -> par p ("Node" <> " " <> TLB.fromText (snakeToCase Upper (unName name) <> "Sort"))
       List a -> "[" <> t2t False a <> "]"
       NonEmpty a -> par p ("NonEmpty" <> " " <> t2t True a)
       Unit -> "()"
