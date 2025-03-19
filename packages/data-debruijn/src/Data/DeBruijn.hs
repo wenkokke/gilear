@@ -1,18 +1,10 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RoleAnnotations #-}
-{-# LANGUAGE TypeData #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
 
 module Data.DeBruijn (
-  type Nat (..),
-  type (+),
-  type Pred,
-  type Pos,
   Ix (FZ, FS),
   toWord,
   isPos,
@@ -20,25 +12,10 @@ module Data.DeBruijn (
   thick,
 ) where
 
-import Data.Kind (Constraint, Type)
+import Data.Kind (Type)
+import Data.Type.Nat (Pos, Pred, type Nat (..))
 import Data.Word (Word16)
 import Unsafe.Coerce (unsafeCoerce)
-
--- | Type-level natural numbers.
-type data Nat = Z | S Nat
-
--- | Addition of type-level naturals.
-type family (+) (n :: Nat) (m :: Nat) = (r :: Nat) where
-  Z + m = m
-  S n + m = S (n + m)
-
--- | Predecessor of type-level naturals.
-type family Pred (n :: Nat) = (r :: Nat) where
-  Pred (S n) = n
-
--- | @'Pos' n@ holds if @n@ is non-zero.
-type Pos :: Nat -> Constraint
-type Pos (n :: Nat) = n ~ S (Pred n)
 
 {-| @'SNat'@ is the singleton type for natural numbers.
 newtype SNat (n :: Nat) = UnsafeSN {unSN :: Word}
