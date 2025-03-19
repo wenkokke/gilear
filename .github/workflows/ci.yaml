@@ -98,14 +98,6 @@ jobs:
             packages/vscode-gilear/node_modules/
           key: ${{ steps.cache-node.outputs.cache-primary-key }}
 
-      - name: 💾 Restore Haskell
-        uses: actions/cache/restore@v4
-        if: ${{ !env.ACT }}
-        id: cache-setup-haskell
-        with:
-          path: $HOME/.ghcup
-          key: ${{ matrix.os.name }}-ghc-${{ matrix.haskell.ghc.version || steps.dev-dependencies.outputs.ghc }}-cabal-${{ matrix.haskell.cabal.version || steps.dev-dependencies.outputs.cabal }}
-
       - name: 🛠️ Install Haskell
         uses: haskell-actions/setup@v2
         id: setup-haskell
@@ -113,12 +105,11 @@ jobs:
           ghc-version: ${{ matrix.haskell.ghc.version || steps.dev-dependencies.outputs.ghc }}
           cabal-version: ${{ matrix.haskell.cabal.version || steps.dev-dependencies.outputs.cabal }}
 
-      - name: 💾 Save Haskell
-        uses: actions/cache/save@v4
-        if: ${{ !env.ACT && steps.cache-setup-haskell.outputs.cache-hit != 'true' }}
+      - name: 🛠️ Install cabal-docspec (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/setup-cabal-docspec
         with:
-          path: $HOME/.ghcup
-          key: ${{ steps.cache-setup-haskell.outputs.cache-primary-key }}
+          cabal-docspec-version: ${{ steps.dev-dependencies.outputs.cabal-docspec }}
 
       - name: 🛠️ Configure
         run: |
@@ -155,6 +146,12 @@ jobs:
 
       - name: 🧪 Test Haskell Packages
         run: cabal test all --project-file=${{ matrix.haskell.cabal.project-file }}
+
+      - name: 🧪 Test Haskell docspec (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: ./scripts/test-cabal-docspec.sh
+        env:
+          CABAL_DOCSPEC_SKIP_BUILD: "1"
 
       - name: 🧪 Test VS Code Extension (Linux)
         if: runner.os == 'Linux'
