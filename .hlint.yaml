@@ -18,7 +18,9 @@
     - name: "-Wno-unused-top-binds"
       within: "TreeSitter.Internal"
     - name: "-Wno-orphans"
-      within: "Data.DeBruijn.Inductive.Arbitrary"
+      within:
+        - "Data.Type.Nat.Singleton.Efficient.Arbitrary"
+        - "Data.Type.Nat.Singleton.Inductive.Arbitrary"
     - name: "-Wno-orphans"
       within: "TreeSitter.GenerateAst.Internal.CodeGen"
 
