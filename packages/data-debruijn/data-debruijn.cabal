@@ -50,3 +50,16 @@ library arbitrary
     , base
     , data-debruijn
     , QuickCheck     >=2.9 && <3.0
+
+test-suite data-debruijn-test
+  import:          language
+  hs-source-dirs:  test
+  main-is:         Main.hs
+  type:            exitcode-stdio-1.0
+
+  build-depends:
+    , base
+    , data-debruijn
+    , QuickCheck     >=2.9 && <3.0
+    , tasty
+    , tasty-quickcheck
