@@ -34,10 +34,7 @@ library
     Data.Type.Nat.Singleton.Efficient
     Data.Type.Nat.Singleton.Inductive
 
-  build-depends:
-    , base    >=4.18  && <5
-    , bitvec  ^>=1.1
-    , vector  ^>=0.13
+  build-depends:   base >=4.18 && <5
 
 library arbitrary
   import:          language
@@ -52,14 +49,13 @@ library arbitrary
     , QuickCheck     >=2.9 && <3.0
 
 test-suite data-debruijn-test
-  import:          language
-  hs-source-dirs:  test
-  main-is:         Main.hs
-  type:            exitcode-stdio-1.0
-
+  import:         language
+  hs-source-dirs: test
+  main-is:        Main.hs
+  type:           exitcode-stdio-1.0
   build-depends:
     , base
     , data-debruijn
-    , QuickCheck     >=2.9 && <3.0
+    , QuickCheck        >=2.9 && <3.0
     , tasty
     , tasty-quickcheck

@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Test.Tasty
+import Test.Tasty (TestTree, defaultMain, testGroup)
 
 tests :: TestTree
 tests = testGroup "All Tests" []
