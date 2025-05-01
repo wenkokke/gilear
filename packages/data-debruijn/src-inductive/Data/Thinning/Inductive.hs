@@ -2,11 +2,14 @@
 
 module Data.Thinning.Inductive (
   (:<) (Done, Keep, Drop),
+  toInductive,
+  fromInductive,
   Thin (..),
 ) where
 
 import Data.Index.Inductive (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
+import Data.Thinning qualified as Efficient
 import Data.Type.Nat (Nat (..))
 
 --------------------------------------------------------------------------------
@@ -19,6 +22,22 @@ data (:<) n m where
   Done :: Z :< Z
   Keep :: !(n :< m) -> S n :< S m
   Drop :: !(n :< m) -> n :< S m
+
+-- | Convert from the efficient representation 'Efficient.:<' to the inductive representation ':<'.
+toInductive :: n Efficient.:< m -> n :< m
+toInductive Efficient.Done = Done
+toInductive (Efficient.Keep n'm') = Keep (toInductive n'm')
+toInductive (Efficient.Drop nm') = Drop (toInductive nm')
+
+-- | Convert from the inductive representation ':<' to the efficient representation 'Efficient.:<'.
+fromInductive :: n :< m -> n Efficient.:< m
+fromInductive Done = Efficient.Done
+fromInductive (Keep n'm') = Efficient.Keep (fromInductive n'm')
+fromInductive (Drop nm') = Efficient.Drop (fromInductive nm')
+
+--------------------------------------------------------------------------------
+-- Thinning Class
+--------------------------------------------------------------------------------
 
 -- | The actions of thinnings on natural-indexed data types.
 type Thin :: (Nat -> Type) -> Constraint

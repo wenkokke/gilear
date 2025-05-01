@@ -4,6 +4,8 @@
 
 module Data.Type.Nat.Singleton.Inductive (
   SNat (..),
+  toInductive,
+  fromInductive,
   fromSNat,
   fromSNatRaw,
   decSNat,
@@ -24,7 +26,7 @@ import Data.Proxy (Proxy (..))
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Type.Equality qualified as Eq
 import Data.Type.Nat (Nat (..), type (+))
-import Data.Word (Word16)
+import Data.Type.Nat.Singleton qualified as Efficient
 
 {- $setup
 >>> import Data.Type.Nat.Singleton.Inductive.Arbitrary
@@ -40,6 +42,16 @@ data SNat n where
   Z :: SNat Z
   S :: !(SNat n) -> SNat (S n)
 
+-- | Convert from the efficient representation 'Efficient.SNat' to the inductive representation 'SNat'.
+toInductive :: Efficient.SNat n -> SNat n
+toInductive Efficient.Z = Z
+toInductive (Efficient.S n) = S (toInductive n)
+
+-- | Convert from the inductive representation 'SNat' to the efficient representation 'Efficient.SNat'.
+fromInductive :: SNat n -> Efficient.SNat n
+fromInductive Z = Efficient.Z
+fromInductive (S n) = Efficient.S (fromInductive n)
+
 instance Show (SNat n) where
   showsPrec :: Int -> SNat n -> ShowS
   showsPrec p = \case
@@ -47,12 +59,12 @@ instance Show (SNat n) where
     S n -> showString "S " . showParen (p > 10) (showsPrec 11 n)
 
 -- | @'fromSNat' n@ returns the numeric representation of 'SNat n'.
-{-# SPECIALIZE fromSNat :: SNat n -> Word16 #-}
+{-# SPECIALIZE fromSNat :: SNat n -> Int #-}
 fromSNat :: (Integral i) => SNat n -> i
 fromSNat Z = 0
 fromSNat (S n') = succ (fromSNat n')
 
-fromSNatRaw :: SNat n -> Word16
+fromSNatRaw :: SNat n -> Int
 fromSNatRaw = fromSNat
 {-# INLINE fromSNatRaw #-}
 

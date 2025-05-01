@@ -6,4 +6,4 @@ tests :: TestTree
 tests = testGroup "All Tests" []
 
 main :: IO ()
-main = defaultMain Main.tests
+main = defaultMain tests

@@ -23,30 +23,57 @@ common language
   default-extensions: ImportQualifiedPost
 
 library
-  import:          language
-  hs-source-dirs:  src
+  import:             language
+  hs-source-dirs:     src
+  reexported-modules: Data.Type.Nat
   exposed-modules:
-    Data.Index.Efficient
-    Data.Index.Inductive
-    Data.Thinning.Efficient
-    Data.Thinning.Inductive
+    Data.Index
+    Data.Thinning
+    Data.Type.Nat.Singleton
+
+  build-depends:
+    , base                     >=4.18 && <5
+    , data-debruijn:efficient
+
+library efficient
+  import:          language
+  visibility:      public
+  hs-source-dirs:  src-efficient
+  exposed-modules:
+    Data.Index.Unsafe
+    Data.Thinning.Unsafe
     Data.Type.Nat
-    Data.Type.Nat.Singleton.Efficient
-    Data.Type.Nat.Singleton.Inductive
+    Data.Type.Nat.Singleton.Unsafe
 
   build-depends:   base >=4.18 && <5
 
+library inductive
+  import:          language
+  visibility:      public
+  hs-source-dirs:  src-inductive
+  exposed-modules:
+    Data.Index.Inductive
+    Data.Thinning.Inductive
+    Data.Type.Nat.Singleton.Inductive
+
+  build-depends:
+    , base           >=4.18 && <5
+    , data-debruijn
+
 library arbitrary
   import:          language
+  visibility:      public
   hs-source-dirs:  src-arbitrary
   exposed-modules:
-    Data.Type.Nat.Singleton.Efficient.Arbitrary
+    Data.Type.Nat.Singleton.Arbitrary
     Data.Type.Nat.Singleton.Inductive.Arbitrary
+    Numeric.Natural.Arbitrary
 
   build-depends:
     , base
     , data-debruijn
-    , QuickCheck     >=2.9 && <3.0
+    , data-debruijn:inductive
+    , QuickCheck               >=2.9 && <3.0
 
 test-suite data-debruijn-test
   import:         language
@@ -56,6 +83,8 @@ test-suite data-debruijn-test
   build-depends:
     , base
     , data-debruijn
-    , QuickCheck        >=2.9 && <3.0
+    , data-debruijn:arbitrary
+    , data-debruijn:inductive
+    , QuickCheck               >=2.9 && <3.0
     , tasty
     , tasty-quickcheck

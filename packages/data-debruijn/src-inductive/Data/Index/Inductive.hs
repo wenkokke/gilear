@@ -6,6 +6,8 @@
 module Data.Index.Inductive (
   -- * DeBruijn indices
   Ix (FZ, FS),
+  toInductive,
+  fromInductive,
   fromIx,
   fromIxRaw,
   isPos,
@@ -14,12 +16,12 @@ module Data.Index.Inductive (
   inject,
 ) where
 
+import Data.Index qualified as Efficient
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Type.Nat (type Nat (..), type Pos, type (+))
 import Data.Type.Nat.Singleton.Inductive (SNat (..), plusCommS)
-import Data.Word (Word16)
 
 -- | @'Ix' n@ is the type of DeBruijn indices less than @n@.
 type Ix :: Nat -> Type
@@ -27,14 +29,24 @@ data Ix n where
   FZ :: Ix (S n)
   FS :: !(Ix n) -> Ix (S n)
 
+-- | Convert from the efficient representation 'Efficient.Ix' to the inductive representation 'Ix'.
+toInductive :: Efficient.Ix n -> Ix n
+toInductive Efficient.FZ = FZ
+toInductive (Efficient.FS i) = FS (toInductive i)
+
+-- | Convert from the inductive representation 'Ix' to the efficient representation 'Efficient.Ix'.
+fromInductive :: Ix n -> Efficient.Ix n
+fromInductive FZ = Efficient.FZ
+fromInductive (FS i) = Efficient.FS (fromInductive i)
+
 -- | Convert an 'Ix' to 'Word'.
-{-# SPECIALIZE fromIx :: Ix n -> Word16 #-}
+{-# SPECIALIZE fromIx :: Ix n -> Int #-}
 fromIx :: (Integral i) => Ix n -> i
 fromIx = \case
   FZ -> 0
   FS i -> succ (fromIx i)
 
-fromIxRaw :: Ix n -> Word16
+fromIxRaw :: Ix n -> Int
 fromIxRaw = fromIx
 {-# INLINE fromIxRaw #-}
 

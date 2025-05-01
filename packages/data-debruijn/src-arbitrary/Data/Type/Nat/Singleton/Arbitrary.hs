@@ -1,8 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Type.Nat.Singleton.Inductive.Arbitrary where
+module Data.Type.Nat.Singleton.Arbitrary where
 
-import Data.Type.Nat.Singleton.Inductive (SomeSNat (..), fromSomeSNat, toSomeSNat)
+import Data.Type.Nat.Singleton (SomeSNat (..), fromSomeSNat, toSomeSNat)
 import Data.Word (Word16)
 import Numeric.Natural.Arbitrary ()
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..), shrinkIntegral)

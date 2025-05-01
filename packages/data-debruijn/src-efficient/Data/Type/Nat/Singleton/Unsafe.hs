@@ -4,10 +4,10 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
-module Data.Type.Nat.Singleton.Efficient (
-  SNatRep (SNatRep, sNatRepRaw),
-  SNat (UnsafeSNat, sNatRep, Z, S),
+module Data.Type.Nat.Singleton.Unsafe (
+  SNat (Z, S),
   fromSNat,
   fromSNatRaw,
   decSNat,
@@ -15,6 +15,10 @@ module Data.Type.Nat.Singleton.Efficient (
   withSomeSNat,
   toSomeSNat,
   fromSomeSNat,
+
+  -- * Unsafe
+  SNat (UnsafeSNat, sNatRep),
+  SNatRep (SNatRep, sNatRepRaw),
 ) where
 
 import Control.Exception (assert)
@@ -25,7 +29,7 @@ import Data.Type.Nat (Nat (..), Pos, Pred)
 import Unsafe.Coerce (unsafeCoerce)
 
 {- $setup
->>> import Data.Type.Nat.Singleton.Efficient.Arbitrary
+>>> import Data.Type.Nat.Singleton.Arbitrary
 -}
 
 -- | @'SNatRep'@ is the type used to represent natural numbers.

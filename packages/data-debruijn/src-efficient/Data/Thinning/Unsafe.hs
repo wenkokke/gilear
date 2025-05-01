@@ -4,16 +4,21 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
-module Data.Thinning.Efficient (
+module Data.Thinning.Unsafe (
   (:<) (Done, Keep, Drop),
   toBits,
   Thin (..),
+
+  -- * Unsafe
+  (:<) (UnsafeTh),
+  ThRep (ThRep, size, bits),
 ) where
 
 import Control.Exception (assert)
 import Data.Bits (Bits (..))
-import Data.Index.Efficient (Ix (..), isPos)
+import Data.Index.Unsafe (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Type.Nat (Nat (..), Pos, Pred)
 import Unsafe.Coerce (unsafeCoerce)

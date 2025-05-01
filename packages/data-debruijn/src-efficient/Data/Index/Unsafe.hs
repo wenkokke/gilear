@@ -5,10 +5,10 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
-module Data.Index.Efficient (
-  IxRep (IxRep, ixRepRaw),
-  Ix (UnsafeIx, FZ, FS),
+module Data.Index.Unsafe (
+  Ix (FZ, FS),
   fromIx,
   fromIxRaw,
   isPos,
@@ -16,13 +16,17 @@ module Data.Index.Efficient (
   thick,
   inject,
   raise,
+
+  -- * Unsafe
+  Ix (UnsafeIx),
+  IxRep (IxRep, ixRepRaw),
 ) where
 
 import Control.Exception (assert)
 import Data.Kind (Type)
 import Data.Proxy (Proxy)
 import Data.Type.Nat (Nat (..), Pos, Pred, type (+))
-import Data.Type.Nat.Singleton.Efficient (SNat (..), SNatRep (..))
+import Data.Type.Nat.Singleton.Unsafe (SNat (..), SNatRep (..))
 import Unsafe.Coerce (unsafeCoerce)
 
 newtype IxRep = IxRep {ixRepRaw :: Int}

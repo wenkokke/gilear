@@ -19,10 +19,16 @@
       within: "TreeSitter.Internal"
     - name: "-Wno-orphans"
       within:
-        - "Data.Type.Nat.Singleton.Efficient.Arbitrary"
+        - "Numeric.Natural.Arbitrary"
+        - "Data.Type.Nat.Singleton.Arbitrary"
         - "Data.Type.Nat.Singleton.Inductive.Arbitrary"
     - name: "-Wno-orphans"
       within: "TreeSitter.GenerateAst.Internal.CodeGen"
+    - name: "-Wno-duplicate-exports"
+      within:
+        - "Data.Index.Unsafe"
+        - "Data.Thinning.Unsafe"
+        - "Data.Type.Nat.Singleton.Unsafe"
 
 # Control which modules can be used
 - modules:
