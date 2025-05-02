@@ -88,3 +88,17 @@ test-suite data-debruijn-test
     , QuickCheck               >=2.9 && <3.0
     , tasty
     , tasty-quickcheck
+
+benchmark data-debruijn-bench
+  type:           exitcode-stdio-1.0
+  ghc-options:    -O1 -rtsopts
+  hs-source-dirs: bench
+  main-is:        Main.hs
+  build-depends:
+    , base
+    , data-debruijn
+    , data-debruijn:efficient
+    , data-debruijn:inductive
+    , ghc-prim
+    , criterion
+    , deepseq
