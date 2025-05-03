@@ -67,12 +67,15 @@ library arbitrary
   exposed-modules:
     Data.Type.Nat.Singleton.Arbitrary
     Data.Type.Nat.Singleton.Inductive.Arbitrary
+    Data.Index.Inductive.Arbitrary
+    Data.Index.Unsafe.Arbitrary
     Numeric.Natural.Arbitrary
 
   build-depends:
     , base
     , data-debruijn
     , data-debruijn:inductive
+    , data-debruijn:efficient
     , QuickCheck               >=2.9 && <3.0
 
 test-suite data-debruijn-test

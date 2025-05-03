@@ -14,20 +14,29 @@ module Data.Index.Inductive (
   thin,
   thick,
   inject,
+
+  SomeIx,
+  withSomeIx,
+  toSomeIx,
+  toSomeIxRaw,
+  fromSomeIx
 ) where
 
 import Data.Index qualified as Efficient
+import Data.Maybe (isJust)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Type.Nat (type Nat (..), type Pos, type (+))
-import Data.Type.Nat.Singleton.Inductive (SNat (..), plusCommS)
+import Data.Type.Nat.Singleton.Inductive (SNat (..), plusCommS, iterate', decSNat, fromSNat)
 
 -- | @'Ix' n@ is the type of DeBruijn indices less than @n@.
 type Ix :: Nat -> Type
 data Ix n where
   FZ :: Ix (S n)
   FS :: !(Ix n) -> Ix (S n)
+
+deriving instance Show (Ix n)
 
 -- | Convert from the efficient representation 'Efficient.Ix' to the inductive representation 'Ix'.
 toInductive :: Efficient.Ix n -> Ix n
@@ -84,5 +93,37 @@ raise :: Ix n -> SNat m -> Ix (n + m)
 raise i Z = _
 raise i (S n) = _
 -}
+
 eraseIx :: Ix n -> Proxy n
 eraseIx _ = Proxy
+
+-- | An existential wrapper around indexes.
+type SomeIx :: Type
+data SomeIx = forall (n :: Nat). SomeIx !(Ix n)
+
+deriving instance Show SomeIx
+
+instance Eq SomeIx where
+  (==) :: SomeIx -> SomeIx -> Bool
+  SomeIx m == SomeIx n = isJust (decIx m n)
+
+withSomeIx :: (forall n. Ix n -> a) -> SomeIx -> a
+withSomeIx action (SomeIx n) = action n
+
+toSomeIx :: (Integral i) => i -> SomeIx
+toSomeIx n = iterate' n (withSomeIx $ SomeIx . FS) (SomeIx FZ)
+
+fromSomeIx :: (Integral i) => SomeIx -> i
+fromSomeIx = withSomeIx fromIx
+
+toSomeIxRaw :: Int -> SomeIx
+toSomeIxRaw = toSomeIx
+
+fromSomeIxRaw :: SomeIx -> Int
+fromSomeIxRaw = withSomeIx fromIxRaw
+
+-- | Decidable equality for natural number singletons.
+decIx :: Ix m -> Ix n -> Maybe (m :~: n)
+decIx FZ FZ = Just Refl
+decIx (FS m') (FS n') = (\Refl -> Refl) <$> decIx m' n'
+decIx _m _n = Nothing

@@ -18,6 +18,7 @@ module Data.Type.Nat.Singleton.Inductive (
   withSomeSNat,
   toSomeSNat,
   fromSomeSNat,
+  iterate'
 ) where
 
 import Data.Kind (Type)
