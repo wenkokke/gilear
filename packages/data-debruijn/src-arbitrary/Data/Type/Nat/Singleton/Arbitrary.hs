@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Type.Nat.Singleton.Arbitrary where
+module Data.Type.Nat.Singleton.Arbitrary () where
 
-import Data.Type.Nat.Singleton (SomeSNat (..), fromSomeSNat, toSomeSNat)
-import Data.Word (Word16)
+import Data.Type.Nat.Singleton (SomeSNat (..), fromSomeSNatRaw, toSomeSNatRaw)
 import Numeric.Natural.Arbitrary ()
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..), shrinkIntegral)
 import Test.QuickCheck.Function (Function (..), functionMap, (:->))
 import Test.QuickCheck.Gen (Gen)
+import Test.QuickCheck.Modifiers (NonNegative (..))
 
 --------------------------------------------------------------------------------
 -- QuickCheck instances for SomeSNat
@@ -15,15 +15,15 @@ import Test.QuickCheck.Gen (Gen)
 
 instance Arbitrary SomeSNat where
   arbitrary :: Gen SomeSNat
-  arbitrary = fmap (toSomeSNat @Word16) arbitrary
+  arbitrary = fmap (toSomeSNatRaw . getNonNegative) arbitrary
 
   shrink :: SomeSNat -> [SomeSNat]
-  shrink = fmap (toSomeSNat @Word16) . shrinkIntegral . fromSomeSNat
+  shrink = fmap toSomeSNatRaw . shrinkIntegral . fromSomeSNatRaw
 
 instance CoArbitrary SomeSNat where
   coarbitrary :: SomeSNat -> Gen b -> Gen b
-  coarbitrary = coarbitrary . (fromSomeSNat @Word16)
+  coarbitrary = coarbitrary . fromSomeSNatRaw
 
 instance Function SomeSNat where
   function :: (SomeSNat -> b) -> SomeSNat :-> b
-  function = functionMap (fromSomeSNat @Word16) toSomeSNat
+  function = functionMap fromSomeSNatRaw toSomeSNatRaw

@@ -27,5 +27,5 @@ fi
     --extra-package=data-debruijn:arbitrary \
     --extra-package=QuickCheck \
     --check-properties \
-    --property-variables="m n" \
+    --property-variables="i j m n" \
     --verbose

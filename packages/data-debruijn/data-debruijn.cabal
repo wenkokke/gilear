@@ -65,17 +65,16 @@ library arbitrary
   visibility:      public
   hs-source-dirs:  src-arbitrary
   exposed-modules:
+    Data.Index.Arbitrary
+    Data.Index.Inductive.Arbitrary
     Data.Type.Nat.Singleton.Arbitrary
     Data.Type.Nat.Singleton.Inductive.Arbitrary
-    Data.Index.Inductive.Arbitrary
-    Data.Index.Unsafe.Arbitrary
     Numeric.Natural.Arbitrary
 
   build-depends:
     , base
     , data-debruijn
     , data-debruijn:inductive
-    , data-debruijn:efficient
     , QuickCheck               >=2.9 && <3.0
 
 test-suite data-debruijn-test
@@ -99,9 +98,9 @@ benchmark data-debruijn-bench
   main-is:        Main.hs
   build-depends:
     , base
+    , criterion
     , data-debruijn
     , data-debruijn:efficient
     , data-debruijn:inductive
-    , ghc-prim
-    , criterion
     , deepseq
+    , ghc-prim

@@ -2,12 +2,11 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Index.Inductive.Arbitrary () where
+module Data.Index.Arbitrary () where
 
-import Data.Index.Inductive (Ix (..), SomeIx (..), toSomeIx)
+import Data.Index (Ix (..), SomeIx (..), toSomeIxRaw)
 import Data.Type.Nat (Nat (..))
-import Numeric.Natural (Natural)
-import Numeric.Natural.Arbitrary ()
+import Data.Type.Nat.Singleton.Arbitrary ()
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
 import Test.QuickCheck.Gen (Gen, oneof)
 import Test.QuickCheck.Modifiers (NonNegative (..), Positive (..))
@@ -17,7 +16,7 @@ instance Arbitrary SomeIx where
   arbitrary = do
     Positive boundOverIndex <- arbitrary
     NonNegative index <- arbitrary
-    pure $ toSomeIx @Natural (index + boundOverIndex, index)
+    pure $ toSomeIxRaw (index + boundOverIndex, index)
 
 instance Arbitrary (Ix (S Z)) where
   arbitrary :: Gen (Ix (S Z))

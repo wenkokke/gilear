@@ -2,12 +2,12 @@
 
 module Data.Thinning (
   (:<) (Done, Keep, Drop),
-  toBits,
+  toBools,
   Thin (..),
 ) where
 
 import Data.Thinning.Unsafe (
   Thin (..),
-  toBits,
+  toBools,
   type (:<) (Done, Drop, Keep),
  )

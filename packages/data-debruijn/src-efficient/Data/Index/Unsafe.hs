@@ -8,7 +8,9 @@
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
 module Data.Index.Unsafe (
+  -- * DeBruijn Indexes
   Ix (FZ, FS),
+  eqIx,
   fromIx,
   fromIxRaw,
   isPos,
@@ -17,17 +19,36 @@ module Data.Index.Unsafe (
   inject,
   raise,
 
+  -- * Existential Wrapper
+  SomeIx (..),
+  withSomeIx,
+  toSomeIx,
+  toSomeIxRaw,
+  fromSomeIx,
+  fromSomeIxRaw,
+
   -- * Unsafe
   Ix (UnsafeIx),
   IxRep (IxRep, ixRepRaw),
 ) where
 
 import Control.Exception (assert)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
 import Data.Proxy (Proxy)
+import Data.Type.Equality (type (:~:) (Refl))
 import Data.Type.Nat (Nat (..), Pos, Pred, type (+))
-import Data.Type.Nat.Singleton.Unsafe (SNat (..), SNatRep (..))
+import Data.Type.Nat.Singleton.Unsafe (SNat (..), SNatRep (..), decSNat)
+import Text.Printf (printf)
 import Unsafe.Coerce (unsafeCoerce)
+
+{- $setup
+>>> import Data.Index.Arbitrary
+-}
+
+--------------------------------------------------------------------------------
+-- DeBruijn Index Representation
+--------------------------------------------------------------------------------
 
 newtype IxRep = IxRep {ixRepRaw :: Int}
   deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
@@ -50,11 +71,18 @@ recIxRep :: IxRep -> a -> (IxRep -> a) -> a
 recIxRep r ifZ ifS = if r == mkFZRep then ifZ else ifS (getIxRepChild r)
 {-# INLINE recIxRep #-}
 
+--------------------------------------------------------------------------------
+-- DeBruijn Indexes
+--------------------------------------------------------------------------------
+
 -- | @'Ix' n@ is the type of DeBruijn indices less than @n@.
 type Ix :: Nat -> Type
 newtype Ix n = UnsafeIx {getIxRep :: IxRep}
 
 type role Ix nominal
+
+eqIx :: Ix n -> Ix m -> Bool
+eqIx i j = fromIxRaw i == fromIxRaw j
 
 instance Show (Ix n) where
   showsPrec :: Int -> Ix n -> ShowS
@@ -138,3 +166,50 @@ inject _ (UnsafeIx j) = UnsafeIx j
 -- | Raise.
 raise :: SNat n -> Ix m -> Ix (n + m)
 raise (UnsafeSNat (SNatRep n)) (UnsafeIx (IxRep j)) = UnsafeIx (IxRep (n + j))
+
+--------------------------------------------------------------------------------
+-- Existential Wrapper
+--------------------------------------------------------------------------------
+
+-- | An existential wrapper around indexes.
+type SomeIx :: Type
+data SomeIx = forall (n :: Nat). SomeIx
+  { bound :: {-# UNPACK #-} !(SNat n)
+  , index :: {-# UNPACK #-} !(Ix n)
+  }
+
+instance Eq SomeIx where
+  (==) :: SomeIx -> SomeIx -> Bool
+  SomeIx n i == SomeIx m j
+    | Just Refl <- decSNat n m = eqIx i j
+    | otherwise = False
+
+deriving instance Show SomeIx
+
+withSomeIx :: (forall n. SNat n -> Ix n -> a) -> SomeIx -> a
+withSomeIx action (SomeIx n i) = action n i
+
+{-| @'toSomeIx' n@ constructs the index @n@ at type @'Ix' n@ from the number @n@.
+
+prop> toSomeIx (fromSomeIx i) == i
+-}
+toSomeIx :: (Integral i) => (i, i) -> SomeIx
+toSomeIx = toSomeIxRaw . bimap fromIntegral fromIntegral
+
+{-| @'toSomeIxRaw' n@ constructs the index @n@ at type @'Ix' n@ from the 'Int' @n@.
+
+prop> toSomeIxRaw (fromSomeIxRaw i) == i
+-}
+toSomeIxRaw :: (Int, Int) -> SomeIx
+toSomeIxRaw (bound, index)
+  | index < 0 = error $ printf "index cannot contain negative value, found index %d" (toInteger index)
+  | bound <= index = error "bound must be larger than index, found bound %d and index %d" (toInteger bound) (toInteger index)
+  | otherwise = SomeIx (UnsafeSNat (SNatRep bound)) (UnsafeIx (IxRep index))
+
+-- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped index.
+fromSomeIx :: (Integral i) => SomeIx -> (i, i)
+fromSomeIx = bimap fromIntegral fromIntegral . fromSomeIxRaw
+
+-- | @'fromSomeSNat' n@ returns the 'Int' representation of the wrapped index.
+fromSomeIxRaw :: SomeIx -> (Int, Int)
+fromSomeIxRaw (SomeIx (UnsafeSNat (SNatRep bound)) (UnsafeIx (IxRep index))) = (bound, index)

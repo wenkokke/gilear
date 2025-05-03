@@ -6,6 +6,7 @@
 module Data.Index.Inductive (
   -- * DeBruijn indices
   Ix (FZ, FS),
+  eqIx,
   toInductive,
   fromInductive,
   fromIx,
@@ -15,26 +16,44 @@ module Data.Index.Inductive (
   thick,
   inject,
 
-  SomeIx,
+  -- * Existential Wrapper
+  SomeIx (..),
   withSomeIx,
   toSomeIx,
   toSomeIxRaw,
-  fromSomeIx
+  fromSomeIx,
+  fromSomeIxRaw,
 ) where
 
 import Data.Index qualified as Efficient
-import Data.Maybe (isJust)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Type.Nat (type Nat (..), type Pos, type (+))
-import Data.Type.Nat.Singleton.Inductive (SNat (..), plusCommS, iterate', decSNat, fromSNat)
+import Data.Type.Nat.Singleton.Inductive (SNat (..), SomeSNat (..), decSNat, fromSNat, fromSNatRaw, plusCommS, toSomeSNat)
+import Text.Printf (printf)
+
+{- $setup
+>>> import Data.Index.Inductive.Arbitrary
+-}
+
+--------------------------------------------------------------------------------
+-- DeBruijn Indexes
+--------------------------------------------------------------------------------
 
 -- | @'Ix' n@ is the type of DeBruijn indices less than @n@.
 type Ix :: Nat -> Type
 data Ix n where
   FZ :: Ix (S n)
   FS :: !(Ix n) -> Ix (S n)
+
+eqIx :: Ix n -> Ix m -> Bool
+eqIx FZ FZ = True
+eqIx (FS i) (FS j) = eqIx i j
+eqIx _ _ = False
+
+instance Eq (Ix n) where
+  (==) = eqIx
 
 deriving instance Show (Ix n)
 
@@ -82,7 +101,7 @@ inject :: SNat n -> Ix m -> Ix (n + m)
 inject Z i = i
 inject (S _) FZ = FZ
 inject n (FS i) =
-  case plusCommS n (eraseIx i) of
+  case plusCommS n (erase i) of
     Refl -> FS (inject n i)
 
 {-| Raise.
@@ -94,36 +113,59 @@ raise i Z = _
 raise i (S n) = _
 -}
 
-eraseIx :: Ix n -> Proxy n
-eraseIx _ = Proxy
+--------------------------------------------------------------------------------
+-- Existential Wrapper
+--------------------------------------------------------------------------------
 
 -- | An existential wrapper around indexes.
 type SomeIx :: Type
-data SomeIx = forall (n :: Nat). SomeIx !(Ix n)
-
-deriving instance Show SomeIx
+data SomeIx = forall (n :: Nat). SomeIx
+  { bound :: !(SNat n)
+  , index :: !(Ix n)
+  }
 
 instance Eq SomeIx where
   (==) :: SomeIx -> SomeIx -> Bool
-  SomeIx m == SomeIx n = isJust (decIx m n)
+  SomeIx n i == SomeIx m j
+    | Just Refl <- decSNat n m = eqIx i j
+    | otherwise = False
 
-withSomeIx :: (forall n. Ix n -> a) -> SomeIx -> a
-withSomeIx action (SomeIx n) = action n
+deriving instance Show SomeIx
 
-toSomeIx :: (Integral i) => i -> SomeIx
-toSomeIx n = iterate' n (withSomeIx $ SomeIx . FS) (SomeIx FZ)
+withSomeIx :: (forall n. SNat n -> Ix n -> a) -> SomeIx -> a
+withSomeIx action (SomeIx n i) = action n i
 
-fromSomeIx :: (Integral i) => SomeIx -> i
-fromSomeIx = withSomeIx fromIx
+{-| @'toSomeIx' n@ constructs the index @n@ at type @'Ix' n@ from the number @n@.
 
-toSomeIxRaw :: Int -> SomeIx
+prop> toSomeIx (fromSomeIx i) == i
+-}
+toSomeIx :: (Integral i) => (i, i) -> SomeIx
+toSomeIx (bound, index)
+  | index < 0 = error $ printf "index cannot contain negative value, found index %d" (toInteger index)
+  | bound <= index = error "bound must be larger than index, found bound %d and index %d" (toInteger bound) (toInteger index)
+  | bound >= 1, index == 0, SomeSNat n <- toSomeSNat (pred bound) = SomeIx (S n) FZ
+  | SomeIx n i <- toSomeIx (pred bound, pred index) = SomeIx (S n) (FS i)
+
+{-| @'toSomeIxRaw' n@ constructs the index @n@ at type @'Ix' n@ from the 'Int' @n@.
+
+prop> toSomeIxRaw (fromSomeIxRaw i) == i
+-}
+toSomeIxRaw :: (Int, Int) -> SomeIx
 toSomeIxRaw = toSomeIx
 
-fromSomeIxRaw :: SomeIx -> Int
-fromSomeIxRaw = withSomeIx fromIxRaw
+-- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped index.
+fromSomeIx :: (Integral i) => SomeIx -> (i, i)
+fromSomeIx = withSomeIx (\n i -> (fromSNat n, fromIx i))
 
--- | Decidable equality for natural number singletons.
-decIx :: Ix m -> Ix n -> Maybe (m :~: n)
-decIx FZ FZ = Just Refl
-decIx (FS m') (FS n') = (\Refl -> Refl) <$> decIx m' n'
-decIx _m _n = Nothing
+-- | @'fromSomeSNat' n@ returns the 'Int' representation of the wrapped index.
+fromSomeIxRaw :: SomeIx -> (Int, Int)
+fromSomeIxRaw = withSomeIx (\n i -> (fromSNatRaw n, fromIxRaw i))
+
+--------------------------------------------------------------------------------
+-- Helper Functions
+--------------------------------------------------------------------------------
+
+-- | @`erase` x@ erases the content of @x@ to a @`Proxy`@.
+erase :: f a -> Proxy a
+erase _ = Proxy
+{-# INLINE erase #-}

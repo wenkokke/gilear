@@ -1,9 +1,11 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Data.Thinning.Inductive (
   (:<) (Done, Keep, Drop),
   toInductive,
   fromInductive,
+  toBools,
   Thin (..),
 ) where
 
@@ -34,6 +36,17 @@ fromInductive :: n :< m -> n Efficient.:< m
 fromInductive Done = Efficient.Done
 fromInductive (Keep n'm') = Efficient.Keep (fromInductive n'm')
 fromInductive (Drop nm') = Efficient.Drop (fromInductive nm')
+
+-- | Convert a thinning into a list of booleans.
+toBools :: n :< m -> [Bool]
+toBools = \case
+  Done -> []
+  Keep n'm' -> True : toBools n'm'
+  Drop nm' -> False : toBools nm'
+
+--------------------------------------------------------------------------------
+-- Existential Wrapper
+--------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
 -- Thinning Class

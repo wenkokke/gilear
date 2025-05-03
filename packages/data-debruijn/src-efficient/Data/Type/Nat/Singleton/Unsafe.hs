@@ -7,14 +7,19 @@
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
 module Data.Type.Nat.Singleton.Unsafe (
+  -- * Natural Number Singletons
   SNat (Z, S),
   fromSNat,
   fromSNatRaw,
   decSNat,
+
+  -- * Existential Wrapper
   SomeSNat (..),
   withSomeSNat,
   toSomeSNat,
+  toSomeSNatRaw,
   fromSomeSNat,
+  fromSomeSNatRaw,
 
   -- * Unsafe
   SNat (UnsafeSNat, sNatRep),
@@ -26,11 +31,16 @@ import Data.Kind (Type)
 import Data.Maybe (isJust)
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Type.Nat (Nat (..), Pos, Pred)
+import Text.Printf (printf)
 import Unsafe.Coerce (unsafeCoerce)
 
 {- $setup
 >>> import Data.Type.Nat.Singleton.Arbitrary
 -}
+
+--------------------------------------------------------------------------------
+-- Natural Number Singleton Representation
+--------------------------------------------------------------------------------
 
 -- | @'SNatRep'@ is the type used to represent natural numbers.
 newtype SNatRep = SNatRep {sNatRepRaw :: Int}
@@ -62,6 +72,10 @@ elSNatRep u ifZ ifS =
       then ifZ
       else ifS (getSNatRepChild u)
 {-# INLINE elSNatRep #-}
+
+--------------------------------------------------------------------------------
+-- Natural Number Singletons
+--------------------------------------------------------------------------------
 
 -- | @'SNat' n@ is the singleton type for natural numbers.
 type SNat :: Nat -> Type
@@ -127,6 +141,10 @@ instance Eq (SNat n) where
   (==) :: SNat n -> SNat n -> Bool
   m == n = isJust (decSNat m n)
 
+--------------------------------------------------------------------------------
+-- Existential Wrapper
+--------------------------------------------------------------------------------
+
 -- | An existential wrapper around natural number singletons.
 type SomeSNat :: Type
 data SomeSNat = forall (n :: Nat). SomeSNat !(SNat n)
@@ -143,14 +161,26 @@ withSomeSNat action (SomeSNat n) = action n
 
 {-| @'toSomeSNat' n@ constructs the singleton @'SNat' n@.
 
-prop> fromSomeSNat (toSomeSNat n) == n
 prop> toSomeSNat (fromSomeSNat n) == n
 -}
-{-# SPECIALIZE toSomeSNat :: SNatRep -> SomeSNat #-}
 toSomeSNat :: (Integral i) => i -> SomeSNat
-toSomeSNat u = SomeSNat (UnsafeSNat (fromIntegral u))
+toSomeSNat u
+  | u < 0 = error $ printf "cannot convert %d to natural number singleton" (toInteger u)
+  | otherwise = SomeSNat (UnsafeSNat (fromIntegral u))
+
+{-| @'toSomeSNat' n@ constructs the singleton @'SNat' n@.
+
+prop> toSomeSNatRaw (fromSomeSNatRaw n) == n
+-}
+toSomeSNatRaw :: Int -> SomeSNat
+toSomeSNatRaw u
+  | u < 0 = error $ printf "cannot convert %d to natural number singleton"
+  | otherwise = SomeSNat (UnsafeSNat (SNatRep u))
 
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped singleton.
-{-# SPECIALIZE fromSomeSNat :: SomeSNat -> Int #-}
 fromSomeSNat :: (Integral i) => SomeSNat -> i
 fromSomeSNat = withSomeSNat fromSNat
+
+-- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped singleton.
+fromSomeSNatRaw :: SomeSNat -> Int
+fromSomeSNatRaw (SomeSNat (UnsafeSNat (SNatRep u))) = u

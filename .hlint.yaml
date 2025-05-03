@@ -20,6 +20,10 @@
     - name: "-Wno-orphans"
       within:
         - "Numeric.Natural.Arbitrary"
+        - "Data.Index.Arbitrary"
+        - "Data.Index.Inductive.Arbitrary"
+        - "Data.Thinning.Arbitrary"
+        - "Data.Thinning.Inductive.Arbitrary"
         - "Data.Type.Nat.Singleton.Arbitrary"
         - "Data.Type.Nat.Singleton.Inductive.Arbitrary"
     - name: "-Wno-orphans"

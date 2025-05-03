@@ -8,7 +8,7 @@
 
 module Data.Thinning.Unsafe (
   (:<) (Done, Keep, Drop),
-  toBits,
+  toBools,
   Thin (..),
 
   -- * Unsafe
@@ -22,6 +22,10 @@ import Data.Index.Unsafe (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Type.Nat (Nat (..), Pos, Pred)
 import Unsafe.Coerce (unsafeCoerce)
+
+--------------------------------------------------------------------------------
+-- Thinning Representation
+--------------------------------------------------------------------------------
 
 data ThRep = ThRep
   { size :: {-# UNPACK #-} !Int
@@ -105,6 +109,10 @@ _toBitsThRep th = flip fmap [0 .. th.size - 1] $ \case
     | testBit th.bits i -> True
     | otherwise -> False
 
+--------------------------------------------------------------------------------
+-- Thinnings
+--------------------------------------------------------------------------------
+
 type (:<) :: Nat -> Nat -> Type
 newtype (:<) n m = UnsafeTh {thRep :: ThRep}
 
@@ -156,11 +164,13 @@ pattern Drop nm <- (projectTh -> DropF nm) where Drop nm = embedTh (DropF nm)
 
 {-# COMPLETE Done, Keep, Drop #-}
 
-toBits :: n :< m -> [Bool]
-toBits (UnsafeTh th) = flip fmap [0 .. th.size - 1] $ \case
-  i
-    | testBit th.bits i -> True
-    | otherwise -> False
+-- | Convert a thinning into a list of booleans.
+toBools :: n :< m -> [Bool]
+toBools (UnsafeTh th) = fmap (testBit th.bits) [0 .. th.size - 1]
+
+--------------------------------------------------------------------------------
+-- Thinning Class
+--------------------------------------------------------------------------------
 
 -- | The actions of thinnings on natural-indexed data types.
 type Thin :: (Nat -> Type) -> Constraint

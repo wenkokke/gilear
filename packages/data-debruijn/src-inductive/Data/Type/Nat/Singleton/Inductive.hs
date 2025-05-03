@@ -3,22 +3,28 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Data.Type.Nat.Singleton.Inductive (
+  -- * Natural Number Singletons
   SNat (..),
   toInductive,
   fromInductive,
   fromSNat,
   fromSNatRaw,
   decSNat,
+
+  -- * Existential Wrapper
+  SomeSNat (..),
+  withSomeSNat,
+  toSomeSNat,
+  toSomeSNatRaw,
+  fromSomeSNat,
+  fromSomeSNatRaw,
+
+  -- * Laws
   plusUnitL,
   plusUnitR,
   plusCommS,
   plusComm,
   plusAssoc,
-  SomeSNat (..),
-  withSomeSNat,
-  toSomeSNat,
-  fromSomeSNat,
-  iterate'
 ) where
 
 import Data.Kind (Type)
@@ -55,9 +61,10 @@ fromInductive (S n) = Efficient.S (fromInductive n)
 
 instance Show (SNat n) where
   showsPrec :: Int -> SNat n -> ShowS
-  showsPrec p = \case
-    Z -> showString "Z"
-    S n -> showString "S " . showParen (p > 10) (showsPrec 11 n)
+  showsPrec p =
+    showParen (p > 10) . \case
+      Z -> showString "Z"
+      S n -> showString "S " . showsPrec 11 n
 
 -- | @'fromSNat' n@ returns the numeric representation of 'SNat n'.
 {-# SPECIALIZE fromSNat :: SNat n -> Int #-}
@@ -79,6 +86,10 @@ instance Eq (SNat n) where
   (==) :: SNat n -> SNat n -> Bool
   m == n = isJust (decSNat m n)
 
+--------------------------------------------------------------------------------
+-- Existential Wrapper
+--------------------------------------------------------------------------------
+
 -- | An existential wrapper around natural number singletons.
 type SomeSNat :: Type
 data SomeSNat = forall (n :: Nat). SomeSNat !(SNat n)
@@ -95,15 +106,25 @@ withSomeSNat action (SomeSNat n) = action n
 
 {-| @'toSomeSNat' n@ constructs the singleton @'SNat' n@.
 
-prop> fromSomeSNat (toSomeSNat n) == n
 prop> toSomeSNat (fromSomeSNat n) == n
 -}
 toSomeSNat :: (Integral i) => i -> SomeSNat
 toSomeSNat n = iterate' n (withSomeSNat $ SomeSNat . S) (SomeSNat Z)
 
+{-| @'toSomeSNat' n@ constructs the singleton @'SNat' n@.
+
+prop> toSomeSNatRaw (fromSomeSNatRaw n) == n
+-}
+toSomeSNatRaw :: Int -> SomeSNat
+toSomeSNatRaw = toSomeSNat
+
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped singleton.
 fromSomeSNat :: (Integral i) => SomeSNat -> i
 fromSomeSNat = withSomeSNat fromSNat
+
+-- | @'fromSomeSNat' n@ returns the 'Int' representation of the wrapped singleton.
+fromSomeSNatRaw :: SomeSNat -> Int
+fromSomeSNatRaw = fromSomeSNat
 
 --------------------------------------------------------------------------------
 -- Laws
@@ -124,7 +145,7 @@ plusCommS (S n') m = Eq.apply Refl (plusCommS n' m)
 
 plusComm :: SNat n -> SNat m -> n + m :~: m + n
 plusComm Z m = Eq.sym (plusUnitR m)
-plusComm (S n') m = Eq.apply Refl (plusComm n' m) `Eq.trans` plusCommS m (eraseSNat n')
+plusComm (S n') m = Eq.apply Refl (plusComm n' m) `Eq.trans` plusCommS m (erase n')
 
 plusAssoc :: SNat n -> Proxy m -> Proxy l -> (n + m) + l :~: n + (m + l)
 plusAssoc Z _m _l = Refl
@@ -134,14 +155,12 @@ plusAssoc (S n') m l = Eq.apply Refl (plusAssoc n' m l)
 -- Helper Functions
 --------------------------------------------------------------------------------
 
-eraseSNat :: SNat m -> Proxy m
-eraseSNat _ = Proxy
+-- | @`erase` x@ erases the content of @x@ to a @`Proxy`@.
+erase :: f a -> Proxy a
+erase _ = Proxy
+{-# INLINE erase #-}
 
-{-| @`iterate'` i f@ applies @f@ @i@ times.
-
->>> iterate' 13 succ 12
-25
--}
+-- | @`iterate'` i f@ applies @f@ @i@ times.
 iterate' :: (Integral i) => i -> (a -> a) -> a -> a
 iterate' i f x
   | i == 0 = x

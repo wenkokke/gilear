@@ -1,9 +1,9 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Type.Nat.Singleton.Inductive.Arbitrary where
+module Data.Type.Nat.Singleton.Inductive.Arbitrary () where
 
 import Data.Type.Nat.Singleton.Inductive (SomeSNat (..), fromSomeSNat, toSomeSNat)
-import Data.Word (Word16)
+import Numeric.Natural (Natural)
 import Numeric.Natural.Arbitrary ()
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..), shrinkIntegral)
 import Test.QuickCheck.Function (Function (..), functionMap, (:->))
@@ -15,15 +15,15 @@ import Test.QuickCheck.Gen (Gen)
 
 instance Arbitrary SomeSNat where
   arbitrary :: Gen SomeSNat
-  arbitrary = fmap (toSomeSNat @Word16) arbitrary
+  arbitrary = fmap (toSomeSNat @Natural) arbitrary
 
   shrink :: SomeSNat -> [SomeSNat]
-  shrink = fmap (toSomeSNat @Word16) . shrinkIntegral . fromSomeSNat
+  shrink = fmap (toSomeSNat @Natural) . shrinkIntegral . (fromSomeSNat @Natural)
 
 instance CoArbitrary SomeSNat where
   coarbitrary :: SomeSNat -> Gen b -> Gen b
-  coarbitrary = coarbitrary . (fromSomeSNat @Word16)
+  coarbitrary = coarbitrary . (fromSomeSNat @Natural)
 
 instance Function SomeSNat where
   function :: (SomeSNat -> b) -> SomeSNat :-> b
-  function = functionMap (fromSomeSNat @Word16) toSomeSNat
+  function = functionMap (fromSomeSNat @Natural) (toSomeSNat @Natural)

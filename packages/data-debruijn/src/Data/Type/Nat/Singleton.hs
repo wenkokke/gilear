@@ -1,12 +1,17 @@
 module Data.Type.Nat.Singleton (
+  -- * Natural Number Singletons
   SNat (Z, S),
   fromSNat,
   fromSNatRaw,
   decSNat,
+
+  -- * Existential Wrapper
   SomeSNat (..),
   withSomeSNat,
   toSomeSNat,
+  toSomeSNatRaw,
   fromSomeSNat,
+  fromSomeSNatRaw,
 ) where
 
 import Data.Type.Nat.Singleton.Unsafe (
@@ -16,6 +21,8 @@ import Data.Type.Nat.Singleton.Unsafe (
   fromSNat,
   fromSNatRaw,
   fromSomeSNat,
+  fromSomeSNatRaw,
   toSomeSNat,
+  toSomeSNatRaw,
   withSomeSNat,
  )
