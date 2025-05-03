@@ -94,7 +94,6 @@ test-suite data-debruijn-test
 benchmark data-debruijn-bench
   import:         language
   type:           exitcode-stdio-1.0
-  ghc-options:    -O1 -rtsopts
   hs-source-dirs: bench
   main-is:        Main.hs
   build-depends:
