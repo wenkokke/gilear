@@ -3,11 +3,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Data.Index.Inductive.Arbitrary (
-  arbitraryIx,
+  -- arbitraryIx,
 ) where
 
 import Data.Index.Inductive (Ix (..), SomeIx (..), toSomeIx)
 import Data.Type.Nat (Nat (..))
+import Data.Type.Nat.Singleton
 import Numeric.Natural (Natural)
 import Numeric.Natural.Arbitrary ()
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
@@ -29,6 +30,6 @@ instance (forall m. Arbitrary (Ix (S m))) => Arbitrary (Ix (S (S n))) where
   arbitrary :: Gen (Ix (S (S n)))
   arbitrary = oneof [pure FZ, FS <$> arbitrary]
 
-arbitraryIx :: SNat (S n) -> Gen (Ix (S n))
-arbitraryIx (S Z) = pure FZ
-arbitraryIx (S n) = oneof [pure FZ, FS <$> arbitrary]
+-- arbitraryIx :: SNat (S n) -> Gen (Ix (S n))
+-- arbitraryIx (S Z) = pure FZ
+-- arbitraryIx (S n) = oneof [pure FZ, FS <$> arbitrary]
