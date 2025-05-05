@@ -17,35 +17,35 @@ import Test.Tasty.QuickCheck (testProperty)
 tests :: TestTree
 tests =
   testGroup
-    "Index tests"
-    [ testProperty "eqIxEq" eqIxEq
-    , testProperty "fromIxRawEq" fromIxRawEq
-    , testProperty "fromIxEq" fromIxEq -- ,
-    -- testProperty "injectEq" injectEq,
-    -- testProperty "thickEq" thickEq,
-    -- testProperty "thinEq" thinEq
+    "Test.Data.Index"
+    [ testProperty "test_eqIxEq" test_eqIxEq
+    , testProperty "test_fromIxRawEq" test_fromIxRawEq
+    , testProperty "test_fromIxEq" test_fromIxEq -- ,
+    -- testProperty "test_injectEq" test_injectEq,
+    -- testProperty "test_thickEq" test_thickEq,
+    -- testProperty "test_thinEq" test_thinEq
     ]
 
-eqIxEq :: SomeIx -> SomeIx -> Bool
-eqIxEq (SomeIx{..}) (SomeIx{bound = _, index = index'}) =
+test_eqIxEq :: SomeIx -> SomeIx -> Bool
+test_eqIxEq (SomeIx{..}) (SomeIx{bound = _, index = index'}) =
   Ix.eqIx index index' == Ix.Inductive.eqIx (Ix.toInductive index) (Ix.toInductive index')
 
-fromIxRawEq :: SomeIx -> Bool
-fromIxRawEq (SomeIx{..}) =
+test_fromIxRawEq :: SomeIx -> Bool
+test_fromIxRawEq (SomeIx{..}) =
   Ix.fromIxRaw index == Ix.Inductive.fromIxRaw (Ix.toInductive index)
 
-fromIxEq :: SomeIx -> Bool
-fromIxEq (SomeIx{..}) =
+test_fromIxEq :: SomeIx -> Bool
+test_fromIxEq (SomeIx{..}) =
   Ix.fromIx @Int index == Ix.Inductive.fromIx @Int (Ix.toInductive index)
 
--- injectEq :: SomeSNat -> SomeIx -> Bool
--- injectEq (SomeSNat n) (SomeIx {..}) =
+-- test_injectEq :: SomeSNat -> SomeIx -> Bool
+-- test_injectEq (SomeSNat n) (SomeIx {..}) =
 --   inject n index == Inductive.inject (Nat.toInductive n) (toInductive index)
 
--- thickEq :: SomeIx -> SomeIx -> Bool
--- thickEq (SomeIx {..}) (SomeIx {bound = _, index = index'}) =
+-- test_thickEq :: SomeIx -> SomeIx -> Bool
+-- test_thickEq (SomeIx {..}) (SomeIx {bound = _, index = index'}) =
 --   thick index index' == (Inductive.fromInductive <$> Inductive.thick (toInductive index) (toInductive index'))
 
--- thinEq :: SomeIx -> SomeIx -> Bool
--- thinEq (SomeIx {..}) (SomeIx {bound = _, index = index'}) =
+-- test_thinEq :: SomeIx -> SomeIx -> Bool
+-- test_thinEq (SomeIx {..}) (SomeIx {bound = _, index = index'}) =
 --   thin index index' == Inductive.thin (toInductive index) (toInductive index')

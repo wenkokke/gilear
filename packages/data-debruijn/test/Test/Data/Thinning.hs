@@ -11,10 +11,10 @@ import Test.Tasty.QuickCheck ()
 tests :: TestTree
 tests =
   testGroup
-    "Thinning tests"
+    "Test.Data.Thinning"
     []
 
--- testProperty "toBoolsEq" toBoolsEq
+-- testProperty "test_toBoolsEq" test_toBoolsEq
 
--- toBoolsEq :: (Testable a) => n :< m -> a
--- toBoolsEq t = toBools t == Ind.toBools (Ind.toInductive t)
+-- test_toBoolsEq :: (Testable a) => n :< m -> a
+-- test_toBoolsEq t = toBools t == Ind.toBools (Ind.toInductive t)

@@ -12,20 +12,20 @@ import Test.Tasty.QuickCheck (testProperty)
 tests :: TestTree
 tests =
   testGroup
-    "Nat tests"
-    [ testProperty "fromSNatRawEq" fromSNatRawEq
-    , testProperty "fromSNatEq" fromSNatEq
-    , testProperty "decSNatEq" decSNatEq
+    "Test.Data.Type.Nat.Singleton"
+    [ testProperty "test_fromSNatRawEq" test_fromSNatRawEq
+    , testProperty "test_fromSNatEq" test_fromSNatEq
+    , testProperty "test_decSNatEq" test_decSNatEq
     ]
 
-fromSNatRawEq :: SomeSNat -> Bool
-fromSNatRawEq (SomeSNat n) =
+test_fromSNatRawEq :: SomeSNat -> Bool
+test_fromSNatRawEq (SomeSNat n) =
   SNat.fromSNatRaw n == SNat.Inductive.fromSNatRaw (SNat.toInductive n)
 
-fromSNatEq :: SomeSNat -> Bool
-fromSNatEq (SomeSNat n) =
+test_fromSNatEq :: SomeSNat -> Bool
+test_fromSNatEq (SomeSNat n) =
   SNat.fromSNat @Int n == SNat.Inductive.fromSNat @Int (SNat.toInductive n)
 
-decSNatEq :: SomeSNat -> SomeSNat -> Bool
-decSNatEq (SomeSNat m) (SomeSNat n) =
+test_decSNatEq :: SomeSNat -> SomeSNat -> Bool
+test_decSNatEq (SomeSNat m) (SomeSNat n) =
   SNat.decSNat m n == SNat.Inductive.decSNat (SNat.toInductive m) (SNat.toInductive n)
