@@ -2,7 +2,9 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Index.Arbitrary () where
+module Data.Index.Arbitrary (
+  arbitraryIx,
+) where
 
 import Data.Index (Ix (..), SomeIx (..), toSomeIxRaw)
 import Data.Type.Nat (Nat (..))
@@ -25,3 +27,7 @@ instance Arbitrary (Ix (S Z)) where
 instance (forall m. Arbitrary (Ix (S m))) => Arbitrary (Ix (S (S n))) where
   arbitrary :: Gen (Ix (S (S n)))
   arbitrary = oneof [pure FZ, FS <$> arbitrary]
+
+arbitraryIx :: SNat (S n) -> Gen (Ix (S n))
+arbitraryIx (S Z) = pure FZ
+arbitraryIx (S n) = oneof [pure FZ, FS <$> arbitrary]
