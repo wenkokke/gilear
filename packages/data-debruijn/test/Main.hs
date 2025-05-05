@@ -1,17 +1,17 @@
 module Main (main) where
 
-import Index qualified
-import Nat qualified
+import Test.Data.Index qualified (tests)
+import Test.Data.Thinning qualified (tests)
+import Test.Data.Type.Nat.Singleton qualified (tests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Thinning qualified
 
 tests :: TestTree
 tests =
   testGroup
     "All Tests"
-    [ Nat.tests,
-      Index.tests --,
-      -- Thinning.tests
+    [ Test.Data.Index.tests
+    , Test.Data.Thinning.tests
+    , Test.Data.Type.Nat.Singleton.tests
     ]
 
 main :: IO ()

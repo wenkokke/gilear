@@ -79,9 +79,14 @@ library arbitrary
 
 test-suite data-debruijn-test
   import:         language
-  hs-source-dirs: test
-  main-is:        Main.hs
   type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Data.Index
+    Test.Data.Thinning
+    Test.Data.Type.Nat.Singleton
+
   build-depends:
     , base
     , data-debruijn
