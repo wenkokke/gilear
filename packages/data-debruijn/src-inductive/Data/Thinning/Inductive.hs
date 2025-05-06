@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Data.Thinning.Inductive (
   -- * Thinnings
@@ -10,15 +11,20 @@ module Data.Thinning.Inductive (
 
   -- * Existential Wrapper
   SomeTh (..),
+  fromBools,
+  fromBits,
+  fromBitsRaw,
 
   -- * The action of thinnings on 'Nat'-indexed types
   Thin (..),
 ) where
 
+import Data.Bits (Bits (..))
 import Data.Index.Inductive (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Thinning qualified as Efficient
 import Data.Type.Nat (Nat (..))
+import Data.Type.Nat.Singleton.Inductive (SNat (..))
 
 --------------------------------------------------------------------------------
 -- Thinnings
@@ -61,6 +67,42 @@ data SomeTh
   , upper :: SNat m
   , value :: n :<= m
   }
+
+emptySomeTh :: SomeTh
+emptySomeTh =
+  SomeTh
+    { lower = Z
+    , upper = Z
+    , value = Done
+    }
+
+keepSomeTh :: SomeTh -> SomeTh
+keepSomeTh SomeTh{..} =
+  SomeTh
+    { lower = S lower
+    , upper = S upper
+    , value = Keep value
+    }
+
+dropSomeTh :: SomeTh -> SomeTh
+dropSomeTh SomeTh{..} =
+  SomeTh
+    { lower = lower
+    , upper = S upper
+    , value = Drop value
+    }
+
+fromBools :: [Bool] -> SomeTh
+fromBools [] = emptySomeTh
+fromBools (keepValue : rest)
+  | keepValue = keepSomeTh (fromBools rest)
+  | otherwise = dropSomeTh (fromBools rest)
+
+fromBits :: (Integral i, Bits bs) => (i, bs) -> SomeTh
+fromBits (upper, bits) = fromBools (testBit bits <$> [0 .. fromIntegral upper])
+
+fromBitsRaw :: (Int, Integer) -> SomeTh
+fromBitsRaw (upper, bits) = fromBools (testBit bits <$> [0 .. upper])
 
 --------------------------------------------------------------------------------
 -- Thinning Class

@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
@@ -13,6 +14,9 @@ module Data.Thinning.Unsafe (
 
   -- * Existential Wrapper
   SomeTh (..),
+  fromBools,
+  fromBits,
+  fromBitsRaw,
 
   -- * The action of thinnings on 'Nat'-indexed types
   Thin (..),
@@ -27,7 +31,7 @@ import Data.Bits (Bits (..))
 import Data.Index.Unsafe (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Type.Nat (Nat (..), Pos, Pred)
-import Data.Type.Nat.Singleton.Unsafe (SNat)
+import Data.Type.Nat.Singleton.Unsafe (SNat (..))
 import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------------------------------------------------------------
@@ -184,6 +188,58 @@ data SomeTh
   , upper :: SNat m
   , value :: n :<= m
   }
+
+emptySomeTh :: SomeTh
+emptySomeTh =
+  SomeTh
+    { lower = Z
+    , upper = Z
+    , value = Done
+    }
+
+keepSomeTh :: SomeTh -> SomeTh
+keepSomeTh SomeTh{..} =
+  SomeTh
+    { lower = S lower
+    , upper = S upper
+    , value = Keep value
+    }
+
+dropSomeTh :: SomeTh -> SomeTh
+dropSomeTh SomeTh{..} =
+  SomeTh
+    { lower = lower
+    , upper = S upper
+    , value = Drop value
+    }
+
+fromBools :: [Bool] -> SomeTh
+fromBools [] = emptySomeTh
+fromBools (keepValue : rest)
+  | keepValue = keepSomeTh (fromBools rest)
+  | otherwise = dropSomeTh (fromBools rest)
+
+fromBits :: (Integral i, Bits bs) => (i, bs) -> SomeTh
+fromBits (upper, bits) = fromBools (testBit bits <$> [0 .. fromIntegral upper])
+
+fromBitsRaw :: (Int, Integer) -> SomeTh
+fromBitsRaw (upper, bits) = fromBools (testBit bits <$> [0 .. upper])
+
+-- TODO: optimise fromBits with number juggling and lies
+--
+-- fromBits :: (Integral i, Bits bs) => (i, bs) -> SomeTh
+-- fromBits (size, bits) = unsafeFromBitsRaw (sizeInt, copyBitsTo sizeInt bits)
+--   where
+--     sizeInt = fromIntegral @_ @Int size
+--
+-- fromBitsRaw :: (Int, Integer) -> SomeTh
+-- fromBitsRaw (size, bits) = unsafeFromBitsRaw (size, copyBitsTo size bits)
+--
+-- unsafeFromBitsRaw :: (Int, Integer) -> SomeTh
+-- unsafeFromBitsRaw (size, bits) = SomeTh {UnsafeTh (ThRep { size, bits  }))
+--
+-- copyBitsTo :: (Bits a, Bits b) => Int -> a -> b
+-- copyBitsTo size bits = foldr (.|.) zeroBits [bit i | i <- [0..size], testBit bits i]
 
 --------------------------------------------------------------------------------
 -- Thinning Class
