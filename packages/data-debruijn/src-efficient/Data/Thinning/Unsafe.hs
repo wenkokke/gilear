@@ -10,6 +10,11 @@ module Data.Thinning.Unsafe (
   -- * Thinnings
   (:<=) (Done, Keep, Drop),
   toBools,
+
+  -- * Existential Wrapper
+  SomeTh (..),
+
+  -- * The action of thinnings on 'Nat'-indexed types
   Thin (..),
 
   -- * Unsafe
@@ -22,6 +27,7 @@ import Data.Bits (Bits (..))
 import Data.Index.Unsafe (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Type.Nat (Nat (..), Pos, Pred)
+import Data.Type.Nat.Singleton.Unsafe (SNat)
 import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------------------------------------------------------------
@@ -166,6 +172,18 @@ pattern Drop nm <- (projectTh -> DropF nm) where Drop nm = embedTh (DropF nm)
 toBools :: n :<= m -> [Bool]
 toBools = toBoolsThRep . (.thRep)
 {-# INLINE toBools #-}
+
+--------------------------------------------------------------------------------
+-- Existential Wrapper
+--------------------------------------------------------------------------------
+
+data SomeTh
+  = forall n m.
+  SomeTh
+  { lower :: SNat n
+  , upper :: SNat m
+  , value :: n :<= m
+  }
 
 --------------------------------------------------------------------------------
 -- Thinning Class

@@ -2,10 +2,16 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Data.Thinning.Inductive (
+  -- * Thinnings
   (:<=) (Done, Keep, Drop),
   toInductive,
   fromInductive,
   toBools,
+
+  -- * Existential Wrapper
+  SomeTh (..),
+
+  -- * The action of thinnings on 'Nat'-indexed types
   Thin (..),
 ) where
 
@@ -47,6 +53,14 @@ toBools = \case
 --------------------------------------------------------------------------------
 -- Existential Wrapper
 --------------------------------------------------------------------------------
+
+data SomeTh
+  = forall n m.
+  SomeTh
+  { lower :: SNat n
+  , upper :: SNat m
+  , value :: n :<= m
+  }
 
 --------------------------------------------------------------------------------
 -- Thinning Class
