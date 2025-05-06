@@ -16,5 +16,5 @@ tests =
 
 -- testProperty "test_toBoolsEq" test_toBoolsEq
 
--- test_toBoolsEq :: (Testable a) => n :< m -> a
+-- test_toBoolsEq :: (Testable a) => n :<= m -> a
 -- test_toBoolsEq t = toBools t == Ind.toBools (Ind.toInductive t)

@@ -7,12 +7,13 @@
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
 module Data.Thinning.Unsafe (
-  (:<) (Done, Keep, Drop),
+  -- * Thinnings
+  (:<=) (Done, Keep, Drop),
   toBools,
   Thin (..),
 
   -- * Unsafe
-  (:<) (UnsafeTh),
+  (:<=) (UnsafeTh),
   ThRep (ThRep, size, bits),
 ) where
 
@@ -92,8 +93,8 @@ thinThRep th1 th2 =
       , bits = th1.bits .|. shift th2.bits (th1.size - th2.size)
       }
 
-_fromBitsThRep :: [Bool] -> ThRep
-_fromBitsThRep th =
+_fromBoolsThRep :: [Bool] -> ThRep
+_fromBoolsThRep th =
   ThRep
     { size = length th
     , bits = foldr (.|.) 0 (zipWith readBit [0 ..] th)
@@ -103,34 +104,31 @@ _fromBitsThRep th =
   readBit _ False = 0
   readBit i True = bit i
 
-_toBitsThRep :: ThRep -> [Bool]
-_toBitsThRep th = flip fmap [0 .. th.size - 1] $ \case
-  i
-    | testBit th.bits i -> True
-    | otherwise -> False
+toBoolsThRep :: ThRep -> [Bool]
+toBoolsThRep th = testBit th.bits <$> [0 .. th.size - 1]
 
 --------------------------------------------------------------------------------
 -- Thinnings
 --------------------------------------------------------------------------------
 
-type (:<) :: Nat -> Nat -> Type
-newtype (:<) n m = UnsafeTh {thRep :: ThRep}
+type (:<=) :: Nat -> Nat -> Type
+newtype (:<=) n m = UnsafeTh {thRep :: ThRep}
 
-type role (:<) nominal nominal
+type role (:<=) nominal nominal
 
-mkDone :: Z :< Z
+mkDone :: Z :<= Z
 mkDone = UnsafeTh mkDoneRep
 {-# INLINE mkDone #-}
 
-mkKeep :: n :< m -> S n :< S m
+mkKeep :: n :<= m -> S n :<= S m
 mkKeep = UnsafeTh . mkKeepRep . (.thRep)
 {-# INLINE mkKeep #-}
 
-mkDrop :: n :< m -> n :< S m
+mkDrop :: n :<= m -> n :<= S m
 mkDrop = UnsafeTh . mkDropRep . (.thRep)
 {-# INLINE mkDrop #-}
 
-recTh :: n :< m -> a -> (Pred n :< Pred m -> a) -> (n :< Pred m -> a) -> a
+recTh :: n :<= m -> a -> (Pred n :<= Pred m -> a) -> (n :<= Pred m -> a) -> a
 recTh nm ifDone ifKeep ifDrop = elThRep nm.thRep ifDone (ifKeep . UnsafeTh) (ifDrop . UnsafeTh)
 {-# INLINE recTh #-}
 
@@ -139,34 +137,35 @@ data ThF (th :: Nat -> Nat -> Type) (n :: Nat) (m :: Nat) where
   KeepF :: !(th n m) -> ThF th (S n) (S m)
   DropF :: !(th n m) -> ThF th n (S m)
 
-projectTh :: n :< m -> ThF (:<) n m
+projectTh :: n :<= m -> ThF (:<=) n m
 projectTh nm = recTh nm (unsafeCoerce DoneF) (unsafeCoerce . KeepF) (unsafeCoerce . DropF)
 {-# INLINE projectTh #-}
 
-embedTh :: ThF (:<) n m -> n :< m
+embedTh :: ThF (:<=) n m -> n :<= m
 embedTh = \case
   DoneF -> mkDone
   KeepF n'm' -> mkKeep n'm'
   DropF nm' -> mkDrop nm'
 {-# INLINE embedTh #-}
 
-pattern Done :: () => (n ~ Z, m ~ Z) => n :< m
+pattern Done :: () => (n ~ Z, m ~ Z) => n :<= m
 pattern Done <- (projectTh -> DoneF) where Done = embedTh DoneF
 {-# INLINE Done #-}
 
-pattern Keep :: () => (Pos n, Pos m) => Pred n :< Pred m -> n :< m
+pattern Keep :: () => (Pos n, Pos m) => Pred n :<= Pred m -> n :<= m
 pattern Keep nm <- (projectTh -> KeepF nm) where Keep nm = embedTh (KeepF nm)
 {-# INLINE Keep #-}
 
-pattern Drop :: () => (Pos m) => n :< Pred m -> n :< m
+pattern Drop :: () => (Pos m) => n :<= Pred m -> n :<= m
 pattern Drop nm <- (projectTh -> DropF nm) where Drop nm = embedTh (DropF nm)
 {-# INLINE Drop #-}
 
 {-# COMPLETE Done, Keep, Drop #-}
 
 -- | Convert a thinning into a list of booleans.
-toBools :: n :< m -> [Bool]
-toBools (UnsafeTh th) = fmap (testBit th.bits) [0 .. th.size - 1]
+toBools :: n :<= m -> [Bool]
+toBools = toBoolsThRep . (.thRep)
+{-# INLINE toBools #-}
 
 --------------------------------------------------------------------------------
 -- Thinning Class
@@ -175,11 +174,11 @@ toBools (UnsafeTh th) = fmap (testBit th.bits) [0 .. th.size - 1]
 -- | The actions of thinnings on natural-indexed data types.
 type Thin :: (Nat -> Type) -> Constraint
 class Thin f where
-  thin :: n :< m -> f n -> f m
-  thick :: n :< m -> f m -> Maybe (f n)
+  thin :: n :<= m -> f n -> f m
+  thick :: n :<= m -> f m -> Maybe (f n)
 
 instance Thin Ix where
-  thin :: n :< m -> Ix n -> Ix m
+  thin :: n :<= m -> Ix n -> Ix m
   thin !t !i = isPos i $
     case t of
       Keep n'm' ->
@@ -188,18 +187,18 @@ instance Thin Ix where
           FS i' -> FS (thin n'm' i')
       Drop nm' -> FS (thin nm' i)
 
-  thick :: n :< m -> Ix m -> Maybe (Ix n)
+  thick :: n :<= m -> Ix m -> Maybe (Ix n)
   thick Done _i = Nothing
   thick (Keep _n'm') FZ = Just FZ
   thick (Keep n'm') (FS i') = FS <$> thick n'm' i'
   thick (Drop _nm') FZ = Nothing
   thick (Drop nm') (FS i') = thick nm' i'
 
-instance Thin ((:<) l) where
-  thin :: n :< m -> l :< n -> l :< m
+instance Thin ((:<=) l) where
+  thin :: n :<= m -> l :<= n -> l :<= m
   thin nm ln = UnsafeTh (thinThRep nm.thRep ln.thRep)
 
-  thick :: n :< m -> l :< m -> Maybe (l :< n)
+  thick :: n :<= m -> l :<= m -> Maybe (l :<= n)
   thick Done Done = Just Done
   thick (Keep n'm') (Keep l'n') = Keep <$> thick n'm' l'n'
   thick (Keep n'm') (Drop ln') = Drop <$> thick n'm' ln'

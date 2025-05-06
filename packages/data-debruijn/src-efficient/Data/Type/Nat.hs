@@ -28,7 +28,7 @@ type family Pred (n :: Nat) :: Nat where
 type Pos :: Nat -> Constraint
 type Pos (n :: Nat) = n ~ S (Pred n)
 
--- | Inequality of type-level naturals.
+-- | Less-than-or-equal for type-level naturals.
 type family (<=) (n :: Nat) (m :: Nat) :: Bool where
   Z <= m = 'True
   S n <= Z = 'False

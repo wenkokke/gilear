@@ -1,7 +1,7 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 
 module Data.Thinning (
-  (:<) (Done, Keep, Drop),
+  (:<=) (Done, Keep, Drop),
   toBools,
   Thin (..),
 ) where
@@ -9,5 +9,5 @@ module Data.Thinning (
 import Data.Thinning.Unsafe (
   Thin (..),
   toBools,
-  type (:<) (Done, Drop, Keep),
+  type (:<=) (Done, Drop, Keep),
  )
