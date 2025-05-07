@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -23,7 +24,6 @@ module Data.Type.Nat.Singleton.Unsafe (
 
   -- * Unsafe
   SNat (UnsafeSNat, sNatRep),
-  SNatRep (SNatRep, sNatRepRaw),
 ) where
 
 import Control.Exception (assert)
@@ -42,9 +42,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- Natural Number Singleton Representation
 --------------------------------------------------------------------------------
 
--- | @'SNatRep'@ is the type used to represent natural numbers.
-newtype SNatRep = SNatRep {sNatRepRaw :: Int}
-  deriving newtype (Eq, Ord, Num, Enum, Real, Integral)
+#define SNatRep Int
 
 isValidSNatRep :: SNatRep -> Bool
 isValidSNatRep u = u >= 0
@@ -97,7 +95,7 @@ fromSNat (UnsafeSNat u) = fromInteger (toInteger u)
 
 -- | @'fromSNatRaw' n@ returns the raw underlying representation of 'SNat n'.
 fromSNatRaw :: SNat n -> Int
-fromSNatRaw (UnsafeSNat (SNatRep w)) = w
+fromSNatRaw (UnsafeSNat w) = w
 
 instance Show (SNat n) where
   showsPrec :: Int -> SNat n -> ShowS
@@ -175,7 +173,7 @@ prop> toSomeSNatRaw (fromSomeSNatRaw n) == n
 toSomeSNatRaw :: Int -> SomeSNat
 toSomeSNatRaw u
   | u < 0 = error $ printf "cannot convert %d to natural number singleton"
-  | otherwise = SomeSNat (UnsafeSNat (SNatRep u))
+  | otherwise = SomeSNat (UnsafeSNat u)
 
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped singleton.
 fromSomeSNat :: (Integral i) => SomeSNat -> i
@@ -183,4 +181,4 @@ fromSomeSNat = withSomeSNat fromSNat
 
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped singleton.
 fromSomeSNatRaw :: SomeSNat -> Int
-fromSomeSNatRaw (SomeSNat (UnsafeSNat (SNatRep u))) = u
+fromSomeSNatRaw (SomeSNat (UnsafeSNat u)) = u

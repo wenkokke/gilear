@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE GADTs #-}
@@ -29,7 +30,6 @@ module Data.Index.Unsafe (
 
   -- * Unsafe
   Ix (UnsafeIx),
-  IxRep (IxRep, ixRepRaw),
 ) where
 
 import Control.Exception (assert)
@@ -38,7 +38,7 @@ import Data.Kind (Type)
 import Data.Proxy (Proxy)
 import Data.Type.Equality (type (:~:) (Refl))
 import Data.Type.Nat (Nat (..), Pos, Pred, type (+))
-import Data.Type.Nat.Singleton.Unsafe (SNat (..), SNatRep (..), decSNat)
+import Data.Type.Nat.Singleton.Unsafe (SNat (..), decSNat)
 import Text.Printf (printf)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -50,8 +50,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- DeBruijn Index Representation
 --------------------------------------------------------------------------------
 
-newtype IxRep = IxRep {ixRepRaw :: Int}
-  deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
+#define IxRep Int
 
 mkFZRep :: IxRep
 mkFZRep = 0
@@ -109,7 +108,7 @@ fromIx (UnsafeIx u) = fromInteger (toInteger u)
 
 -- | @'fromIxRaw' n@ returns the raw numeric representation of 'SNat n'.
 fromIxRaw :: Ix n -> Int
-fromIxRaw (UnsafeIx (IxRep w)) = w
+fromIxRaw (UnsafeIx w) = w
 {-# INLINE fromIxRaw #-}
 
 -- | @'IxF'@ is the base functor of @'Ix'@.
@@ -165,7 +164,7 @@ inject _ (UnsafeIx j) = UnsafeIx j
 
 -- | Raise.
 raise :: SNat n -> Ix m -> Ix (n + m)
-raise (UnsafeSNat (SNatRep n)) (UnsafeIx (IxRep j)) = UnsafeIx (IxRep (n + j))
+raise (UnsafeSNat n) (UnsafeIx j) = UnsafeIx (n + j)
 
 --------------------------------------------------------------------------------
 -- Existential Wrapper
@@ -200,16 +199,16 @@ toSomeIx = toSomeIxRaw . bimap fromIntegral fromIntegral
 
 prop> toSomeIxRaw (fromSomeIxRaw i) == i
 -}
-toSomeIxRaw :: (Int, Int) -> SomeIx
+toSomeIxRaw :: (IxRep, IxRep) -> SomeIx
 toSomeIxRaw (bound, index)
   | index < 0 = error $ printf "index cannot contain negative value, found index %d" (toInteger index)
   | bound <= index = error "bound must be larger than index, found bound %d and index %d" (toInteger bound) (toInteger index)
-  | otherwise = SomeIx (UnsafeSNat (SNatRep bound)) (UnsafeIx (IxRep index))
+  | otherwise = SomeIx (UnsafeSNat bound) (UnsafeIx index)
 
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped index.
 fromSomeIx :: (Integral i) => SomeIx -> (i, i)
 fromSomeIx = bimap fromIntegral fromIntegral . fromSomeIxRaw
 
 -- | @'fromSomeSNat' n@ returns the 'Int' representation of the wrapped index.
-fromSomeIxRaw :: SomeIx -> (Int, Int)
-fromSomeIxRaw (SomeIx (UnsafeSNat (SNatRep bound)) (UnsafeIx (IxRep index))) = (bound, index)
+fromSomeIxRaw :: SomeIx -> (IxRep, IxRep)
+fromSomeIxRaw (SomeIx (UnsafeSNat bound) (UnsafeIx index)) = (bound, index)

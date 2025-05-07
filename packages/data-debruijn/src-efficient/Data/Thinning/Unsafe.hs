@@ -40,7 +40,7 @@ import Unsafe.Coerce (unsafeCoerce)
 
 data ThRep = ThRep
   { size :: {-# UNPACK #-} !Int
-  , bits :: !Integer
+  , bits :: {-# UNPACK #-} !Integer
   }
   deriving (Eq, Show)
 
@@ -54,7 +54,6 @@ mkDoneRep =
     { size = 0
     , bits = zeroBits
     }
-{-# INLINE mkDoneRep #-}
 
 mkKeepRep :: ThRep -> ThRep
 mkKeepRep th =
@@ -63,7 +62,6 @@ mkKeepRep th =
       { size = succ th.size
       , bits = th.bits
       }
-{-# INLINE mkKeepRep #-}
 
 mkDropRep :: ThRep -> ThRep
 mkDropRep th =
@@ -72,7 +70,6 @@ mkDropRep th =
       { size = succ th.size
       , bits = setBit th.bits th.size
       }
-{-# INLINE mkDropRep #-}
 
 getThRepChild :: ThRep -> ThRep
 getThRepChild th =
@@ -82,7 +79,6 @@ getThRepChild th =
           { size = size'
           , bits = clearBit th.bits size'
           }
-{-# INLINE getThRepChild #-}
 
 elThRep :: ThRep -> a -> (ThRep -> a) -> (ThRep -> a) -> a
 elThRep th ifDone ifKeep ifDrop =
@@ -93,7 +89,6 @@ elThRep th ifDone ifKeep ifDrop =
         if testBit th.bits (pred th.size)
           then ifKeep (getThRepChild th)
           else ifDrop (getThRepChild th)
-{-# INLINE elThRep #-}
 
 thinThRep :: ThRep -> ThRep -> ThRep
 thinThRep th1 th2 =
@@ -102,6 +97,9 @@ thinThRep th1 th2 =
       { size = th1.size `max` th2.size
       , bits = th1.bits .|. shift th2.bits (th1.size - th2.size)
       }
+
+toBoolsThRep :: ThRep -> [Bool]
+toBoolsThRep th = testBit th.bits <$> [0 .. th.size - 1]
 
 _fromBoolsThRep :: [Bool] -> ThRep
 _fromBoolsThRep th =
@@ -113,9 +111,6 @@ _fromBoolsThRep th =
   readBit :: Int -> Bool -> Integer
   readBit _ False = 0
   readBit i True = bit i
-
-toBoolsThRep :: ThRep -> [Bool]
-toBoolsThRep th = testBit th.bits <$> [0 .. th.size - 1]
 
 --------------------------------------------------------------------------------
 -- Thinnings
