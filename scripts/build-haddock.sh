@@ -26,7 +26,7 @@ if ! mkdir -p "./doc/reference/"; then
     exit 1
 fi
 # Copy the Haddock documentation for each local package to the './doc/reference' directory
-if ! cp -r "./dist-newstyle/build/"*"/ghc-"*"/"*"-"*"/doc/html/"* "./doc/reference/"; then
+if ! find "./dist-newstyle/build" -type d -and -name "html" -exec cp -r {} ./doc/reference/ ';'; then
     exit 1
 fi
 
