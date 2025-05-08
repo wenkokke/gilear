@@ -43,7 +43,7 @@ import Text.Printf (printf)
 import Unsafe.Coerce (unsafeCoerce)
 
 {- $setup
->>> import Data.Index.Arbitrary
+>>> import Data.DeBruijn.Index.Arbitrary
 -}
 
 --------------------------------------------------------------------------------

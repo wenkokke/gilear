@@ -20,8 +20,8 @@
     - name: "-Wno-orphans"
       within:
         - "Numeric.Natural.Arbitrary"
-        - "Data.Index.Arbitrary"
-        - "Data.Index.Inductive.Arbitrary"
+        - "Data.DeBruijn.Index.Arbitrary"
+        - "Data.DeBruijn.Index.Inductive.Arbitrary"
         - "Data.Thinning.Arbitrary"
         - "Data.Thinning.Inductive.Arbitrary"
         - "Data.Type.Nat.Singleton.Arbitrary"
@@ -30,7 +30,8 @@
       within: "TreeSitter.GenerateAst.Internal.CodeGen"
     - name: "-Wno-duplicate-exports"
       within:
-        - "Data.Index.Unsafe"
+        - "Data.DeBruijn.Index.Unsafe"
+        - "Data.DeBruijn.Level.Unsafe"
         - "Data.Thinning.Unsafe"
         - "Data.Type.Nat.Singleton.Unsafe"
 

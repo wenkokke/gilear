@@ -42,10 +42,6 @@ import Data.Type.Nat.Singleton.Unsafe (SNat (..), decSNat)
 import Text.Printf (printf)
 import Unsafe.Coerce (unsafeCoerce)
 
-{- $setup
->>> import Data.Index.Arbitrary
--}
-
 --------------------------------------------------------------------------------
 -- DeBruijn Index Representation
 --------------------------------------------------------------------------------
@@ -71,10 +67,10 @@ recLvRep r ifZ ifS = if r == mkLZRep then ifZ else ifS (getLvRepChild r)
 {-# INLINE recLvRep #-}
 
 --------------------------------------------------------------------------------
--- DeBruijn Indexes
+-- DeBruijn Levels
 --------------------------------------------------------------------------------
 
--- | @'Lv' n@ is the type of DeBruijn indices less than @n@.
+-- | @'Lv' n@ is the type of DeBruijn levels less than @n@.
 type Lv :: Nat -> Type
 newtype Lv n = UnsafeLv {getLvRep :: LvRep}
 
@@ -170,7 +166,7 @@ raise (UnsafeSNat n) (UnsafeLv j) = UnsafeLv (n + j)
 -- Existential Wrapper
 --------------------------------------------------------------------------------
 
--- | An existential wrapper around indexes.
+-- | An existential wrapper around levels.
 type SomeLv :: Type
 data SomeLv = forall (n :: Nat). SomeLv
   { bound :: {-# UNPACK #-} !(SNat n)
@@ -188,16 +184,20 @@ deriving instance Show SomeLv
 withSomeLv :: (forall n. SNat n -> Lv n -> a) -> SomeLv -> a
 withSomeLv action (SomeLv n i) = action n i
 
-{-| @'toSomeLv' n@ constructs the index @n@ at type @'Lv' n@ from the number @n@.
+{-| @'toSomeLv' n@ constructs the level @n@ at type @'Lv' n@ from the number @n@.
 
-prop> toSomeLv (fromSomeLv i) == i
+@
+toSomeLv (fromSomeLv i) == i
+@
 -}
 toSomeLv :: (Integral i) => (i, i) -> SomeLv
 toSomeLv = toSomeLvRaw . bimap fromIntegral fromIntegral
 
 {-| @'toSomeLvRaw' n@ constructs the index @n@ at type @'Lv' n@ from the 'Int' @n@.
 
-prop> toSomeLvRaw (fromSomeLvRaw i) == i
+@
+toSomeLvRaw (fromSomeLvRaw i) == i
+@
 -}
 toSomeLvRaw :: (LvRep, LvRep) -> SomeLv
 toSomeLvRaw (bound, index)

@@ -34,7 +34,7 @@ import Data.Type.Nat.Singleton.Inductive (SNat (..), SomeSNat (..), decSNat, fro
 import Text.Printf (printf)
 
 {- $setup
->>> import Data.Index.Inductive.Arbitrary
+>>> import Data.DeBruijn.Index.Inductive.Arbitrary
 -}
 
 --------------------------------------------------------------------------------
