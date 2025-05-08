@@ -20,7 +20,7 @@ module Data.Thinning.Inductive (
 ) where
 
 import Data.Bits (Bits (..))
-import Data.Index.Inductive (Ix (..), isPos)
+import Data.DeBruijn.Index.Inductive (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Thinning qualified as Efficient
 import Data.Type.Nat (Nat (..))

@@ -3,7 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Data.Index.Inductive (
+module Data.DeBruijn.Index.Inductive (
   -- * DeBruijn indices
   Ix (FZ, FS),
   eqIx,
@@ -25,7 +25,7 @@ module Data.Index.Inductive (
   fromSomeIxRaw,
 ) where
 
-import Data.Index qualified as Efficient
+import Data.DeBruijn.Index qualified as Efficient
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Type.Equality ((:~:) (Refl))

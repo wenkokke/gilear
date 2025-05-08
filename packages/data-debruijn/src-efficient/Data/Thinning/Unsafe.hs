@@ -28,7 +28,7 @@ module Data.Thinning.Unsafe (
 
 import Control.Exception (assert)
 import Data.Bits (Bits (..))
-import Data.Index.Unsafe (Ix (..), isPos)
+import Data.DeBruijn.Index.Unsafe (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
 import Data.Type.Nat (Nat (..), Pos, Pred)
 import Data.Type.Nat.Singleton.Unsafe (SNat (..))

@@ -1,13 +1,13 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Data.Index (tests) where
+module Test.Data.DeBruijn.Index (tests) where
 
-import Data.Index (SomeIx (..))
-import Data.Index qualified as Ix
-import Data.Index.Arbitrary ()
-import Data.Index.Inductive qualified as Ix (toInductive)
-import Data.Index.Inductive qualified as Ix.Inductive
-import Data.Index.Inductive.Arbitrary ()
+import Data.DeBruijn.Index (SomeIx (..))
+import Data.DeBruijn.Index qualified as Ix
+import Data.DeBruijn.Index.Arbitrary ()
+import Data.DeBruijn.Index.Inductive qualified as Ix (toInductive)
+import Data.DeBruijn.Index.Inductive qualified as Ix.Inductive
+import Data.DeBruijn.Index.Inductive.Arbitrary ()
 import Data.Type.Nat.Singleton ()
 -- import Data.Type.Nat.Singleton.Inductive qualified as SNat (toInductive)
 -- import Data.Type.Nat.Singleton.Inductive qualified as SNat.Inductive
@@ -17,7 +17,7 @@ import Test.Tasty.QuickCheck (testProperty)
 tests :: TestTree
 tests =
   testGroup
-    "Test.Data.Index"
+    "Test.DeBruijn.Data.Index"
     [ testProperty "test_eqIxEq" test_eqIxEq
     , testProperty "test_fromIxRawEq" test_fromIxRawEq
     , testProperty "test_fromIxEq" test_fromIxEq -- ,

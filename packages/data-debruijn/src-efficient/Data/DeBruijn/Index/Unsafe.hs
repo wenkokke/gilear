@@ -8,7 +8,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
-module Data.Index.Unsafe (
+module Data.DeBruijn.Index.Unsafe (
   -- * DeBruijn Indexes
   Ix (FZ, FS),
   eqIx,

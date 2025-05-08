@@ -2,11 +2,11 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Index.Inductive.Arbitrary (
+module Data.DeBruijn.Index.Inductive.Arbitrary (
   arbitraryIx,
 ) where
 
-import Data.Index.Inductive (Ix (..), SomeIx (..), toSomeIx)
+import Data.DeBruijn.Index.Inductive (Ix (..), SomeIx (..), toSomeIx)
 import Data.Type.Nat (Nat (..))
 import Data.Type.Nat.Singleton (SNat (..))
 import Numeric.Natural (Natural)

@@ -1,4 +1,4 @@
-module Data.Index (
+module Data.DeBruijn.Index (
   -- * DeBruijn Indexes
   Ix (FZ, FS),
   eqIx,
@@ -19,7 +19,7 @@ module Data.Index (
   fromSomeIxRaw,
 ) where
 
-import Data.Index.Unsafe (
+import Data.DeBruijn.Index.Unsafe (
   Ix (FS, FZ),
   SomeIx (..),
   eqIx,

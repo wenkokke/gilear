@@ -27,7 +27,7 @@ library
   hs-source-dirs:     src
   reexported-modules: Data.Type.Nat
   exposed-modules:
-    Data.Index
+    Data.DeBruijn.Index
     Data.Thinning
     Data.Type.Nat.Singleton
 
@@ -40,7 +40,7 @@ library efficient
   visibility:      public
   hs-source-dirs:  src-efficient
   exposed-modules:
-    Data.Index.Unsafe
+    Data.DeBruijn.Index.Unsafe
     Data.Thinning.Unsafe
     Data.Type.Nat
     Data.Type.Nat.Singleton.Unsafe
@@ -52,7 +52,7 @@ library inductive
   visibility:      public
   hs-source-dirs:  src-inductive
   exposed-modules:
-    Data.Index.Inductive
+    Data.DeBruijn.Index.Inductive
     Data.Thinning.Inductive
     Data.Type.Nat.Singleton.Inductive
 
@@ -65,8 +65,8 @@ library arbitrary
   visibility:      public
   hs-source-dirs:  src-arbitrary
   exposed-modules:
-    Data.Index.Arbitrary
-    Data.Index.Inductive.Arbitrary
+    Data.DeBruijn.Index.Arbitrary
+    Data.DeBruijn.Index.Inductive.Arbitrary
     Data.Type.Nat.Singleton.Arbitrary
     Data.Type.Nat.Singleton.Inductive.Arbitrary
     Numeric.Natural.Arbitrary
@@ -83,7 +83,7 @@ test-suite data-debruijn-test
   main-is:        Main.hs
   hs-source-dirs: test
   other-modules:
-    Test.Data.Index
+    Test.Data.DeBruijn.Index
     Test.Data.Thinning
     Test.Data.Type.Nat.Singleton
 
