@@ -26,7 +26,9 @@ module Data.Type.Nat.Singleton.Inductive (
   plusCommS,
   plusComm,
   plusAssoc,
-  hasInstance,
+
+  -- * Induction Principles
+  withInstance,
 ) where
 
 import Data.Kind (Constraint, Type)
@@ -154,6 +156,20 @@ plusAssoc Z _m _l = Refl
 plusAssoc (S n') m l = Eq.apply Refl (plusAssoc n' m l)
 
 --------------------------------------------------------------------------------
+-- Induction Principles
+--------------------------------------------------------------------------------
+
+withInstance ::
+  forall (c :: Nat -> Constraint).
+  (c Z, forall n. c (S n)) =>
+  forall (n :: Nat) (r :: Type).
+  SNat n ->
+  ((c n) => r) ->
+  r
+withInstance Z action = action
+withInstance (S n) action = withInstance @c n action
+
+--------------------------------------------------------------------------------
 -- Helper Functions
 --------------------------------------------------------------------------------
 
@@ -167,16 +183,3 @@ iterate' :: (Integral i) => i -> (a -> a) -> a -> a
 iterate' i f x
   | i == 0 = x
   | otherwise = iterate' (i - 1) f $! f x
-
---------------------------------------------------------------------------------
--- Whatever Unhinged Shit
---------------------------------------------------------------------------------
-
-hasInstance ::
-  forall (c :: Nat -> Constraint) n a.
-  (c Z, forall n. c (S n)) =>
-  SNat n ->
-  ((c n) => a) ->
-  a
-hasInstance Z action = action
-hasInstance (S n) action = hasInstance @c n action

@@ -23,6 +23,16 @@ module Data.Type.Nat.Singleton.Unsafe (
   fromSomeSNat,
   fromSomeSNatRaw,
 
+  -- * Laws
+  plusUnitL,
+  plusUnitR,
+  plusCommS,
+  plusComm,
+  plusAssoc,
+
+  -- * Induction Principles
+  withInstance,
+
   -- * Unsafe
   SNat (UnsafeSNat, sNatRep),
 ) where
@@ -30,6 +40,7 @@ module Data.Type.Nat.Singleton.Unsafe (
 import Control.Exception (assert)
 import Data.Kind (Constraint, Type)
 import Data.Maybe (isJust)
+import Data.Proxy (Proxy)
 import Data.Type.Equality ((:~:) (Refl))
 import Data.Type.Nat (Nat (..), Pos, Pred, type (+))
 import Text.Printf (printf)
@@ -183,3 +194,36 @@ fromSomeSNat = withSomeSNat fromSNat
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped singleton.
 fromSomeSNatRaw :: SomeSNat -> Int
 fromSomeSNatRaw (SomeSNat (UnsafeSNat u)) = u
+
+--------------------------------------------------------------------------------
+-- Laws
+--------------------------------------------------------------------------------
+
+plusUnitL :: Proxy n -> Z + n :~: n
+plusUnitL _ = Refl
+
+plusUnitR :: SNat n -> n + Z :~: n
+plusUnitR _ = unsafeCoerce Refl
+
+plusCommS :: SNat n -> Proxy m -> S (n + m) :~: n + S m
+plusCommS _ _ = unsafeCoerce Refl
+
+plusComm :: SNat n -> SNat m -> n + m :~: m + n
+plusComm _ _ = unsafeCoerce Refl
+
+plusAssoc :: SNat n -> Proxy m -> Proxy l -> (n + m) + l :~: n + (m + l)
+plusAssoc _ _ _ = unsafeCoerce Refl
+
+--------------------------------------------------------------------------------
+-- Induction Principles
+--------------------------------------------------------------------------------
+
+withInstance ::
+  forall (c :: Nat -> Constraint).
+  (c Z, forall n. c (S n)) =>
+  forall (n :: Nat) (r :: Type).
+  SNat n ->
+  ((c n) => r) ->
+  r
+withInstance Z action = action
+withInstance (S n) action = withInstance @c n action
