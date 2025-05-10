@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Data.Type.Nat.Singleton.Inductive (
@@ -25,9 +26,10 @@ module Data.Type.Nat.Singleton.Inductive (
   plusCommS,
   plusComm,
   plusAssoc,
+  hasInstance,
 ) where
 
-import Data.Kind (Type)
+import Data.Kind (Constraint, Type)
 import Data.Maybe (isJust)
 import Data.Proxy (Proxy (..))
 import Data.Type.Equality ((:~:) (Refl))
@@ -165,3 +167,16 @@ iterate' :: (Integral i) => i -> (a -> a) -> a -> a
 iterate' i f x
   | i == 0 = x
   | otherwise = iterate' (i - 1) f $! f x
+
+--------------------------------------------------------------------------------
+-- Whatever Unhinged Shit
+--------------------------------------------------------------------------------
+
+hasInstance ::
+  forall (c :: Nat -> Constraint) n a.
+  (c Z, forall n. c (S n)) =>
+  SNat n ->
+  ((c n) => a) ->
+  a
+hasInstance Z action = action
+hasInstance (S n) action = hasInstance @c n action

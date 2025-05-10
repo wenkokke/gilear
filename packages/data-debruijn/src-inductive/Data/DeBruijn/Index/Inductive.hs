@@ -53,6 +53,7 @@ eqIx (FS i) (FS j) = eqIx i j
 eqIx _ _ = False
 
 instance Eq (Ix n) where
+  (==) :: Ix n -> Ix n -> Bool
   (==) = eqIx
 
 deriving instance Show (Ix n)

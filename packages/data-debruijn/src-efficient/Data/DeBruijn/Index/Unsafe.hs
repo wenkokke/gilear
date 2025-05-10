@@ -83,6 +83,10 @@ type role Ix nominal
 eqIx :: Ix n -> Ix m -> Bool
 eqIx i j = fromIxRaw i == fromIxRaw j
 
+instance Eq (Ix n) where
+  (==) :: Ix n -> Ix n -> Bool
+  (==) = eqIx
+
 instance Show (Ix n) where
   showsPrec :: Int -> Ix n -> ShowS
   showsPrec p = \case

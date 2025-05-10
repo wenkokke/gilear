@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -27,10 +28,10 @@ module Data.Type.Nat.Singleton.Unsafe (
 ) where
 
 import Control.Exception (assert)
-import Data.Kind (Type)
+import Data.Kind (Constraint, Type)
 import Data.Maybe (isJust)
 import Data.Type.Equality ((:~:) (Refl))
-import Data.Type.Nat (Nat (..), Pos, Pred)
+import Data.Type.Nat (Nat (..), Pos, Pred, type (+))
 import Text.Printf (printf)
 import Unsafe.Coerce (unsafeCoerce)
 
