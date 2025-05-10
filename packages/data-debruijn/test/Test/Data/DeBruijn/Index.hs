@@ -27,16 +27,16 @@ tests =
     ]
 
 test_eqIxEq :: SomeIx -> SomeIx -> Bool
-test_eqIxEq (SomeIx{index= i, bound = _}) (SomeIx{index = j, bound = _}) =
+test_eqIxEq (SomeIx{index = i, bound = _}) (SomeIx{index = j, bound = _}) =
   Ix.Inductive.eqIx (Ix.toInductive i) (Ix.toInductive j) == Ix.eqIx i j
 
 test_fromIxRawEq :: SomeIx -> Bool
 test_fromIxRawEq (SomeIx{..}) =
-   Ix.Inductive.fromIxRaw (Ix.toInductive index) == Ix.fromIxRaw index
+  Ix.Inductive.fromIxRaw (Ix.toInductive index) == Ix.fromIxRaw index
 
 test_fromIxEq :: SomeIx -> Bool
 test_fromIxEq (SomeIx{..}) =
-   Ix.Inductive.fromIx @Int (Ix.toInductive index) == Ix.fromIx @Int index
+  Ix.Inductive.fromIx @Int (Ix.toInductive index) == Ix.fromIx @Int index
 
 test_injectEq :: SomeSNat -> SomeIx -> Bool
 test_injectEq (SomeSNat n) (SomeIx{..}) =
