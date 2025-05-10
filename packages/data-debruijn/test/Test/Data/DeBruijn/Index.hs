@@ -49,8 +49,10 @@ prop_thinEq i j = Ix.thin i j == Ix.Inductive.fromInductive (Ix.Inductive.thin (
 
 test_thinEq :: Gen Bool
 test_thinEq = do
-  SomeIx{..} <- arbitrary
-  prop_thinEq <$> Ix.arbitraryIx (S bound) <*> pure index
+  SomeSNat n <- arbitrary
+  i <- Ix.arbitraryIx (S (S n))
+  j <- Ix.arbitraryIx (S n)
+  pure $ prop_thinEq i j
 
 prop_thickEq :: Ix (S n) -> Ix (S n) -> Bool
 prop_thickEq i j = Ix.thick i j == (Ix.Inductive.fromInductive <$> Ix.Inductive.thick (Ix.toInductive i) (Ix.toInductive j))
@@ -58,7 +60,9 @@ prop_thickEq i j = Ix.thick i j == (Ix.Inductive.fromInductive <$> Ix.Inductive.
 test_thickEq :: Gen Bool
 test_thickEq = do
   SomeSNat n <- arbitrary
-  prop_thickEq <$> Ix.arbitraryIx (S n) <*> Ix.arbitraryIx (S n)
+  i <- Ix.arbitraryIx (S n)
+  j <- Ix.arbitraryIx (S n)
+  pure $ prop_thickEq i j
 
 --------------------------------------------------------------------------------
 -- Helper Functions
