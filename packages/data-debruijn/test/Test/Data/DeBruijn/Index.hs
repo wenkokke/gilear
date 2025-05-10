@@ -7,8 +7,6 @@ import Data.DeBruijn.Index qualified as Ix
 import Data.DeBruijn.Index.Arbitrary qualified as Ix (arbitraryIx)
 import Data.DeBruijn.Index.Inductive qualified as Ix (toInductive)
 import Data.DeBruijn.Index.Inductive qualified as Ix.Inductive
-import Data.DeBruijn.Index.Inductive.Arbitrary qualified as Ix.Inductive (arbitraryIx)
--- import Data.Type.Nat.Singleton.Inductive qualified as SNat.Inductive
 import Data.Proxy (Proxy (..))
 import Data.Type.Nat (Nat (..))
 import Data.Type.Nat.Singleton (SNat (..), SomeSNat (..))
@@ -29,23 +27,23 @@ tests =
     ]
 
 test_eqIxEq :: SomeIx -> SomeIx -> Bool
-test_eqIxEq (SomeIx{..}) (SomeIx{bound = _, index = index'}) =
-  Ix.eqIx index index' == Ix.Inductive.eqIx (Ix.toInductive index) (Ix.toInductive index')
+test_eqIxEq (SomeIx{index= i, bound = _}) (SomeIx{index = j, bound = _}) =
+  Ix.Inductive.eqIx (Ix.toInductive i) (Ix.toInductive j) == Ix.eqIx i j
 
 test_fromIxRawEq :: SomeIx -> Bool
 test_fromIxRawEq (SomeIx{..}) =
-  Ix.fromIxRaw index == Ix.Inductive.fromIxRaw (Ix.toInductive index)
+   Ix.Inductive.fromIxRaw (Ix.toInductive index) == Ix.fromIxRaw index
 
 test_fromIxEq :: SomeIx -> Bool
 test_fromIxEq (SomeIx{..}) =
-  Ix.fromIx @Int index == Ix.Inductive.fromIx @Int (Ix.toInductive index)
+   Ix.Inductive.fromIx @Int (Ix.toInductive index) == Ix.fromIx @Int index
 
 test_injectEq :: SomeSNat -> SomeIx -> Bool
 test_injectEq (SomeSNat n) (SomeIx{..}) =
-  Ix.inject (erase n) index == Ix.Inductive.fromInductive (Ix.Inductive.inject (SNat.toInductive n) (Ix.toInductive index))
+  Ix.Inductive.inject (SNat.toInductive n) (Ix.toInductive index) == Ix.Inductive.toInductive (Ix.inject (erase n) index)
 
 prop_thinEq :: Ix (S n) -> Ix n -> Bool
-prop_thinEq i j = Ix.thin i j == Ix.Inductive.fromInductive (Ix.Inductive.thin (Ix.toInductive i) (Ix.toInductive j))
+prop_thinEq i j = Ix.Inductive.thin (Ix.toInductive i) (Ix.toInductive j) == Ix.toInductive (Ix.thin i j)
 
 test_thinEq :: Gen Bool
 test_thinEq = do
@@ -55,7 +53,7 @@ test_thinEq = do
   pure $ prop_thinEq i j
 
 prop_thickEq :: Ix (S n) -> Ix (S n) -> Bool
-prop_thickEq i j = Ix.thick i j == (Ix.Inductive.fromInductive <$> Ix.Inductive.thick (Ix.toInductive i) (Ix.toInductive j))
+prop_thickEq i j = Ix.Inductive.thick (Ix.toInductive i) (Ix.toInductive j) == (Ix.toInductive <$> Ix.thick i j)
 
 test_thickEq :: Gen Bool
 test_thickEq = do

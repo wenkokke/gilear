@@ -35,11 +35,11 @@ tests =
 
 test_fromSNatRawEq :: SomeSNat -> Bool
 test_fromSNatRawEq (SomeSNat n) =
-  SNat.fromSNatRaw n == SNat.Inductive.fromSNatRaw (SNat.toInductive n)
+  SNat.Inductive.fromSNatRaw (SNat.toInductive n) == SNat.fromSNatRaw n
 
 test_fromSNatEq :: SomeSNat -> Bool
 test_fromSNatEq (SomeSNat n) =
-  SNat.fromSNat @Int n == SNat.Inductive.fromSNat @Int (SNat.toInductive n)
+  SNat.Inductive.fromSNat @Int (SNat.toInductive n) == SNat.fromSNat @Int n
 
 test_decSNatEq :: SomeSNat -> SomeSNat -> Bool
 test_decSNatEq (SomeSNat m) (SomeSNat n) =
