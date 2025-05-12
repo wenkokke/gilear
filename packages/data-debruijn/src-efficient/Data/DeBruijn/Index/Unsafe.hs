@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
@@ -32,6 +33,7 @@ module Data.DeBruijn.Index.Unsafe (
   Ix (UnsafeIx),
 ) where
 
+import Control.DeepSeq (NFData (..))
 import Control.Exception (assert)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
@@ -89,9 +91,14 @@ instance Eq (Ix n) where
 
 instance Show (Ix n) where
   showsPrec :: Int -> Ix n -> ShowS
-  showsPrec p = \case
-    FZ -> showString "FZ"
-    FS n -> showString "FS " . showParen (p > 10) (showsPrec 11 n)
+  showsPrec p =
+    showParen (p > 10) . \case
+      FZ -> showString "FZ"
+      FS n -> showString "FS " . showsPrec 11 n
+
+instance NFData (Ix n) where
+  rnf :: Ix n -> ()
+  rnf (UnsafeIx u) = rnf u
 
 mkFZ :: Ix (S n)
 mkFZ = UnsafeIx mkFZRep
@@ -180,6 +187,10 @@ data SomeIx = forall (n :: Nat). SomeIx
   { bound :: {-# UNPACK #-} !(SNat n)
   , index :: {-# UNPACK #-} !(Ix n)
   }
+
+instance NFData SomeIx where
+  rnf :: SomeIx -> ()
+  rnf SomeIx{..} = rnf bound `seq` rnf index
 
 instance Eq SomeIx where
   (==) :: SomeIx -> SomeIx -> Bool

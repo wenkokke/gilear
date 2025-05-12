@@ -31,6 +31,7 @@ module Data.Type.Nat.Singleton.Inductive (
   withInstance,
 ) where
 
+import Control.DeepSeq (NFData (..))
 import Data.Kind (Constraint, Type)
 import Data.Maybe (isJust)
 import Data.Proxy (Proxy (..))
@@ -52,6 +53,11 @@ type SNat :: Nat -> Type
 data SNat n where
   Z :: SNat Z
   S :: !(SNat n) -> SNat (S n)
+
+instance NFData (SNat n) where
+  rnf :: SNat n -> ()
+  rnf Z = ()
+  rnf (S n) = rnf n
 
 -- | Convert from the efficient representation 'Efficient.SNat' to the inductive representation 'SNat'.
 toInductive :: Efficient.SNat n -> SNat n
@@ -97,6 +103,10 @@ instance Eq (SNat n) where
 -- | An existential wrapper around natural number singletons.
 type SomeSNat :: Type
 data SomeSNat = forall (n :: Nat). SomeSNat !(SNat n)
+
+instance NFData SomeSNat where
+  rnf :: SomeSNat -> ()
+  rnf (SomeSNat n) = rnf n
 
 deriving instance Show SomeSNat
 

@@ -2,6 +2,7 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Data.DeBruijn.Index.Inductive (
   -- * DeBruijn indices
@@ -25,6 +26,7 @@ module Data.DeBruijn.Index.Inductive (
   fromSomeIxRaw,
 ) where
 
+import Control.DeepSeq (NFData (..))
 import Data.DeBruijn.Index qualified as Efficient
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
@@ -51,6 +53,11 @@ eqIx :: Ix n -> Ix m -> Bool
 eqIx FZ FZ = True
 eqIx (FS i) (FS j) = eqIx i j
 eqIx _ _ = False
+
+instance NFData (Ix n) where
+  rnf :: Ix n -> ()
+  rnf FZ = ()
+  rnf (FS i) = rnf i
 
 instance Eq (Ix n) where
   (==) :: Ix n -> Ix n -> Bool
@@ -124,6 +131,10 @@ data SomeIx = forall (n :: Nat). SomeIx
   { bound :: !(SNat n)
   , index :: !(Ix n)
   }
+
+instance NFData SomeIx where
+  rnf :: SomeIx -> ()
+  rnf SomeIx{..} = rnf bound `seq` rnf index
 
 instance Eq SomeIx where
   (==) :: SomeIx -> SomeIx -> Bool

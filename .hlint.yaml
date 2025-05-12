@@ -106,10 +106,13 @@
 - group:
     name: future,
     enabled: true
+
 # Ignore some builtin hints
 # - ignore: {name: Use let}
 # - ignore: {name: Use const, within: SpecialModule} # Only within certain modules
-
+- ignore:
+    name: "Use camelCase"
+    within: "Bench.Data.DeBruijn.Index"
 # Define some custom infix operators
 # - fixity: infixr 3 ~^#^~
 

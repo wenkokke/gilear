@@ -37,6 +37,7 @@ module Data.Type.Nat.Singleton.Unsafe (
   SNat (UnsafeSNat, sNatRep),
 ) where
 
+import Control.DeepSeq (NFData (..))
 import Control.Exception (assert)
 import Data.Kind (Constraint, Type)
 import Data.Maybe (isJust)
@@ -91,6 +92,10 @@ elSNatRep u ifZ ifS =
 type SNat :: Nat -> Type
 newtype SNat n = UnsafeSNat {sNatRep :: SNatRep}
 
+instance NFData (SNat n) where
+  rnf :: SNat n -> ()
+  rnf (UnsafeSNat u) = rnf u
+
 type role SNat nominal
 
 mkZ :: SNat Z
@@ -111,9 +116,10 @@ fromSNatRaw (UnsafeSNat w) = w
 
 instance Show (SNat n) where
   showsPrec :: Int -> SNat n -> ShowS
-  showsPrec p = \case
-    Z -> showString "Z"
-    S n -> showString "S " . showParen (p > 10) (showsPrec 11 n)
+  showsPrec p =
+    showParen (p > 10) . \case
+      Z -> showString "Z"
+      S n -> showString "S " . showsPrec 11 n
 
 -- | @'SNatF'@ is the base functor of @'SNat'@.
 data SNatF (snat :: Nat -> Type) (n :: Nat) where
@@ -158,6 +164,10 @@ instance Eq (SNat n) where
 -- | An existential wrapper around natural number singletons.
 type SomeSNat :: Type
 data SomeSNat = forall (n :: Nat). SomeSNat !(SNat n)
+
+instance NFData SomeSNat where
+  rnf :: SomeSNat -> ()
+  rnf (SomeSNat n) = rnf n
 
 deriving instance Show SomeSNat
 

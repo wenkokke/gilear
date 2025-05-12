@@ -8,7 +8,7 @@ module Data.DeBruijn.Index.Inductive.Arbitrary (
 
 import Data.DeBruijn.Index.Inductive (Ix (..), SomeIx (..), toSomeIx)
 import Data.Type.Nat (Nat (..))
-import Data.Type.Nat.Singleton (SNat (..))
+import Data.Type.Nat.Singleton.Inductive (SNat (..))
 import Numeric.Natural (Natural)
 import Numeric.Natural.Arbitrary ()
 import Test.QuickCheck.Arbitrary (Arbitrary (..))

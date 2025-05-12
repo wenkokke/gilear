@@ -19,6 +19,7 @@ module Data.Thinning.Inductive (
   Thin (..),
 ) where
 
+import Control.DeepSeq (NFData (..))
 import Data.Bits (Bits (..))
 import Data.DeBruijn.Index.Inductive (Ix (..), isPos)
 import Data.Kind (Constraint, Type)
@@ -36,6 +37,12 @@ data (:<=) n m where
   Done :: Z :<= Z
   Keep :: !(n :<= m) -> S n :<= S m
   Drop :: !(n :<= m) -> n :<= S m
+
+instance NFData (n :<= m) where
+  rnf :: n :<= m -> ()
+  rnf Done = ()
+  rnf (Keep n'm') = rnf n'm'
+  rnf (Drop nm') = rnf nm'
 
 -- | Convert from the efficient representation 'Efficient.:<=' to the inductive representation ':<='.
 toInductive :: n Efficient.:<= m -> n :<= m
@@ -67,6 +74,10 @@ data SomeTh
   , upper :: SNat m
   , value :: n :<= m
   }
+
+instance NFData SomeTh where
+  rnf :: SomeTh -> ()
+  rnf SomeTh{..} = rnf lower `seq` rnf upper `seq` rnf value
 
 emptySomeTh :: SomeTh
 emptySomeTh =

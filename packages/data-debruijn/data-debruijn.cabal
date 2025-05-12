@@ -1,9 +1,9 @@
 cabal-version:   3.4
 name:            data-debruijn
 version:         0.0.0.0
-synopsis:        Implementation of de Bruijn indices backed by a Natural.
+synopsis:        Efficient and type-safe implementation of DeBruijn indices.
 description:
-  See <https://github.com/wenkokke/gilear/blob/main/packages/base-compat-constptr/#README>
+  See <https://github.com/wenkokke/gilear/blob/main/packages/data-debruijn/#README>
 
 license:         AGPL-3.0-only
 author:          Wen Kokke
@@ -46,7 +46,9 @@ library efficient
     Data.Type.Nat
     Data.Type.Nat.Singleton.Unsafe
 
-  build-depends:   base >=4.18 && <5
+  build-depends:
+    , base     >=4.18 && <5
+    , deepseq
 
 library inductive
   import:          language
@@ -60,6 +62,7 @@ library inductive
   build-depends:
     , base           >=4.18 && <5
     , data-debruijn
+    , deepseq
 
 library arbitrary
   import:          language
@@ -78,6 +81,22 @@ library arbitrary
     , data-debruijn:inductive
     , QuickCheck               >=2.9 && <3.0
 
+library test-extra
+  import:          language
+  visibility:      private
+  hs-source-dirs:  test-extra
+  exposed-modules:
+    Data.DeBruijn.Index.Extra
+    Data.DeBruijn.Index.Inductive.Extra
+
+  build-depends:
+    , base
+    , data-debruijn
+    , data-debruijn:arbitrary
+    , data-debruijn:inductive
+    , deepseq
+    , QuickCheck
+
 test-suite data-debruijn-test
   import:         language
   type:           exitcode-stdio-1.0
@@ -93,20 +112,20 @@ test-suite data-debruijn-test
     , data-debruijn
     , data-debruijn:arbitrary
     , data-debruijn:inductive
-    , QuickCheck               >=2.9 && <3.0
+    , data-debruijn:test-extra
     , tasty
     , tasty-quickcheck
 
 benchmark data-debruijn-bench
   import:         language
   type:           exitcode-stdio-1.0
-  hs-source-dirs: bench
   main-is:        Main.hs
+  hs-source-dirs: bench
+  other-modules:  Bench.Data.DeBruijn.Index
   build-depends:
     , base
     , criterion
     , data-debruijn
-    , data-debruijn:efficient
     , data-debruijn:inductive
+    , data-debruijn:test-extra
     , deepseq
-    , ghc-prim

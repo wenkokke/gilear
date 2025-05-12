@@ -81,9 +81,10 @@ eqLv i j = fromLvRaw i == fromLvRaw j
 
 instance Show (Lv n) where
   showsPrec :: Int -> Lv n -> ShowS
-  showsPrec p = \case
-    LZ -> showString "LZ"
-    LS n -> showString "LS " . showParen (p > 10) (showsPrec 11 n)
+  showsPrec p =
+    showParen (p > 10) . \case
+      LZ -> showString "LZ"
+      LS n -> showString "LS " . showsPrec 11 n
 
 mkLZ :: Lv (S n)
 mkLZ = UnsafeLv mkLZRep
