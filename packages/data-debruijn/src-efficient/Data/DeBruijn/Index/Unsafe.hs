@@ -72,6 +72,17 @@ recIxRep :: IxRep -> a -> (IxRep -> a) -> a
 recIxRep r ifZ ifS = if r == mkFZRep then ifZ else ifS (getIxRepChild r)
 {-# INLINE recIxRep #-}
 
+thinRep :: IxRep -> IxRep -> IxRep
+thinRep i j
+  | i <= j = succ j
+  | otherwise = j
+
+thickRep :: IxRep -> IxRep -> Maybe IxRep
+thickRep i j = case i `compare` j of
+  LT -> Just (pred j)
+  EQ -> Nothing
+  GT -> Just j
+
 --------------------------------------------------------------------------------
 -- DeBruijn Indexes
 --------------------------------------------------------------------------------
@@ -158,16 +169,11 @@ isPos (FS _) r = r
 
 -- | Thinning.
 thin :: Ix (S n) -> Ix n -> Ix (S n)
-thin FZ j = FS j
-thin (FS _) FZ = FZ
-thin (FS i) (FS j) = FS (thin i j)
+thin (UnsafeIx i) (UnsafeIx j) = UnsafeIx (thinRep i j)
 
 -- | Thickening.
 thick :: Ix (S n) -> Ix (S n) -> Maybe (Ix n)
-thick FZ FZ = Nothing
-thick FZ (FS j) = Just j
-thick (FS i) FZ = isPos i $ Just FZ
-thick (FS i) (FS j) = isPos i $ FS <$> thick i j
+thick (UnsafeIx i) (UnsafeIx j) = UnsafeIx <$> thickRep i j
 
 -- | Inject.
 inject :: Proxy n -> Ix m -> Ix (n + m)

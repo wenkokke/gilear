@@ -3,7 +3,7 @@ module Test.Data.Type.Nat.Singleton (tests) where
 import Data.Type.Nat.Singleton qualified as Unsafe
 import Data.Type.Nat.Singleton.Arbitrary ()
 import Data.Type.Nat.Singleton.Inductive qualified as Inductive
-import Data.Type.Nat.Singleton.Inductive qualified as Unsafe (fromInductive, toInductive)
+import Data.Type.Nat.Singleton.Inductive qualified as Unsafe (fromInductive)
 import Data.Type.Nat.Singleton.Inductive.Arbitrary ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (NonNegative (..), testProperty)
