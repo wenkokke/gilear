@@ -1,9 +1,9 @@
 cabal-version:   3.4
 name:            data-debruijn
 version:         0.0.0.0
-synopsis:        Implementation of de Bruijn indices backed by a Natural.
+synopsis:        Efficient and type-safe implementation of DeBruijn indices.
 description:
-  See <https://github.com/wenkokke/gilear/blob/main/packages/base-compat-constptr/#README>
+  See <https://github.com/wenkokke/gilear/blob/main/packages/data-debruijn/#README>
 
 license:         AGPL-3.0-only
 author:          Wen Kokke
@@ -23,21 +23,109 @@ common language
   default-extensions: ImportQualifiedPost
 
 library
-  import:          language
-  hs-source-dirs:  src
+  import:             language
+  hs-source-dirs:     src
+  reexported-modules: Data.Type.Nat
   exposed-modules:
-    Data.DeBruijn
-    Data.DeBruijn.Efficient
-    Data.DeBruijn.Inductive
-    Data.Type.Nat
+    Data.DeBruijn.Index
+    Data.Thinning
+    Data.Type.Nat.Singleton
 
-  build-depends:   base >=4.18 && <5
+  build-depends:
+    , base                     >=4.18 && <5
+    , data-debruijn:efficient
+
+library efficient
+  import:          language
+  visibility:      public
+  hs-source-dirs:  src-efficient
+  exposed-modules:
+    Data.DeBruijn.Index.Unsafe
+    Data.DeBruijn.Level.Unsafe
+    Data.Thinning.Unsafe
+    Data.Type.Nat
+    Data.Type.Nat.Singleton.Unsafe
+
+  build-depends:
+    , base     >=4.18 && <5
+    , deepseq
+
+library inductive
+  import:          language
+  visibility:      public
+  hs-source-dirs:  src-inductive
+  exposed-modules:
+    Data.DeBruijn.Index.Inductive
+    Data.Thinning.Inductive
+    Data.Type.Nat.Singleton.Inductive
+
+  build-depends:
+    , base           >=4.18 && <5
+    , data-debruijn
+    , deepseq
 
 library arbitrary
   import:          language
+  visibility:      public
   hs-source-dirs:  src-arbitrary
-  exposed-modules: Data.DeBruijn.Inductive.Arbitrary
+  exposed-modules:
+    Data.DeBruijn.Index.Arbitrary
+    Data.DeBruijn.Index.Inductive.Arbitrary
+    Data.Type.Nat.Singleton.Arbitrary
+    Data.Type.Nat.Singleton.Inductive.Arbitrary
+    Numeric.Natural.Arbitrary
+
   build-depends:
     , base
     , data-debruijn
-    , QuickCheck     >=2.9 && <3.0
+    , data-debruijn:inductive
+    , QuickCheck               >=2.9 && <3.0
+
+library test-extra
+  import:          language
+  visibility:      private
+  hs-source-dirs:  test-extra
+  exposed-modules:
+    Data.DeBruijn.Index.Extra
+    Data.DeBruijn.Index.Inductive.Extra
+
+  build-depends:
+    , base
+    , data-debruijn
+    , data-debruijn:arbitrary
+    , data-debruijn:inductive
+    , deepseq
+    , QuickCheck
+
+test-suite data-debruijn-test
+  import:         language
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Data.DeBruijn.Index
+    Test.Data.Thinning
+    Test.Data.Type.Nat.Singleton
+
+  build-depends:
+    , base
+    , data-debruijn
+    , data-debruijn:arbitrary
+    , data-debruijn:inductive
+    , data-debruijn:test-extra
+    , tasty
+    , tasty-quickcheck
+
+benchmark data-debruijn-bench
+  import:         language
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: bench
+  other-modules:  Bench.Data.DeBruijn.Index
+  build-depends:
+    , base
+    , criterion
+    , data-debruijn
+    , data-debruijn:inductive
+    , data-debruijn:test-extra
+    , deepseq
