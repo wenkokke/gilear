@@ -223,7 +223,7 @@ prop> toSomeIxRaw (fromSomeIxRaw i) == i
 toSomeIxRaw :: (IxRep, IxRep) -> SomeIx
 toSomeIxRaw (bound, index)
   | index < 0 = error $ printf "index cannot contain negative value, found index %d" (toInteger index)
-  | bound <= index = error "bound must be larger than index, found bound %d and index %d" (toInteger bound) (toInteger index)
+  | bound <= index = error $ printf "bound must be larger than index, found bound %d and index %d" (toInteger bound) (toInteger index)
   | otherwise = SomeIx (UnsafeSNat bound) (UnsafeIx index)
 
 -- | @'fromSomeSNat' n@ returns the numeric representation of the wrapped index.

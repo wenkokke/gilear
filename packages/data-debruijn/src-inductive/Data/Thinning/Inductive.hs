@@ -35,8 +35,8 @@ import Data.Type.Nat.Singleton.Inductive (SNat (..))
 type (:<=) :: Nat -> Nat -> Type
 data (:<=) n m where
   Done :: Z :<= Z
-  Keep :: !(n :<= m) -> S n :<= S m
-  Drop :: !(n :<= m) -> n :<= S m
+  Keep :: n :<= m -> S n :<= S m
+  Drop :: n :<= m -> n :<= S m
 
 instance NFData (n :<= m) where
   rnf :: n :<= m -> ()

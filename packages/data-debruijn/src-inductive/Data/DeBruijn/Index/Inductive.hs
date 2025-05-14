@@ -47,7 +47,7 @@ import Text.Printf (printf)
 type Ix :: Nat -> Type
 data Ix n where
   FZ :: Ix (S n)
-  FS :: !(Ix n) -> Ix (S n)
+  FS :: Ix n -> Ix (S n)
 
 eqIx :: Ix n -> Ix m -> Bool
 eqIx FZ FZ = True

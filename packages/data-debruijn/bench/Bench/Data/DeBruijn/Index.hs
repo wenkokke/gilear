@@ -8,6 +8,8 @@ import Data.DeBruijn.Index qualified as Unsafe
 import Data.DeBruijn.Index.Extra qualified as Unsafe
 import Data.DeBruijn.Index.Inductive qualified as Inductive
 import Data.DeBruijn.Index.Inductive.Extra qualified as Inductive
+import Data.List (nub)
+import Data.Functor ((<&>))
 import Text.Printf (printf)
 
 benchmarks :: Benchmark
@@ -52,14 +54,17 @@ bench_thinWith toSomeThinArgs action thinArgsRaw@(_n, i, j) = do
   bench benchLabel (action someThinArgs)
 
 thinArgsRawList :: [(Int, Int, Int)]
-thinArgsRawList = concatMap thinArgsRawWith [1, 2, 5, 10, 20, 50, 100]
- where
-  thinArgsRawWith :: Int -> [(Int, Int, Int)]
-  thinArgsRawWith n =
-    [ (10 * n, i * n, j * n)
-    | i <- [1, 2, 5]
-    , j <- [1, 2, 5]
-    ]
+thinArgsRawList = nub (varyingParameter0 <> varyingParameter1)
+  where
+    varyingParameter0 =
+      [ (101, i, j)
+      | i <- [0,10..100]
+      , j <- [0, i - 1, i, i + 1, 100]
+      , 0 <= j && j < 101
+      ]
+    varyingParameter1 =
+      varyingParameter0
+        <&> (\(n, j, i) -> (n, i, j))
 
 --------------------------------------------------------------------------------
 -- Benchmark: thick
@@ -95,11 +100,14 @@ bench_thickWith toSomeThickArgs action thickArgsRaw@(_n, i, j) = do
   bench benchLabel (action someThickArgs)
 
 thickArgsRawList :: [(Int, Int, Int)]
-thickArgsRawList = concatMap thickArgsRawWith [1, 2, 5, 10, 20, 50, 100]
- where
-  thickArgsRawWith :: Int -> [(Int, Int, Int)]
-  thickArgsRawWith n =
-    [ (10 * n, i * n, j * n)
-    | i <- [1, 2, 5]
-    , j <- [1, 2, 5]
-    ]
+thickArgsRawList = nub (varyingParameter0 <> varyingParameter1)
+  where
+    varyingParameter0 =
+      [ (101, i, j)
+      | i <- [0,10..100]
+      , j <- [0, i - 1, i, i + 1, 100]
+      , 0 <= j && j < 101
+      ]
+    varyingParameter1 =
+      varyingParameter0
+        <&> (\(n, j, i) -> (n, i, j))

@@ -52,7 +52,7 @@ import Data.Type.Nat.Singleton qualified as Efficient
 type SNat :: Nat -> Type
 data SNat n where
   Z :: SNat Z
-  S :: !(SNat n) -> SNat (S n)
+  S :: SNat n -> SNat (S n)
 
 instance NFData (SNat n) where
   rnf :: SNat n -> ()
