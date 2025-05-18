@@ -3,11 +3,11 @@
 
 module Main (main) where
 
-import Bench.Data.DeBruijn.Index qualified (benchmarks)
+import Bench.Time.Data.DeBruijn.Index qualified (benchmarks)
 import Criterion.Main (defaultMain)
 
 main :: IO ()
 main =
   defaultMain
-    [ Bench.Data.DeBruijn.Index.benchmarks
+    [ Bench.Time.Data.DeBruijn.Index.benchmarks
     ]

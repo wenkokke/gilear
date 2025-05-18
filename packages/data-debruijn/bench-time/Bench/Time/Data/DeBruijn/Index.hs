@@ -1,4 +1,4 @@
-module Bench.Data.DeBruijn.Index (
+module Bench.Time.Data.DeBruijn.Index (
   benchmarks,
 ) where
 
@@ -8,8 +8,8 @@ import Data.DeBruijn.Index qualified as Unsafe
 import Data.DeBruijn.Index.Extra qualified as Unsafe
 import Data.DeBruijn.Index.Inductive qualified as Inductive
 import Data.DeBruijn.Index.Inductive.Extra qualified as Inductive
-import Data.List (nub)
 import Data.Functor ((<&>))
+import Data.List (nub)
 import Text.Printf (printf)
 
 benchmarks :: Benchmark
@@ -55,16 +55,16 @@ bench_thinWith toSomeThinArgs action thinArgsRaw@(_n, i, j) = do
 
 thinArgsRawList :: [(Int, Int, Int)]
 thinArgsRawList = nub (varyingParameter0 <> varyingParameter1)
-  where
-    varyingParameter0 =
-      [ (101, i, j)
-      | i <- [0,10..100]
-      , j <- [0, i - 1, i, i + 1, 100]
-      , 0 <= j && j < 101
-      ]
-    varyingParameter1 =
-      varyingParameter0
-        <&> (\(n, j, i) -> (n, i, j))
+ where
+  varyingParameter0 =
+    [ (101, i, j)
+    | i <- [0, 10 .. 100]
+    , j <- [0, i - 1, i, i + 1, 100]
+    , 0 <= j && j < 101
+    ]
+  varyingParameter1 =
+    varyingParameter0
+      <&> (\(n, j, i) -> (n, i, j))
 
 --------------------------------------------------------------------------------
 -- Benchmark: thick
@@ -101,13 +101,13 @@ bench_thickWith toSomeThickArgs action thickArgsRaw@(_n, i, j) = do
 
 thickArgsRawList :: [(Int, Int, Int)]
 thickArgsRawList = nub (varyingParameter0 <> varyingParameter1)
-  where
-    varyingParameter0 =
-      [ (101, i, j)
-      | i <- [0,10..100]
-      , j <- [0, i - 1, i, i + 1, 100]
-      , 0 <= j && j < 101
-      ]
-    varyingParameter1 =
-      varyingParameter0
-        <&> (\(n, j, i) -> (n, i, j))
+ where
+  varyingParameter0 =
+    [ (101, i, j)
+    | i <- [0, 10 .. 100]
+    , j <- [0, i - 1, i, i + 1, 100]
+    , 0 <= j && j < 101
+    ]
+  varyingParameter1 =
+    varyingParameter0
+      <&> (\(n, j, i) -> (n, i, j))

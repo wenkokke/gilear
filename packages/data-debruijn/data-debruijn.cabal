@@ -48,7 +48,7 @@ library efficient
 
   build-depends:
     , base     >=4.18 && <5
-    , deepseq
+    , deepseq  ^>=1.5
 
 library inductive
   import:          language
@@ -62,7 +62,7 @@ library inductive
   build-depends:
     , base           >=4.18 && <5
     , data-debruijn
-    , deepseq
+    , deepseq        ^>=1.5
 
 library arbitrary
   import:          language
@@ -81,10 +81,10 @@ library arbitrary
     , data-debruijn:inductive
     , QuickCheck               >=2.9 && <3.0
 
-library test-extra
+library extras
   import:          language
   visibility:      private
-  hs-source-dirs:  test-extra
+  hs-source-dirs:  src-extras
   exposed-modules:
     Data.DeBruijn.Index.Extra
     Data.DeBruijn.Index.Inductive.Extra
@@ -94,7 +94,7 @@ library test-extra
     , data-debruijn
     , data-debruijn:arbitrary
     , data-debruijn:inductive
-    , deepseq
+    , deepseq                  ^>=1.5
     , QuickCheck
 
 test-suite data-debruijn-test
@@ -111,21 +111,37 @@ test-suite data-debruijn-test
     , base
     , data-debruijn
     , data-debruijn:arbitrary
+    , data-debruijn:extras
     , data-debruijn:inductive
-    , data-debruijn:test-extra
     , tasty
     , tasty-quickcheck
 
-benchmark data-debruijn-bench
+benchmark data-debruijn-bench-time
   import:         language
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  hs-source-dirs: bench
-  other-modules:  Bench.Data.DeBruijn.Index
+  hs-source-dirs: bench-time
+  other-modules:  Bench.Time.Data.DeBruijn.Index
   build-depends:
     , base
-    , criterion
+    , criterion                ^>=1.6
     , data-debruijn
+    , data-debruijn:extras
     , data-debruijn:inductive
-    , data-debruijn:test-extra
-    , deepseq
+    , deepseq                  ^>=1.5
+
+benchmark data-debruijn-bench-space
+  import:         language
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: bench-space
+  other-modules:  Bench.Space.Data.DeBruijn.Index
+  build-depends:
+    , base
+    , bytestring
+    , cassava                  ^>=0.5
+    , data-debruijn
+    , data-debruijn:extras
+    , data-debruijn:inductive
+    , deepseq                  ^>=1.5
+    , weigh                    ^>=0.0.18

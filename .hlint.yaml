@@ -112,7 +112,9 @@
 # - ignore: {name: Use const, within: SpecialModule} # Only within certain modules
 - ignore:
     name: "Use camelCase"
-    within: "Bench.Data.DeBruijn.Index"
+    within:
+      - "Bench.Space.Data.DeBruijn.Index"
+      - "Bench.Time.Data.DeBruijn.Index"
 # Define some custom infix operators
 # - fixity: infixr 3 ~^#^~
 
