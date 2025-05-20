@@ -31,6 +31,13 @@ import Data.Type.Nat.Singleton.Inductive (SNat (..))
 -- Thinnings
 --------------------------------------------------------------------------------
 
+-- TODO:
+-- Rewrite (:<=) using
+-- @
+--  Refl :: n :<= n
+-- @
+-- instead of @Done@.
+
 -- | @'Th' m n@ is the type of thinnings from @m@ to @n@.
 type (:<=) :: Nat -> Nat -> Type
 data (:<=) n m where
