@@ -31,6 +31,7 @@
     - name: "-Wno-duplicate-exports"
       within:
         - "Data.DeBruijn.Index.Unsafe"
+        - "Data.DeBruijn.Environment.Unsafe"
         - "Data.DeBruijn.Level.Unsafe"
         - "Data.DeBruijn.Thinning.Unsafe"
         - "Data.Type.Nat.Singleton.Unsafe"

@@ -40,6 +40,7 @@ library efficient
   visibility:      public
   hs-source-dirs:  src-efficient
   exposed-modules:
+    Data.DeBruijn.Environment.Unsafe
     Data.DeBruijn.Index.Unsafe
     Data.DeBruijn.Level.Unsafe
     Data.DeBruijn.Thinning.Unsafe
@@ -47,8 +48,9 @@ library efficient
     Data.Type.Nat.Singleton.Unsafe
 
   build-depends:
-    , base     >=4.18 && <5
-    , deepseq  ^>=1.5
+    , base        >=4.18  && <5
+    , containers  >=0.6.8 && <0.9
+    , deepseq     ^>=1.5
 
 library inductive
   import:          language
