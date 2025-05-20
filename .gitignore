@@ -25,6 +25,9 @@ build/
 prebuilds/
 node_modules/
 
+# Python
+.venv/
+
 # Devenv
 .devenv*
 devenv.local.nix

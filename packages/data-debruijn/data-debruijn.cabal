@@ -1,9 +1,9 @@
 cabal-version:   3.4
 name:            data-debruijn
 version:         0.0.0.0
-synopsis:        Implementation of de Bruijn indices backed by a Natural.
+synopsis:        Efficient and type-safe implementation of DeBruijn indices.
 description:
-  See <https://github.com/wenkokke/gilear/blob/main/packages/base-compat-constptr/#README>
+  See <https://github.com/wenkokke/gilear/blob/main/packages/data-debruijn/#README>
 
 license:         AGPL-3.0-only
 author:          Wen Kokke
@@ -23,21 +23,128 @@ common language
   default-extensions: ImportQualifiedPost
 
 library
-  import:          language
-  hs-source-dirs:  src
+  import:             language
+  hs-source-dirs:     src
+  reexported-modules: Data.Type.Nat
   exposed-modules:
-    Data.DeBruijn
-    Data.DeBruijn.Efficient
-    Data.DeBruijn.Inductive
-    Data.Type.Nat
+    Data.DeBruijn.Index
+    Data.DeBruijn.Thinning
+    Data.Type.Nat.Singleton
 
-  build-depends:   base >=4.18 && <5
+  build-depends:
+    , base                     >=4.18 && <5
+    , data-debruijn:efficient
+
+library efficient
+  import:          language
+  visibility:      public
+  hs-source-dirs:  src-efficient
+  exposed-modules:
+    Data.DeBruijn.Environment.Unsafe
+    Data.DeBruijn.Index.Unsafe
+    Data.DeBruijn.Level.Unsafe
+    Data.DeBruijn.Thinning.Unsafe
+    Data.Type.Nat
+    Data.Type.Nat.Singleton.Unsafe
+
+  build-depends:
+    , base        >=4.18  && <5
+    , containers  >=0.6.8 && <0.9
+    , deepseq     ^>=1.5
+
+library inductive
+  import:          language
+  visibility:      public
+  hs-source-dirs:  src-inductive
+  exposed-modules:
+    Data.DeBruijn.Environment.Inductive
+    Data.DeBruijn.Index.Inductive
+    Data.DeBruijn.Thinning.Inductive
+    Data.Type.Nat.Singleton.Inductive
+
+  build-depends:
+    , base           >=4.18 && <5
+    , data-debruijn
+    , deepseq        ^>=1.5
 
 library arbitrary
   import:          language
+  visibility:      public
   hs-source-dirs:  src-arbitrary
-  exposed-modules: Data.DeBruijn.Inductive.Arbitrary
+  exposed-modules:
+    Data.DeBruijn.Index.Arbitrary
+    Data.DeBruijn.Index.Inductive.Arbitrary
+    Data.Type.Nat.Singleton.Arbitrary
+    Data.Type.Nat.Singleton.Inductive.Arbitrary
+    Numeric.Natural.Arbitrary
+
   build-depends:
     , base
     , data-debruijn
-    , QuickCheck     >=2.9 && <3.0
+    , data-debruijn:inductive
+    , QuickCheck               >=2.9 && <3.0
+
+library extras
+  import:          language
+  visibility:      private
+  hs-source-dirs:  src-extras
+  exposed-modules:
+    Data.DeBruijn.Index.Extra
+    Data.DeBruijn.Index.Inductive.Extra
+
+  build-depends:
+    , base
+    , data-debruijn
+    , data-debruijn:arbitrary
+    , data-debruijn:inductive
+    , deepseq                  ^>=1.5
+    , QuickCheck
+
+test-suite data-debruijn-test
+  import:         language
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: test
+  other-modules:
+    Test.Data.DeBruijn.Index
+    Test.Data.DeBruijn.Thinning
+    Test.Data.Type.Nat.Singleton
+
+  build-depends:
+    , base
+    , data-debruijn
+    , data-debruijn:arbitrary
+    , data-debruijn:extras
+    , data-debruijn:inductive
+    , tasty
+    , tasty-quickcheck
+
+benchmark data-debruijn-bench-time
+  import:         language
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: bench-time
+  other-modules:  Bench.Time.Data.DeBruijn.Index
+  build-depends:
+    , base
+    , criterion                ^>=1.6
+    , data-debruijn
+    , data-debruijn:extras
+    , data-debruijn:inductive
+    , deepseq                  ^>=1.5
+
+benchmark data-debruijn-bench-space
+  import:         language
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: bench-space
+  other-modules:  Bench.Space.Data.DeBruijn.Index
+  build-depends:
+    , base
+    , bytestring
+    , cassava                  ^>=0.5
+    , data-debruijn
+    , data-debruijn:extras
+    , data-debruijn:inductive
+    , deepseq                  ^>=1.5
+    , weigh                    ^>=0.0.18

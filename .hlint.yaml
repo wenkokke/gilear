@@ -18,9 +18,23 @@
     - name: "-Wno-unused-top-binds"
       within: "TreeSitter.Internal"
     - name: "-Wno-orphans"
-      within: "Data.DeBruijn.Inductive.Arbitrary"
+      within:
+        - "Numeric.Natural.Arbitrary"
+        - "Data.DeBruijn.Index.Arbitrary"
+        - "Data.DeBruijn.Index.Inductive.Arbitrary"
+        - "Data.DeBruijn.Thinning.Arbitrary"
+        - "Data.DeBruijn.Thinning.Inductive.Arbitrary"
+        - "Data.Type.Nat.Singleton.Arbitrary"
+        - "Data.Type.Nat.Singleton.Inductive.Arbitrary"
     - name: "-Wno-orphans"
       within: "TreeSitter.GenerateAst.Internal.CodeGen"
+    - name: "-Wno-duplicate-exports"
+      within:
+        - "Data.DeBruijn.Index.Unsafe"
+        - "Data.DeBruijn.Environment.Unsafe"
+        - "Data.DeBruijn.Level.Unsafe"
+        - "Data.DeBruijn.Thinning.Unsafe"
+        - "Data.Type.Nat.Singleton.Unsafe"
 
 # Control which modules can be used
 - modules:
@@ -93,10 +107,15 @@
 - group:
     name: future,
     enabled: true
+
 # Ignore some builtin hints
 # - ignore: {name: Use let}
 # - ignore: {name: Use const, within: SpecialModule} # Only within certain modules
-
+- ignore:
+    name: "Use camelCase"
+    within:
+      - "Bench.Space.Data.DeBruijn.Index"
+      - "Bench.Time.Data.DeBruijn.Index"
 # Define some custom infix operators
 # - fixity: infixr 3 ~^#^~
 
