@@ -56,6 +56,7 @@ library inductive
   hs-source-dirs:  src-inductive
   exposed-modules:
     Data.DeBruijn.Index.Inductive
+    Data.Environment.Inductive
     Data.Thinning.Inductive
     Data.Type.Nat.Singleton.Inductive
 
