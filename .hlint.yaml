@@ -22,8 +22,8 @@
         - "Numeric.Natural.Arbitrary"
         - "Data.DeBruijn.Index.Arbitrary"
         - "Data.DeBruijn.Index.Inductive.Arbitrary"
-        - "Data.Thinning.Arbitrary"
-        - "Data.Thinning.Inductive.Arbitrary"
+        - "Data.DeBruijn.Thinning.Arbitrary"
+        - "Data.DeBruijn.Thinning.Inductive.Arbitrary"
         - "Data.Type.Nat.Singleton.Arbitrary"
         - "Data.Type.Nat.Singleton.Inductive.Arbitrary"
     - name: "-Wno-orphans"
@@ -32,7 +32,7 @@
       within:
         - "Data.DeBruijn.Index.Unsafe"
         - "Data.DeBruijn.Level.Unsafe"
-        - "Data.Thinning.Unsafe"
+        - "Data.DeBruijn.Thinning.Unsafe"
         - "Data.Type.Nat.Singleton.Unsafe"
 
 # Control which modules can be used

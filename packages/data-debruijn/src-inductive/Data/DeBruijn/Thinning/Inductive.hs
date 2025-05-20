@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Data.Thinning.Inductive (
+module Data.DeBruijn.Thinning.Inductive (
   -- * Thinnings
   (:<=) (Done, Keep, Drop),
   toInductive,
@@ -22,8 +22,8 @@ module Data.Thinning.Inductive (
 import Control.DeepSeq (NFData (..))
 import Data.Bits (Bits (..))
 import Data.DeBruijn.Index.Inductive (Ix (..), isPos)
+import Data.DeBruijn.Thinning qualified as Efficient
 import Data.Kind (Constraint, Type)
-import Data.Thinning qualified as Efficient
 import Data.Type.Nat (Nat (..))
 import Data.Type.Nat.Singleton.Inductive (SNat (..))
 
@@ -38,7 +38,7 @@ import Data.Type.Nat.Singleton.Inductive (SNat (..))
 -- @
 -- instead of @Done@.
 
--- | @'Th' m n@ is the type of thinnings from @m@ to @n@.
+-- | @n ':<=' m@ is the type of thinnings from @m@ to @n@.
 type (:<=) :: Nat -> Nat -> Type
 data (:<=) n m where
   Done :: Z :<= Z

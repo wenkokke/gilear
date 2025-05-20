@@ -3,7 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
-module Data.Environment.Inductive (
+module Data.DeBruijn.Environment.Inductive (
   Env (Nil, (:>)),
   decEnvLen,
   lookup,

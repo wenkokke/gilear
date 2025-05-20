@@ -28,7 +28,7 @@ library
   reexported-modules: Data.Type.Nat
   exposed-modules:
     Data.DeBruijn.Index
-    Data.Thinning
+    Data.DeBruijn.Thinning
     Data.Type.Nat.Singleton
 
   build-depends:
@@ -42,7 +42,7 @@ library efficient
   exposed-modules:
     Data.DeBruijn.Index.Unsafe
     Data.DeBruijn.Level.Unsafe
-    Data.Thinning.Unsafe
+    Data.DeBruijn.Thinning.Unsafe
     Data.Type.Nat
     Data.Type.Nat.Singleton.Unsafe
 
@@ -55,9 +55,9 @@ library inductive
   visibility:      public
   hs-source-dirs:  src-inductive
   exposed-modules:
+    Data.DeBruijn.Environment.Inductive
     Data.DeBruijn.Index.Inductive
-    Data.Environment.Inductive
-    Data.Thinning.Inductive
+    Data.DeBruijn.Thinning.Inductive
     Data.Type.Nat.Singleton.Inductive
 
   build-depends:
@@ -105,7 +105,7 @@ test-suite data-debruijn-test
   hs-source-dirs: test
   other-modules:
     Test.Data.DeBruijn.Index
-    Test.Data.Thinning
+    Test.Data.DeBruijn.Thinning
     Test.Data.Type.Nat.Singleton
 
   build-depends:

@@ -7,7 +7,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-duplicate-exports #-}
 
-module Data.Thinning.Unsafe (
+module Data.DeBruijn.Thinning.Unsafe (
   -- * Thinnings
   (:<=) (Done, Keep, Drop),
   toBools,
