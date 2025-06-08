@@ -32,8 +32,6 @@ if [ ! "${CABAL_DOCSPEC_SKIP_BUILD}" = "1" ]; then
 fi
 "${CABAL_DOCSPEC}" \
   --extra-package=base \
-  --extra-package=data-debruijn:arbitrary \
   --extra-package=QuickCheck \
   --check-properties \
-  --property-variables="m n" \
   --verbose

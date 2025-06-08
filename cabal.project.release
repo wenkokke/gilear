@@ -6,7 +6,6 @@ packages:
   packages/base-compat-constptr
   packages/control-indexed
   packages/control-kripke
-  packages/data-debruijn
   packages/gilear
   packages/gilear-lsp
   packages/tree-sitter
