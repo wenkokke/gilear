@@ -14,22 +14,3 @@ tests: True
 
 -- Benchmarks
 benchmarks: True
-
--- Documentation
--- NOTE(build-haddock.sh): The configuration in this section is required for
---                         the script 'scripts/build-haddock.sh'.
-documentation: True
-
-haddock-all: True
-haddock-hoogle: True
-haddock-html: True
-haddock-hyperlink-source: True
-haddock-quickjump: True
-haddock-internal: True
-haddock-html-location: https://hackage.haskell.org/package/$pkg-$version/docs
-
-program-options
-  haddock-options:
-    --use-index="../doc-index.html"
-    --use-contents="../index.html"
-    --base-url=".."
