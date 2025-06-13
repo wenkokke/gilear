@@ -535,7 +535,7 @@ instance HasNodes (ChildList '[]) where
   getNodesDList Nil = mempty
 
 instance (HasNodes a, HasNodes (ChildList as)) => HasNodes (ChildList (a ': as)) where
-  getNodesDList :: ChildList (a : as) -> DList SomeNode
+  getNodesDList :: ChildList (a ': as) -> DList SomeNode
   getNodesDList (Cons x xs) = getNodesDList x <> getNodesDList xs
 
 instance (HasNodes (ChildList as)) => HasNodes (Children as) where
