@@ -328,7 +328,6 @@ instance Show SymbolType where
 
 newtype Point = WrapTSPoint {unWrapTSPoint :: C.TSPoint}
   deriving newtype (Ord, Eq)
-  deriving stock (Show)
 
 pattern Point :: Word32 -> Word32 -> Point
 pattern Point
@@ -343,8 +342,17 @@ pattern Point
 
 {-# COMPLETE Point #-}
 
+instance Show Point where
+  showsPrec :: Int -> Point -> ShowS
+  showsPrec p Point{..} =
+    showParen (p > 10) $
+      showString "Point "
+        . showsPrec 11 pointRow
+        . showChar ' '
+        . showsPrec 11 pointColumn
+
 newtype Range = WrapTSRange {unWrapTSRange :: C.TSRange}
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
 
 pattern Range :: Point -> Point -> Word32 -> Word32 -> Range
 pattern Range
@@ -371,6 +379,19 @@ pattern Range
         )
 
 {-# COMPLETE Range #-}
+
+instance Show Range where
+  showsPrec :: Int -> Range -> ShowS
+  showsPrec p Range{..} =
+    showParen (p > 10) $
+      showString "Range "
+        . showsPrec 11 rangeStartPoint
+        . showChar ' '
+        . showsPrec 11 rangeEndPoint
+        . showChar ' '
+        . showsPrec 11 rangeStartByte
+        . showChar ' '
+        . showsPrec 11 rangeEndByte
 
 newtype LogType = WrapTSLogType {unWrapTSLogType :: C.TSLogType}
   deriving (Eq)
@@ -432,7 +453,8 @@ pattern InputEdit
 newtype Node = WrapTSNode {unWrapTSNode :: C.TSNode}
 
 newtype NodeId = WrapTSNodeId {unWrapTSNodeId :: Int}
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Ord)
+  deriving newtype (Show)
 
 nodeId :: Node -> NodeId
 nodeId = coerce . ptrToIntPtr . coerce . TSNode._id . coerce
