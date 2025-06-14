@@ -35,7 +35,7 @@ library
 
   autogen-modules: Gilear.Internal.Parser.Ast
   build-depends:
-    , base                  >=4.13 && <5
+    , base                  >=4.19 && <5
     , bytestring            >=0.12 && <0.13
     , co-log-core           >=0.3  && <0.4
     , containers            >=0.6  && <0.8
