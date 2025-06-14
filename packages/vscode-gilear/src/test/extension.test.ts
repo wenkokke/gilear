@@ -74,13 +74,13 @@ suite("Extension Test Suite", () => {
       testCase.steps.map((step) => ({ edits: step.edits, diagnostics: [] })),
     );
     // Ensure that the original and broken test cases are not equal:
-    assert.notDeepStrictEqual(testCase, brokenTestCase);
+    assert.notDeepStrictEqual(brokenTestCase, testCase);
     // Run the golden test with shouldUpdate
     const updatedGoldenTest = await brokenTestCase.run(goldenTestFilesDir, {
       shouldUpdate: true,
     });
     // Assert that the original and updated test cases are equal:
-    assert.deepStrictEqual(testCase, updatedGoldenTest);
+    assert.deepStrictEqual(updatedGoldenTest, testCase);
   });
 
   goldenTestCaseFiles.sort().forEach((testCaseFile) => {
