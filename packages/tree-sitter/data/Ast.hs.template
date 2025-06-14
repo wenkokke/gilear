@@ -67,6 +67,7 @@ ${endfor}${endfor}
   Ast,
   AstCache,
   parseAst,
+  checkSort,
 ) where
 
 import Control.Applicative (Alternative (..), optional)
