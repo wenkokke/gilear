@@ -71,6 +71,7 @@ module Gilear.Internal.Parser.Ast (
   Ast,
   AstCache,
   parseAst,
+  checkSort,
 ) where
 
 import Control.Applicative (Alternative (..), optional)
@@ -402,8 +403,6 @@ instance Eq (Node sort) where
       Nothing -> False
       Just (Refl, HRefl) -> isWellSorted1 == isWellSorted2 && content1 == content2
 
-deriving instance Show (Node sort)
-
 nodeToNodeId :: Node sort -> NodeId
 nodeToNodeId = someNodeToNodeId . nodeToSomeNode
 
@@ -704,7 +703,7 @@ instance HasNodes (ChildList '[]) where
   getNodesDList Nil = mempty
 
 instance (HasNodes a, HasNodes (ChildList as)) => HasNodes (ChildList (a ': as)) where
-  getNodesDList :: ChildList (a : as) -> DList SomeNode
+  getNodesDList :: ChildList (a ': as) -> DList SomeNode
   getNodesDList (Cons x xs) = getNodesDList x <> getNodesDList xs
 
 instance (HasNodes (ChildList as)) => HasNodes (Children as) where
@@ -859,6 +858,53 @@ pattern SortMismatch nodeChild0 =
   , Missing
   , SortMismatch
   #-}
+
+--------------------------------------------------------------------------------
+-- Show Instance using Pattern Synonyms
+--------------------------------------------------------------------------------
+
+instance Show (Node sort) where
+  showsPrec :: Int -> Node sort -> ShowS
+  showsPrec prec =
+    showParen (prec > 10) . \case
+      SourceFile nodeId range nodeChild0 ->
+        showString "SourceFile " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      DeclarationTypeSignature nodeId range nodeChild0 nodeChild1 ->
+        showString "DeclarationTypeSignature " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0 . showChar ' ' . showsPrec 11 nodeChild1
+      DeclarationFunction nodeId range nodeChild0 nodeChild1 nodeChild2 ->
+        showString "DeclarationFunction " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0 . showChar ' ' . showsPrec 11 nodeChild1 . showChar ' ' . showsPrec 11 nodeChild2
+      ExpressionVariable nodeId range nodeChild0 ->
+        showString "ExpressionVariable " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      ExpressionConstructor nodeId range nodeChild0 ->
+        showString "ExpressionConstructor " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      ExpressionFunctionType nodeId range nodeChild0 nodeChild1 ->
+        showString "ExpressionFunctionType " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0 . showChar ' ' . showsPrec 11 nodeChild1
+      ExpressionFunctionApplication nodeId range nodeChild0 nodeChild1 ->
+        showString "ExpressionFunctionApplication " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0 . showChar ' ' . showsPrec 11 nodeChild1
+      ExpressionFunctionAbstraction nodeId range nodeChild0 nodeChild1 ->
+        showString "ExpressionFunctionAbstraction " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0 . showChar ' ' . showsPrec 11 nodeChild1
+      ExpressionAnnotation nodeId range nodeChild0 nodeChild1 ->
+        showString "ExpressionAnnotation " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0 . showChar ' ' . showsPrec 11 nodeChild1
+      ExpressionParentheses nodeId range nodeChild0 ->
+        showString "ExpressionParentheses " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      ConstructorName nodeId range ->
+        showString "ConstructorName " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range
+      PatternList nodeId range nodeChild0 ->
+        showString "PatternList " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      PatternVariable nodeId range nodeChild0 ->
+        showString "PatternVariable " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      PatternConstructor nodeId range nodeChild0 ->
+        showString "PatternConstructor " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      PatternParentheses nodeId range nodeChild0 ->
+        showString "PatternParentheses " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      VariableName nodeId range ->
+        showString "VariableName " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range
+      Error nodeId range nodeChild0 ->
+        showString "Error " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      Missing nodeId range ->
+        showString "Missing " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range
+      SortMismatch nodeChild0 ->
+        showString "SortMismatch " . showsPrec 11 nodeChild0
 
 --------------------------------------------------------------------------------
 -- Symbol Table
