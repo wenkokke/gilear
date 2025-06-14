@@ -325,8 +325,6 @@ instance Eq (Node sort) where
       Nothing -> False
       Just (Refl, HRefl) -> isWellSorted1 == isWellSorted2 && content1 == content2
 
-deriving instance Show (Node sort)
-
 nodeToNodeId :: Node sort -> NodeId
 nodeToNodeId = someNodeToNodeId . nodeToSomeNode
 
@@ -627,6 +625,29 @@ ${endfor}
   , Missing
   , SortMismatch
   #-}
+
+--------------------------------------------------------------------------------
+-- Show Instance using Pattern Synonyms
+--------------------------------------------------------------------------------
+
+instance Show (Node sort) where
+  showsPrec :: Int -> Node sort -> ShowS
+  showsPrec prec =
+    showParen (prec > 10) . \case
+{-+}
+${for(dataTypes)}
+${for(it.constrs)}
+      ${it.name.camelCase} nodeId range${if(it.hasChildren)}${for(it.fields)} nodeChild${it.index}${endfor}${endif} ->
+        showString "${it.name.camelCase} " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range ${if(it.hasChildren)}${for(it.fields)} . showChar ' ' . showsPrec 11 nodeChild${it.index}${endfor}${endif}
+${endfor}
+${endfor}
+{+-}
+      Error nodeId range nodeChild0 ->
+        showString "Error " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range . showChar ' ' . showsPrec 11 nodeChild0
+      Missing nodeId range ->
+        showString "Missing " . showsPrec 11 nodeId . showChar ' ' . showsPrec 11 range
+      SortMismatch nodeChild0 ->
+        showString "SortMismatch " . showsPrec 11 nodeChild0
 
 --------------------------------------------------------------------------------
 -- Symbol Table
