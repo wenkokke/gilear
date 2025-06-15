@@ -46,9 +46,9 @@ handlers logger clientCapabilities =
   initializedHandler :: Lsp.Handlers LspTc
   initializedHandler =
     Lsp.notificationHandler SMethod_Initialized $ \_notification -> do
-      logger <& WithSeverity (T.pack "ClientCapabilities: " <> TL.toStrict (encodeToLazyText clientCapabilities)) Debug
+      logger <& (T.pack "ClientCapabilities: " <> TL.toStrict (encodeToLazyText clientCapabilities)) `WithSeverity` Debug
       config <- Lsp.getConfig
-      logger <& WithSeverity (T.pack "Config: " <> TL.toStrict (encodeToLazyText config)) Debug
+      logger <& (T.pack "Config: " <> TL.toStrict (encodeToLazyText config)) `WithSeverity` Debug
       pure ()
 
   textDocumentDidOpenHandler :: Lsp.Handlers LspTc
@@ -58,15 +58,13 @@ handlers logger clientCapabilities =
       -- Try and get the virtual file for the uri:
       Lsp.getVirtualFile docUri >>= \case
         -- If the virtual file does not exist...
-        Nothing -> pure () -- TODO: report error
+        Nothing ->
+          -- TODO: Recover by reparsing file.
+          logger <& T.pack ("No virtual file for " <> show docUri) `WithSeverity` Error
         Just docVirtualFile -> do
           let docRope = docVirtualFile ^. file_text
           _success <- Tc.documentOpen logger InputEncodingUTF8 docUri docRope
           pure ()
-  -- when success $ do
-  --   let docVersion = docVirtualFile ^. file_version
-  --   logger <& T.pack ("Successfully opened " <> show docUri <> " version " <> show docVersion) `WithSeverity` Debug
-  --   Gilear.publishParserDiagnostics logger docUri (Just 0)
 
   textDocumentDidSaveHandler :: Lsp.Handlers LspTc
   textDocumentDidSaveHandler =
@@ -88,7 +86,9 @@ handlers logger clientCapabilities =
       -- Try and get the virtual file for the uri:
       Lsp.getVirtualFile docUri >>= \case
         -- If the virtual file does not exist...
-        Nothing -> pure () -- TODO: report error
+        Nothing ->
+          -- TODO: Recover by reparsing file.
+          logger <& T.pack ("No virtual file for " <> show docUri) `WithSeverity` Error
         Just docVirtualFile -> do
           -- If there were any whole-document changes...
           let (docChangesPartial, docChangesWholeDocument) = partialDocumentContentChanges docChanges
@@ -102,14 +102,12 @@ handlers logger clientCapabilities =
               else Tc.documentChangePartial logger InputEncodingUTF8 docUri docRope docTextEdits
           when success $ do
             let docVersion = docVirtualFile ^. file_version
-            -- logger <& T.pack ("Successfully changed " <> show docUri <> " version " <> show docVersion) `WithSeverity` Debug
             Gilear.publishParserDiagnostics logger docUri (Just . fromIntegral $ docVersion)
             Tc.lookupCache docUri >>= \case
               Nothing -> pure ()
-              Just _cacheItem -> pure ()
-  -- rootNode <- liftIO (TS.treeRootNode (Tc.itemTree cacheItem))
-  -- nodeText <- liftIO (T.decodeUtf8 <$> TS.showNode rootNode)
-  -- logger <& nodeText `WithSeverity` Debug
+              Just _parserCacheItem ->
+                -- logger <& T.pack (show parserCacheItem.itemAst) `WithSeverity` Debug
+                pure ()
 
   textDocumentDidCloseHandler :: Lsp.Handlers LspTc
   textDocumentDidCloseHandler =
