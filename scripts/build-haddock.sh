@@ -47,7 +47,6 @@ ${HADDOCK} \
   --quickjump \
   --gen-index \
   --gen-contents \
-  --read-interface=data-debruijn,./doc/reference/data-debruijn/data-debruijn.haddock \
   --read-interface=gilear,./doc/reference/gilear/gilear.haddock \
   --read-interface=gilear-lsp,./doc/reference/gilear-lsp/gilear-lsp.haddock \
   --read-interface=tree-sitter-gilear,./doc/reference/tree-sitter-gilear/tree-sitter-gilear.haddock

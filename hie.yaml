@@ -1,11 +1,6 @@
 # NOTE(newpackage): This must list all Cabal packages.
 cradle:
   multi:
-    - path: "./packages/data-debruijn"
-      config:
-        cradle:
-          cabal:
-
     - path: "./packages/gilear"
       config:
         cradle:
