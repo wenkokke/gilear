@@ -47,14 +47,9 @@ ${HADDOCK} \
   --quickjump \
   --gen-index \
   --gen-contents \
-  --read-interface=base-compat-constptr,./doc/reference/base-compat-constptr/base-compat-constptr.haddock \
   --read-interface=control-indexed,./doc/reference/control-indexed/control-indexed.haddock \
   --read-interface=control-kripke,./doc/reference/control-kripke/control-kripke.haddock \
   --read-interface=data-debruijn,./doc/reference/data-debruijn/data-debruijn.haddock \
   --read-interface=gilear,./doc/reference/gilear/gilear.haddock \
   --read-interface=gilear-lsp,./doc/reference/gilear-lsp/gilear-lsp.haddock \
-  --read-interface=tree-sitter,./doc/reference/tree-sitter/tree-sitter.haddock \
-  --read-interface=tree-sitter-capi,./doc/reference/tree-sitter-capi/tree-sitter-capi.haddock \
-  --read-interface=tree-sitter-gilear,./doc/reference/tree-sitter-gilear/tree-sitter-gilear.haddock \
-  --read-interface=tree-sitter-javascript,./doc/reference/tree-sitter-javascript/tree-sitter-javascript.haddock \
-  --read-interface=tree-sitter-while,./doc/reference/tree-sitter-while/tree-sitter-while.haddock
+  --read-interface=tree-sitter-gilear,./doc/reference/tree-sitter-gilear/tree-sitter-gilear.haddock

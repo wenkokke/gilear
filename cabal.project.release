@@ -1,17 +1,12 @@
 index-state:
-  , hackage.haskell.org 2024-12-31T12:51:32Z
+  , hackage.haskell.org 2025-07-25T12:53:58Z
 
 -- NOTE(newpackage): This must list all Cabal packages.
 packages:
-  packages/base-compat-constptr
   packages/control-indexed
   packages/control-kripke
   packages/gilear
   packages/gilear-lsp
-  packages/tree-sitter
-  packages/tree-sitter-capi
   packages/tree-sitter-gilear
-  packages/tree-sitter-javascript
-  packages/tree-sitter-while
   prototypes/gilear-animate-ast/gilear-animate-ast.cabal
   scripts/lint-cabal/lint-cabal.cabal
