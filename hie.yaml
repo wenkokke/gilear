@@ -1,11 +1,6 @@
 # NOTE(newpackage): This must list all Cabal packages.
 cradle:
   multi:
-    - path: "./packages/base-compat-constptr"
-      config:
-        cradle:
-          cabal:
-
     - path: "./packages/control-indexed"
       config:
         cradle:
@@ -31,32 +26,7 @@ cradle:
         cradle:
           cabal:
 
-    - path: "./packages/tree-sitter/data"
-      config:
-        cradle:
-          none:
-
-    - path: "./packages/tree-sitter"
-      config:
-        cradle:
-          cabal:
-
-    - path: "./packages/tree-sitter-capi"
-      config:
-        cradle:
-          cabal:
-
     - path: "./packages/tree-sitter-gilear"
-      config:
-        cradle:
-          cabal:
-
-    - path: "./packages/tree-sitter-javascript"
-      config:
-        cradle:
-          cabal:
-
-    - path: "./packages/tree-sitter-while"
       config:
         cradle:
           cabal:

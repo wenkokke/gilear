@@ -31,9 +31,9 @@ executable gilear-animate-ast
   build-depends:
     , base                  >=4.13 && <5
     , filepath              >=1.5  && <1.6
+    , hs-tree-sitter        >=13.0 && <13.1
     , myers-diff            >=0.3  && <0.4
     , optparse-applicative  >=0.18 && <0.19
     , text                  >=2.1  && <2.2
     , text-rope             >=0.3  && <0.4
-    , tree-sitter           >=0.13 && <0.14
     , tree-sitter-gilear    >=0.0  && <0.1

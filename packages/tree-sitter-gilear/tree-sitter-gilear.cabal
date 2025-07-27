@@ -46,7 +46,7 @@ library
   build-depends:
     , base                  >=4.13 && <5
     , base-compat-constptr  >=0.1  && <0.2
-    , tree-sitter-capi      >=0.13 && <0.14
+    , hs-tree-sitter-capi   >=13.0 && <13.1
 
   hs-source-dirs:   bindings/haskell/src
   include-dirs:     src
