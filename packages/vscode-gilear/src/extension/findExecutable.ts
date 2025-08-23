@@ -1,10 +1,10 @@
+import { execSync } from "child_process";
 import { globSync } from "glob";
 import * as path from "path";
 import * as fs from "fs";
 import type * as vscode from "vscode";
 import * as which from "which";
 import { LogLevel, type Logger } from "./logger/Logger";
-import assert = require("assert");
 
 /** Find executable for `gilear-lsp` when running in Development Mode.
  *
@@ -81,9 +81,19 @@ function findExecutableInDevelopmentEnvironment(
   const executableName =
     process.platform === "win32" ? "gilear-lsp.exe" : "gilear-lsp";
   if (isDevelopmentEnvironment(projectRoot)) {
-    // Find the executable for `gilear-lsp` in the `dist-newstyle` directory.
+    // Find the executable for `gilear-lsp` using `cabal list-bin`.
+    const cabal = which.sync("cabal", { nothrow: true });
+    if (cabal !== null) {
+      const gilearLspBin = execSync(`${cabal} list-bin -v0 gilear-lsp`, {
+        cwd: projectRoot,
+        encoding: "utf-8",
+      }).trim();
+      if (fs.existsSync(gilearLspBin)) {
+        return gilearLspBin;
+      }
+    }
+    // Find the executable for `gilear-lsp` using a glob pattern.
     const pattern = path.join(
-      projectRoot,
       "dist-newstyle",
       "build",
       "*-*",
@@ -95,7 +105,10 @@ function findExecutableInDevelopmentEnvironment(
       "gilear-lsp",
       executableName,
     );
-    const candidates = globSync(pattern, { windowsPathsNoEscape: true });
+    const candidates = globSync(pattern, {
+      cwd: projectRoot,
+      windowsPathsNoEscape: true,
+    });
     // Found exactly one executable for `gilear-lsp`.
     if (candidates.length == 1) {
       const executable = candidates[0];
