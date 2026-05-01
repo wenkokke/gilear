@@ -44,7 +44,7 @@ jobs:
               version: "" # use version from dev-dependencies
             cabal:
               version: "" # use version from dev-dependencies
-              project-file: "cabal.project.debug"
+              project-file: "cabal.project"
         javascript:
           - node:
               version: "" # use version from dev-dependencies

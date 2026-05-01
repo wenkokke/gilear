@@ -1,4 +1,4 @@
-import: cabal.project.release
+import: cabal.project
 
 -- Documentation
 -- NOTE(build-haddock.sh): The configuration in this section is required for

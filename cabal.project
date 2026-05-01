@@ -1,1 +1,8 @@
-cabal.project.debug
+import: cabal.project.config
+
+-- NOTE(newpackage): This must list all Cabal packages.
+packages: packages/gilear
+packages: packages/gilear-lsp
+packages: packages/tree-sitter-gilear
+packages: prototypes/gilear-animate-ast/gilear-animate-ast.cabal
+packages: scripts/lint-cabal/lint-cabal.cabal
