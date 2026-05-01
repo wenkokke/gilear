@@ -1,39 +1,43 @@
-cabal-version:   3.4
-name:            gilear-animate-ast
-version:         0.0.0.0
-synopsis:        Prototype for animating changes to the AST.
+cabal-version: 3.4
+name: gilear-animate-ast
+version: 0.0.0.0
+synopsis: Prototype for animating changes to the AST.
 description:
   See <https://github.com/wenkokke/gilear/blob/main/prototypes/gilear-animate-ast/#README>
 
 license:
-author:          Wen Kokke
-maintainer:      wenkokke@users.noreply.github.com
-category:        Language
-build-type:      Simple
+author: Wen Kokke
+maintainer: wenkokke@users.noreply.github.com
+category: Language
+build-type: Simple
 extra-doc-files: CHANGELOG.md
 
 common language
   ghc-options:
-    -Wall -Wcompat -Widentities -Wprepositive-qualified-module
-    -Wredundant-constraints -Wunticked-promoted-constructors
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wprepositive-qualified-module
+    -Wredundant-constraints
+    -Wunticked-promoted-constructors
     -Wunused-packages
 
-  default-language:   GHC2021
+  default-language: GHC2021
   default-extensions: ImportQualifiedPost
 
   if impl(ghc <9.6.1)
     ghc-options: -optc=-Wno-incompatible-pointer-types-discards-qualifiers
 
 executable gilear-animate-ast
-  import:         language
-  main-is:        Main.hs
+  import: language
+  main-is: Main.hs
   hs-source-dirs: app
   build-depends:
-    , base                  >=4.13 && <5
-    , filepath              >=1.5  && <1.6
-    , hs-tree-sitter        >=13.0 && <13.1
-    , myers-diff            >=0.3  && <0.4
-    , optparse-applicative  >=0.18 && <0.19
-    , text                  >=2.1  && <2.2
-    , text-rope             >=0.3  && <0.4
-    , tree-sitter-gilear    >=0.0  && <0.1
+    base >=4.13 && <5,
+    filepath >=1.5 && <1.6,
+    hs-tree-sitter >=13.0 && <13.1,
+    myers-diff >=0.3 && <0.4,
+    optparse-applicative >=0.18 && <0.19,
+    text >=2.1 && <2.2,
+    text-rope >=0.3 && <0.4,
+    tree-sitter-gilear >=0.0 && <0.1,

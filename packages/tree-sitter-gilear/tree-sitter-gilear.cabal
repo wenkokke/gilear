@@ -1,15 +1,15 @@
-cabal-version:      3.4
-name:               tree-sitter-gilear
-version:            0.0.0.0
-synopsis:           Tree-sitter grammar/parser for Gilear
+cabal-version: 3.4
+name: tree-sitter-gilear
+version: 0.0.0.0
+synopsis: Tree-sitter grammar/parser for Gilear
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/tree-sitter-gilear/#README>
 
-author:             Wen Kokke
-maintainer:         wenkokke@users.noreply.github.com
-build-type:         Simple
-category:           Language
-extra-doc-files:    CHANGELOG.md
+author: Wen Kokke
+maintainer: wenkokke@users.noreply.github.com
+build-type: Simple
+category: Language
+extra-doc-files: CHANGELOG.md
 extra-source-files:
   bindings/c/tree-sitter-gilear.h
   bindings/c/tree-sitter-gilear.pc.in
@@ -28,34 +28,38 @@ data-files:
 
 common language
   ghc-options:
-    -Wall -Wcompat -Widentities -Wprepositive-qualified-module
-    -Wredundant-constraints -Wunticked-promoted-constructors
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wprepositive-qualified-module
+    -Wredundant-constraints
+    -Wunticked-promoted-constructors
     -Wunused-packages
 
-  default-language:   GHC2021
+  default-language: GHC2021
   default-extensions: ImportQualifiedPost
 
   if impl(ghc <9.6.1)
     ghc-options: -optc=-Wno-incompatible-pointer-types-discards-qualifiers
 
 library
-  import:           language
-  exposed-modules:  TreeSitter.Gilear
-  autogen-modules:  Paths_tree_sitter_gilear
-  other-modules:    Paths_tree_sitter_gilear
+  import: language
+  exposed-modules: TreeSitter.Gilear
+  autogen-modules: Paths_tree_sitter_gilear
+  other-modules: Paths_tree_sitter_gilear
   build-depends:
-    , base                  >=4.13 && <5
-    , base-compat-constptr  >=0.1  && <0.2
-    , hs-tree-sitter-capi   >=13.0 && <13.1
+    base >=4.13 && <5,
+    base-compat-constptr >=0.1 && <0.2,
+    hs-tree-sitter-capi >=13.0 && <13.1,
 
-  hs-source-dirs:   bindings/haskell/src
-  include-dirs:     src
+  hs-source-dirs: bindings/haskell/src
+  include-dirs: src
   install-includes: tree_sitter/parser.h
-  c-sources:        src/parser.c
+  c-sources: src/parser.c
 
 test-suite tree-sitter-gilear-test
-  import:         language
-  type:           exitcode-stdio-1.0
+  import: language
+  type: exitcode-stdio-1.0
   hs-source-dirs: bindings/haskell/test
-  main-is:        Main.hs
-  build-depends:  base >=4.13 && <5
+  main-is: Main.hs
+  build-depends: base >=4.13 && <5
