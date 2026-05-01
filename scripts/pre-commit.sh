@@ -74,7 +74,7 @@ if [ ! "${UNSTAGED_MARKDOWN_FILES}" = "" ]; then
 fi
 
 # Run various checks and formatters
-(./scripts/format-cabal-fmt.sh || echo >"${FAIL}")
+(./scripts/format-cabal-gild.sh || echo >"${FAIL}")
 echo
 (./scripts/format-fourmolu.sh || echo >"${FAIL}")
 echo
