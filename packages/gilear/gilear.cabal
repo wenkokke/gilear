@@ -1,27 +1,31 @@
-cabal-version:   3.4
-name:            gilear
-version:         0.0.0.0
-synopsis:        Compiler for the Gilear language
+cabal-version: 3.4
+name: gilear
+version: 0.0.0.0
+synopsis: Compiler for the Gilear language
 description:
   See <https://github.com/wenkokke/gilear/blob/main/packages/gilear/#README>
 
-author:          Wen Kokke
-maintainer:      wenkokke@users.noreply.github.com
-category:        Language
-build-type:      Simple
+author: Wen Kokke
+maintainer: wenkokke@users.noreply.github.com
+category: Language
+build-type: Simple
 extra-doc-files: CHANGELOG.md
 
 common language
   ghc-options:
-    -Wall -Wcompat -Widentities -Wprepositive-qualified-module
-    -Wredundant-constraints -Wunticked-promoted-constructors
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wprepositive-qualified-module
+    -Wredundant-constraints
+    -Wunticked-promoted-constructors
     -Wunused-packages
 
-  default-language:   GHC2021
+  default-language: GHC2021
   default-extensions: ImportQualifiedPost
 
 library
-  import:          language
+  import: language
   exposed-modules:
     Gilear
     Gilear.Internal.Core
@@ -35,33 +39,35 @@ library
 
   autogen-modules: Gilear.Internal.Parser.Ast
   build-depends:
-    , base                  >=4.19 && <5
-    , bytestring            >=0.12 && <0.13
-    , co-log-core           >=0.3  && <0.4
-    , containers            >=0.6  && <0.8
-    , hashable              >=1.4  && <1.6
-    , hs-tree-sitter        >=13.0 && <13.1
-    , IntervalMap           >=0.6  && <0.7
-    , mtl                   >=2.3  && <2.4
-    , prettyprinter         >=1.7  && <1.8
-    , text                  >=2.1  && <2.2
-    , text-rope             >=0.3  && <0.4
-    , transformers          >=0.6  && <0.7
-    , tree-sitter-gilear    >=0.0  && <0.1
-    , unliftio-core         >=0.2  && <0.3
-    , unordered-containers  >=0.2  && <0.3
+    base >=4.19 && <5,
+    bytestring >=0.12 && <0.13,
+    co-log-core >=0.3 && <0.4,
+    containers >=0.6 && <0.8,
+    hashable >=1.4 && <1.6,
+    hs-tree-sitter >=13.0 && <13.1,
+    IntervalMap >=0.6 && <0.7,
+    mtl >=2.3 && <2.4,
+    prettyprinter >=1.7 && <1.8,
+    text >=2.1 && <2.2,
+    text-rope >=0.3 && <0.4,
+    transformers >=0.6 && <0.7,
+    tree-sitter-gilear >=0.0 && <0.1,
+    unliftio-core >=0.2 && <0.3,
+    unordered-containers >=0.2 && <0.3,
 
-  hs-source-dirs:  autogen src
+  hs-source-dirs:
+    autogen
+    src
 
 executable gilear
-  import:         language
-  main-is:        Main.hs
-  build-depends:  base >=4.13 && <5
+  import: language
+  main-is: Main.hs
+  build-depends: base >=4.13 && <5
   hs-source-dirs: app
 
 test-suite gilear-test
-  import:         language
-  type:           exitcode-stdio-1.0
+  import: language
+  type: exitcode-stdio-1.0
   hs-source-dirs: test
-  main-is:        Main.hs
-  build-depends:  base >=4.13 && <5
+  main-is: Main.hs
+  build-depends: base >=4.13 && <5
