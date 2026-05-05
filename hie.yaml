@@ -11,6 +11,16 @@ cradle:
         cradle:
           cabal:
 
+    - path: "./packages/gilear-spec/SetupHooks.hs"
+      config:
+        cradle:
+          none:
+
+    - path: "./packages/gilear-spec"
+      config:
+        cradle:
+          cabal:
+
     - path: "./packages/tree-sitter-gilear"
       config:
         cradle:

@@ -49,4 +49,5 @@ ${HADDOCK} \
   --gen-contents \
   --read-interface=gilear,./doc/reference/gilear/gilear.haddock \
   --read-interface=gilear-lsp,./doc/reference/gilear-lsp/gilear-lsp.haddock \
+  --read-interface=gilear-spec,./doc/reference/gilear-lsp/gilear-lsp.haddock \
   --read-interface=tree-sitter-gilear,./doc/reference/tree-sitter-gilear/tree-sitter-gilear.haddock

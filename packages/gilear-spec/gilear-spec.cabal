@@ -1,0 +1,79 @@
+cabal-version: 3.14
+name: gilear-spec
+version: 0.0.0.0
+synopsis: Reference implementation for the Gilear language
+description:
+  See <https://github.com/wenkokke/gilear/blob/main/packages/gilear-spec/#README>
+
+author: Wen Kokke
+maintainer: wenkokke@users.noreply.github.com
+build-type: Hooks
+category: Language
+extra-doc-files: CHANGELOG.md
+
+custom-setup
+  setup-depends:
+    base >=4.13 && <5,
+    Cabal,
+    Cabal-hooks,
+    filepath,
+
+common language
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wprepositive-qualified-module
+    -Wredundant-constraints
+    -Wunticked-promoted-constructors
+    -Wunused-packages
+
+  default-language: GHC2021
+  default-extensions: ImportQualifiedPost
+
+library
+  import: language
+  hs-source-dirs: src
+  build-depends:
+    array,
+    base >=4.13 && <5,
+    text,
+
+  build-tool-depends:
+    BNFC:bnfc >=2.9 && <2.10,
+    alex:alex,
+    happy:happy,
+
+  exposed-modules:
+    Gilear.Spec
+
+  other-modules:
+    Gilear.Spec.Syntax.Abs
+    Gilear.Spec.Syntax.Print
+    Gilear.Spec.Syntax.Lex
+    Gilear.Spec.Syntax.Par
+    Gilear.Spec.Syntax.ErrM
+    Gilear.Spec.Syntax.Skel
+
+  autogen-modules:
+    Gilear.Spec.Syntax.Abs
+    Gilear.Spec.Syntax.Print
+    Gilear.Spec.Syntax.Lex
+    Gilear.Spec.Syntax.Par
+    Gilear.Spec.Syntax.ErrM
+    Gilear.Spec.Syntax.Skel
+
+executable gilear-spec
+  import: language
+  hs-source-dirs: app
+  main-is: Main.hs
+  build-depends:
+    base,
+    gilear-spec,
+
+test-suite gilear-spec-test
+  import: language
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  build-depends: base >=4.13 && <5
